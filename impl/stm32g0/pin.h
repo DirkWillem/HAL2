@@ -130,6 +130,30 @@ struct Pin {
 };
 
 /**
+ * General-purpose input
+ */
+class Gpi {
+ public:
+  /**
+   * Constructor
+   * @param pin Pin ID
+   * @param pull Pin pull
+   * @param mode Pin mode
+   */
+  explicit Gpi(PinId pin, hal::PinPull pull = hal::PinPull::NoPull,
+               hal::PinMode mode = hal::PinMode::PushPull) noexcept;
+
+  /**
+   * Reads the pin logic level
+   * @return Pin logic level
+   */
+  [[nodiscard]] bool Read() const noexcept;
+
+ private:
+  PinId pin;
+};
+
+/**
  * General-purpose output
  */
 class Gpo {
@@ -160,6 +184,7 @@ class Gpo {
 
 // Validate concepts are implemented
 static_assert(hal::Pin<Pin, PinId>);
+static_assert(hal::Gpi<Gpi, PinId>);
 static_assert(hal::Gpo<Gpo, PinId>);
 
 }   // namespace stm32g0

@@ -29,12 +29,8 @@ UART_IRQ_HANDLER(USART2)
 UART_IRQ_HANDLER(USART3)
 UART_IRQ_HANDLER(UART4)
 UART_IRQ_HANDLER(UART5)
-void LPUART1_IRQHandler() {
-  constexpr auto Inst = stm32g4::UartIdFromName("LPUART1");
-  if constexpr (hal::IsPeripheralInUse<stm32g4::Uart<Inst>>()) {
-    stm32g4::Uart<Inst>::instance().HandleInterrupt();
-  }
-}
+UART_IRQ_HANDLER(LPUART1)
+
 
 #define DMA_IRQ_HANDLER(Inst, Chan)                                           \
   void DMA##Inst##_Channel##Chan##_IRQHandler() {                             \
@@ -47,29 +43,9 @@ void LPUART1_IRQHandler() {
     }                                                                         \
   }
 
-void DMA1_Channel1_IRQHandler() {
-  static_assert(hal::IsPeripheralInUse<stm32g4::Dma<stm32g4::DmaImplMarker>>());
-  static_assert(stm32g4::Dma<stm32g4::DmaImplMarker>::ChannelInUse<1, 1>());
 
-  if constexpr (hal::IsPeripheralInUse<
-                    stm32g4::Dma<stm32g4::DmaImplMarker>>()) {
-    if constexpr (stm32g4::Dma<stm32g4::DmaImplMarker>::ChannelInUse<1, 1>()) {
-      stm32g4::Dma<stm32g4::DmaImplMarker>::instance().HandleInterrupt<1, 1>();
-    }
-  }
-}
-
-void DMA1_Channel2_IRQHandler() {
-  static_assert(hal::IsPeripheralInUse<stm32g4::Dma<stm32g4::DmaImplMarker>>());
-  static_assert(stm32g4::Dma<stm32g4::DmaImplMarker>::ChannelInUse<1, 2>());
-
-  if constexpr (hal::IsPeripheralInUse<
-                    stm32g4::Dma<stm32g4::DmaImplMarker>>()) {
-    if constexpr (stm32g4::Dma<stm32g4::DmaImplMarker>::ChannelInUse<1, 2>()) {
-      stm32g4::Dma<stm32g4::DmaImplMarker>::instance().HandleInterrupt<1, 2>();
-    }
-  }
-}
+DMA_IRQ_HANDLER(1, 1)
+DMA_IRQ_HANDLER(1, 2)
 DMA_IRQ_HANDLER(1, 3)
 DMA_IRQ_HANDLER(1, 4)
 DMA_IRQ_HANDLER(1, 5)

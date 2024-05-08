@@ -2,6 +2,8 @@
 
 #include <string_view>
 
+#include <constexpr_tools/logic.h>
+
 #include "callback.h"
 
 namespace hal {
@@ -15,29 +17,42 @@ enum class UartParity { Even, Odd, None };
 enum class UartStopBits { Half, One, OneAndHalf, Two };
 
 template <typename Impl>
-/**
- * Basic implementation for UART
- */
-concept Uart = requires(Impl& impl) {
+concept UartBase = requires {
+  { Impl::OperatingMode } -> std::convertible_to<UartOperatingMode>;
+  { Impl::FlowControl } -> std::convertible_to<UartFlowControl>;
+};
+
+template <typename Impl>
+concept AsyncUart = UartBase<Impl> && requires(Impl& impl) {
+  impl.UartReceiveCallback(std::declval<std::span<std::byte>>());
+
   impl.Write(std::declval<std::string_view>());
   impl.Write(std::declval<std::span<const std::byte>>());
   impl.Receive(std::declval<std::span<std::byte>>());
 };
 
 template <typename Impl>
-/**
- * Concept for UART implementations that implement the receive callback
- */
-concept UartReceiveCallback = requires(Impl& impl) {
-  impl.UartReceiveCallback(std::declval<std::span<std::byte>>());
+concept BlockingUart = UartBase<Impl> && requires(Impl& impl) {
+  impl.WriteBlocking(std::declval<std::string_view>());
+  impl.WriteBlocking(std::declval<std::span<const std::byte>>());
+  impl.ReceiveBlocking(std::declval<std::span<std::byte>>());
 };
 
 template <typename Impl>
-concept UartRegisterReceiveCallback =
-    UartReceiveCallback<Impl> && requires(Impl& impl) {
-      impl.RegisterUartReceiveCallback(
-          std::declval<hal::Callback<std::span<std::byte>>&>());
-    };
+/**
+ * Basic implementation for UART
+ */
+concept Uart =
+    UartBase<Impl>
+    && (ct::Implies(Impl::OperatingMode == UartOperatingMode::Interrupt
+                        || Impl::OperatingMode == UartOperatingMode::Dma,
+                    AsyncUart<Impl>));
+
+template <typename Impl>
+concept UartRegisterReceiveCallback = AsyncUart<Impl> && requires(Impl& impl) {
+  impl.RegisterUartReceiveCallback(
+      std::declval<hal::Callback<std::span<std::byte>>&>());
+};
 
 /**
  * Helper class for adding registration of UART receive callbacks to an UART

@@ -79,9 +79,10 @@ class UartImpl : public hal::UsedPeripheral {
                                            uint16_t            size);
 
  public:
-  using TxDmaChannel = DmaChannel<Id, UartDmaRequest::Tx>;
-  using RxDmaChannel = DmaChannel<Id, UartDmaRequest::Rx>;
-
+  static constexpr auto OperatingMode = OM;
+  static constexpr auto FlowControl   = FC;
+  using TxDmaChannel                  = DmaChannel<Id, UartDmaRequest::Tx>;
+  using RxDmaChannel                  = DmaChannel<Id, UartDmaRequest::Rx>;
   using Pinout = detail::UartPinoutHelper<Id, FC>::Pinout;
 
   void HandleInterrupt() noexcept { HAL_UART_IRQHandler(&huart); }
@@ -119,10 +120,8 @@ class UartImpl : public hal::UsedPeripheral {
   }
 
   void Receive(std::span<std::byte> into) noexcept
-    requires(OM == hal::UartOperatingMode::Dma
-             && hal::UartReceiveCallback<Impl>)
+    requires(OM == hal::UartOperatingMode::Dma)
   {
-    static_assert(hal::UartReceiveCallback<Impl>);
     rx_buf = into;
     HAL_UARTEx_ReceiveToIdle_DMA(
         &huart, reinterpret_cast<uint8_t*>(rx_buf.data()), rx_buf.size());
@@ -173,8 +172,7 @@ class UartImpl : public hal::UsedPeripheral {
   }
 
   void ReceiveComplete(std::size_t n_bytes) noexcept {
-    static_assert(hal::UartReceiveCallback<Impl>);
-    if constexpr (hal::UartReceiveCallback<Impl>) {
+    if constexpr (hal::AsyncUart<Impl>) {
       static_cast<Impl*>(this)->UartReceiveCallback(rx_buf.subspan(0, n_bytes));
     }
   }

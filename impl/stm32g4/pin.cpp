@@ -104,4 +104,17 @@ void Gpo::Toggle() const noexcept {
   HAL_GPIO_TogglePin(pin.hal_port(), pin.hal_pin());
 }
 
+void Gpo::Toggle() const noexcept {
+  HAL_GPIO_TogglePin(pin.hal_port(), pin.hal_pin());
+}
+
+Gpi::Gpi(stm32g0::PinId pin, hal::PinPull pull, hal::PinMode mode) noexcept
+    : pin{pin} {
+  Pin::Initialize(pin, hal::PinDirection::Input, pull, mode);
+}
+
+bool Gpi::Read() const noexcept {
+  return HAL_GPIO_ReadPin(pin.hal_port(), pin.hal_pin()) == GPIO_PIN_SET;
+}
+
 }   // namespace stm32g4
