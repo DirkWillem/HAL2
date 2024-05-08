@@ -1,0 +1,18 @@
+[submodule "vendor/stm32g0xx_hal"]
+	path = vendor/stm32g0xx_hal
+	url = git@github.com:STMicroelectronics/stm32g0xx_hal_driver.git
+[submodule "vendor/stm32g0xx_device"]
+	path = vendor/stm32g0xx_device
+	url = git@github.com:STMicroelectronics/cmsis_device_g0.git
+[submodule "vendor/stm32g4xx_hal"]
+	path = vendor/stm32g4xx_hal
+	url = git@github.com:STMicroElectronics/stm32g4xx_hal_driver.git
+[submodule "vendor/stm32g4xx_device"]
+	path = vendor/stm32g4xx_device
+	url = git@github.com:STMicroElectronics/cmsis_device_g4.git
+[submodule "vendor/cmsis_core"]
+	path = vendor/cmsis_core
+	url = git@github.com:STMicroelectronics/cmsis_core.git
+[submodule "vendor/stm32_pin_data"]
+	path = vendor/stm32_pin_data
+	url = git@github.com:STMicroelectronics/STM32_open_pin_data.git
