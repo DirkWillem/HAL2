@@ -191,6 +191,7 @@ class Gpo {
 // Validate concepts are implemented
 static_assert(hal::Pin<Pin, PinId>);
 static_assert(hal::Gpi<Gpi, PinId>);
-static_assert(hal::Gpo<Gpo, PinId>);
+static_assert(hal::Gpo<Gpo>);
+static_assert(hal::ConstructibleGpo<Gpo, PinId>);
 
 }   // namespace stm32g4

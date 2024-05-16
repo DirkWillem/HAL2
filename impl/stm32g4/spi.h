@@ -171,14 +171,15 @@ class SpiImpl : public hal::UsedPeripheral {
     return inst;
   }
 
-  bool Receive(std::span<Data> into, uint32_t timeout) noexcept
+  [[nodiscard]] bool ReceiveBlocking(std::span<Data> into,
+                                     uint32_t        timeout) noexcept
     requires(TT == hal::SpiTransmissionType::FullDuplex
              || TT == hal::SpiTransmissionType::HalfDuplex
              || TT == hal::SpiTransmissionType::RxOnly)
   {
-    HAL_SPI_Receive(&hspi, reinterpret_cast<uint8_t*>(into.data()), into.size(),
-                    timeout);
-    return true;
+    return HAL_SPI_Receive(&hspi, reinterpret_cast<uint8_t*>(into.data()),
+                           into.size(), timeout)
+           == HAL_OK;
   }
 
  protected:

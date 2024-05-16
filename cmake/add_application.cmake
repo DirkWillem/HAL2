@@ -16,4 +16,10 @@ function(add_application NAME)
     target_include_directories("${NAME}_${ADD_APPLICATION_TARGET}" PRIVATE
             "${CMAKE_CURRENT_LIST_DIR}"
             "${CMAKE_CURRENT_LIST_DIR}/target/${ADD_APPLICATION_TARGET}")
+
+    add_custom_command(
+            TARGET "${NAME}_${ADD_APPLICATION_TARGET}"
+            POST_BUILD
+            COMMAND ${CMAKE_SIZE} --format=berkeley "${NAME}_${ADD_APPLICATION_TARGET}${CMAKE_EXECUTABLE_SUFFIX_CXX}")
+
 endfunction()

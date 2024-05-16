@@ -84,20 +84,27 @@ concept Gpi = PinId<Pin> && requires(const Impl& cgpi) {
   { cgpi.Read() } -> std::convertible_to<bool>;
 };
 
-template <typename Impl, typename Pin>
+template <typename Impl>
 /**
  * Concept for implementation types of General-Purpose Outputs
+ */
+concept Gpo = requires(Impl gpo) {
+  gpo.Write(std::declval<bool>());
+  gpo.Toggle();
+};
+
+template <typename Impl, typename Pin>
+/**
+ * Concept for implementation types of General-Purpose Outputs that can be
+ * constructed from a pin ID
  * @tparam Pin Pin type
  * @tparam Impl Implementation type
  */
-concept Gpo = PinId<Pin> && requires(Impl gpo) {
+concept ConstructibleGpo = PinId<Pin> && Gpo<Impl> && requires(Impl gpo) {
   Impl{std::declval<Pin>()};
   Impl{std::declval<Pin>(), std::declval<hal::PinPull>()};
   Impl{std::declval<Pin>(), std::declval<hal::PinPull>(),
        std::declval<hal::PinMode>()};
-
-  gpo.Write(std::declval<bool>());
-  gpo.Toggle();
 };
 
 }   // namespace hal
