@@ -84,7 +84,7 @@ void Pin::InitializeAlternate(PinId id, unsigned int af, hal::PinPull pull,
       .Pin       = id.hal_pin(),
       .Mode      = ToHalAlternateMode(mode),
       .Pull      = ToHalPull(pull),
-      .Speed     = GPIO_SPEED_FREQ_HIGH,
+      .Speed     = GPIO_SPEED_FREQ_LOW,
       .Alternate = af,
   };
   HAL_GPIO_Init(id.hal_port(), &init);
@@ -104,11 +104,7 @@ void Gpo::Toggle() const noexcept {
   HAL_GPIO_TogglePin(pin.hal_port(), pin.hal_pin());
 }
 
-void Gpo::Toggle() const noexcept {
-  HAL_GPIO_TogglePin(pin.hal_port(), pin.hal_pin());
-}
-
-Gpi::Gpi(stm32g0::PinId pin, hal::PinPull pull, hal::PinMode mode) noexcept
+Gpi::Gpi(stm32g4::PinId pin, hal::PinPull pull, hal::PinMode mode) noexcept
     : pin{pin} {
   Pin::Initialize(pin, hal::PinDirection::Input, pull, mode);
 }

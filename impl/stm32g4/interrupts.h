@@ -32,6 +32,8 @@ UART_IRQ_HANDLER(UART5)
 UART_IRQ_HANDLER(LPUART1)
 
 
+static_assert(hal::Peripheral<stm32g4::Dma<stm32g4::DmaImplMarker>>);
+
 #define DMA_IRQ_HANDLER(Inst, Chan)                                           \
   void DMA##Inst##_Channel##Chan##_IRQHandler() {                             \
     if constexpr (hal::IsPeripheralInUse<                                     \

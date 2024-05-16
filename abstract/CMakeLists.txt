@@ -1,8 +1,10 @@
 add_library(abstract_hal INTERFACE
         hal/callback.h
         hal/dma.h
+        hal/i2s.h
         hal/peripheral.h
         hal/pin.h
+        hal/spi.h
         hal/uart.h)
 
 target_include_directories(abstract_hal INTERFACE

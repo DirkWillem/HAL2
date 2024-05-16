@@ -81,7 +81,7 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
   using ChanList = hal::DmaChannels<Channels...>;
 
  public:
-  static auto& instance() {
+  static Impl& instance() {
     static Impl inst{};
     return inst;
   }
@@ -190,6 +190,7 @@ class Dma : public hal::UnusedPeripheral<Dma<M>> {
   template <unsigned DmaInst, unsigned Chan>
   [[nodiscard]] static constexpr bool ChannelInUse() noexcept {
     std::unreachable();
+    return false;
   }
 
   template <unsigned DmaInst, unsigned Chan>

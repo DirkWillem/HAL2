@@ -81,7 +81,7 @@ void Pin::InitializeAlternate(PinId id, unsigned int af, hal::PinPull pull,
       .Pin       = id.hal_pin(),
       .Mode      = ToHalAlternateMode(mode),
       .Pull      = ToHalPull(pull),
-      .Speed     = GPIO_SPEED_FREQ_HIGH,
+      .Speed     = GPIO_SPEED_FREQ_LOW,
       .Alternate = af,
   };
   HAL_GPIO_Init(id.hal_port(), &init);

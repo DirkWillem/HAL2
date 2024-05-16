@@ -56,4 +56,62 @@ enum class UartId {
   std::unreachable();
 }
 
+enum class SpiId {
+  Spi1,
+  Spi2,
+  Spi3,
+};
+
+[[nodiscard]] constexpr SPI_TypeDef* GetSpiPointer(SpiId id) noexcept {
+  switch (id) {
+  case SpiId::Spi1: return SPI1;
+  case SpiId::Spi2: return SPI2;
+  case SpiId::Spi3: return SPI3;
+  }
+
+  std::unreachable();
+}
+
+[[nodiscard]] consteval SpiId SpiIdFromName(std::string_view name) noexcept {
+  using std::operator""sv;
+  if (name == "SPI1"sv) {
+    return SpiId::Spi1;
+  } else if (name == "SPI2"sv) {
+    return SpiId::Spi2;
+  } else if (name == "SPI3"sv) {
+    return SpiId::Spi3;
+  }
+
+  std::unreachable();
+}
+
+enum class I2sId {
+  I2s1,
+  I2s2,
+};
+
+[[nodiscard]] constexpr SpiId GetSpiForI2s(I2sId id) noexcept {
+  switch (id) {
+  case I2sId::I2s1: return SpiId::Spi1;
+  case I2sId::I2s2: return SpiId::Spi2;
+  }
+
+  std::unreachable();
+}
+
+[[nodiscard]] constexpr SPI_TypeDef* GetI2sPointer(I2sId id) noexcept {
+  return GetSpiPointer(GetSpiForI2s(id));
+}
+
+[[nodiscard]] consteval I2sId I2sIdFromName(std::string_view name) noexcept {
+  using std::operator""sv;
+  if (name == "I2S1"sv) {
+    return I2sId::I2s1;
+  } else if (name == "I2S2"sv) {
+    return I2sId::I2s2;
+  }
+
+  std::unreachable();
+}
+
 }   // namespace stm32g0

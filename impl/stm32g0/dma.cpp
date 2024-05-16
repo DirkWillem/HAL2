@@ -33,6 +33,27 @@ namespace stm32g0::detail {
   std::unreachable();
 }
 
+[[nodiscard]] uint32_t GetDmaRequestId(SpiId         id,
+                                       SpiDmaRequest request) noexcept {
+  switch (request) {
+  case SpiDmaRequest::Tx:
+    switch (id) {
+    case SpiId::Spi1: return DMA_REQUEST_SPI1_TX;
+    case SpiId::Spi2: return DMA_REQUEST_SPI2_TX;
+    case SpiId::Spi3: return DMA_REQUEST_SPI3_TX;
+    }
+    std::unreachable();
+  case SpiDmaRequest::Rx:
+    switch (id) {
+    case SpiId::Spi1: return DMA_REQUEST_SPI1_RX;
+    case SpiId::Spi2: return DMA_REQUEST_SPI2_RX;
+    case SpiId::Spi3: return DMA_REQUEST_SPI3_RX;
+    }
+    std::unreachable();
+  }
+  std::unreachable();
+}
+
 [[nodiscard]] uint32_t ToHalDmaDirection(hal::DmaDirection dir) noexcept {
   switch (dir) {
   case hal::DmaDirection::MemToPeriph: return DMA_MEMORY_TO_PERIPH;

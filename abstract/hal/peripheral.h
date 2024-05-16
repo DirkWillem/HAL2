@@ -14,7 +14,7 @@ concept Peripheral = requires {
                        { P::instance() } -> std::convertible_to<P&>;
                      });
 
-template<typename Impl>
+template <typename Impl>
 struct UnusedPeripheral {
   static constexpr auto Used = false;
 
@@ -23,6 +23,8 @@ struct UnusedPeripheral {
     return inst;
   }
 };
+
+static_assert(Peripheral<UnusedPeripheral<int>>);
 
 class UsedPeripheral {
  public:

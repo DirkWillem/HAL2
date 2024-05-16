@@ -18,15 +18,18 @@ template <hal::DmaChannel... Channels>
  */
 using DmaChannels = hal::DmaChannels<Channels...>;
 
-/**
- * Possible DMA requests for UART
- */
+/** Possible DMA requests for UART */
 enum class UartDmaRequest { Tx, Rx };
+
+/** Possible DMA requests for SPI */
+enum class SpiDmaRequest { Tx, Rx };
 
 namespace detail {
 
 [[nodiscard]] uint32_t GetDmaRequestId(UartId         id,
                                        UartDmaRequest request) noexcept;
+[[nodiscard]] uint32_t GetDmaRequestId(SpiId         id,
+                                       SpiDmaRequest request) noexcept;
 
 [[nodiscard]] uint32_t ToHalDmaDirection(hal::DmaDirection dir) noexcept;
 [[nodiscard]] uint32_t ToHalDmaMode(hal::DmaMode mode) noexcept;
@@ -189,6 +192,7 @@ class Dma : public hal::UnusedPeripheral<Dma<M>> {
   template <unsigned DmaInst, unsigned Chan>
   [[nodiscard]] static constexpr bool ChannelInUse() noexcept {
     std::unreachable();
+    return false;
   }
 };
 
