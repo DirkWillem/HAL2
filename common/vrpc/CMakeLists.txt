@@ -50,20 +50,20 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
 
             set(PROTO_SVC_HDR_ABS_PATH "${DSTDIR_ABS}/${PROTO_SVC_HDR_REL_PATH}")
             list(APPEND SVC_HDRS "${PROTO_SVC_HDR_ABS_PATH}")
+
+            # Add source files
+            set(PROTO_HDR_ABS_PATH "${DSTDIR_ABS}/${PROTO_HDR_REL_PATH}")
+            set(PROTO_SRC_ABS_PATH "${DSTDIR_ABS}/${PROTO_SRC_REL_PATH}")
+            list(APPEND GEN_SRCS "${PROTO_HDR_ABS_PATH}" "${PROTO_SRC_ABS_PATH}")
+
+            # Set up protobuf generation command
+            set(GEN_CMD
+                    "${HAL_PYTHON}"
+                    "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/vendor/nanopb/generator/nanopb_generator.py"
+                    "${PROTO_REL_PATH}"
+                    -D "${DSTDIR_ABS}"
+                    --cpp-descriptors)
         endif ()
-
-        # Add source files
-        set(PROTO_HDR_ABS_PATH "${DSTDIR_ABS}/${PROTO_HDR_REL_PATH}")
-        set(PROTO_SRC_ABS_PATH "${DSTDIR_ABS}/${PROTO_SRC_REL_PATH}")
-        list(APPEND GEN_SRCS "${PROTO_HDR_ABS_PATH}" "${PROTO_SRC_ABS_PATH}")
-
-        # Set up protobuf generation command
-        set(GEN_CMD
-                "${HAL_PYTHON}"
-                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/vendor/nanopb/generator/nanopb_generator.py"
-                "${PROTO_REL_PATH}"
-                -D "${DSTDIR_ABS}"
-                --cpp-descriptors)
 
         if (NOT ${GENERATE_VRPC_NO_DEPEND_COMMON})
             list(APPEND GEN_CMD "--protoc-opt='--proto_path=${CMAKE_CURRENT_FUNCTION_LIST_DIR}/proto/common'")
