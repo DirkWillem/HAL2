@@ -12,4 +12,14 @@ namespace ct {
   return !a || b;
 }
 
+/**
+ * Logical XOR operator, i.e. a xor b
+ * @param a Left-hand side of expression
+* @param b Right-hand side of expression
+* @return a xor b
+ */
+[[nodiscard]] constexpr bool Xor(bool a, bool b) noexcept {
+  return a != b;
+}
+
 }   // namespace ct

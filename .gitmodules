@@ -16,3 +16,6 @@
 [submodule "vendor/stm32_pin_data"]
 	path = vendor/stm32_pin_data
 	url = git@github.com:STMicroelectronics/STM32_open_pin_data.git
+[submodule "common/vrpc/vendor/nanopb"]
+	path = common/vrpc/vendor/nanopb
+	url = git@github.com:nanopb/nanopb.git

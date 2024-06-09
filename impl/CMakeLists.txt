@@ -75,6 +75,8 @@ function(add_stm32g4_hal VARIANT XMLFILE)
             stm32g4/pin.h
             stm32g4/spi.cpp
             stm32g4/spi.h
+            stm32g4/system.cpp
+            stm32g4/system.h
             stm32g4/uart.cpp
             stm32g4/uart.h
     )

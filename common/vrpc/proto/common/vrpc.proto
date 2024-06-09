@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package vrpc;
+
+message UFix {
+  uint32 w = 1;
+  uint32 f = 2;
+}
+
+message UFixQ {
+  uint32 w = 1;
+  uint32 f = 2;
+  int32 q = 3;
+}
+
+message Fix {
+  oneof fix {
+    UFix ufix = 1;
+    UFixQ ufixq = 2;
+  }
+}
+
+enum ServerBinaryStreamingType {
+  SERVER_BINARY_STREAMING_TYPE_FIXED_SIZE = 0;
+  SERVER_BINARY_STREAMING_TYPE_SERVER_CANCEL = 1;
+  SERVER_BINARY_STREAMING_TYPE_CLIENT_CANCEL = 2;
+}
+
+message StartServerBinaryStreaming {
+  ServerBinaryStreamingType streaming_type = 1;
+  uint32 size = 2;
+}
+
+enum ClientBinaryStreamingType {
+  CLIENT_BINARY_STREAMING_TYPE_FIXED_SIZE = 0;
+  CLIENT_BINARY_STREAMING_TYPE_SERVER_CANCEL = 1;
+  CLIENT_BINARY_STREAMING_TYPE_CLIENT_CANCEL = 2;
+}
+
+message StartClientBinaryStreaming {
+  uint32 size = 1;
+}
+
+message EnableSignalStreaming {
+  uint32 frequency = 1;
+}

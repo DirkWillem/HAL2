@@ -125,6 +125,7 @@ class UartImpl : public hal::UsedPeripheral {
     rx_buf = into;
     HAL_UARTEx_ReceiveToIdle_DMA(
         &huart, reinterpret_cast<uint8_t*>(rx_buf.data()), rx_buf.size());
+    __HAL_DMA_DISABLE_IT(huart.hdmarx, DMA_IT_HT);
   }
 
   /**

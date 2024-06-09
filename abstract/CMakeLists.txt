@@ -5,6 +5,7 @@ add_library(abstract_hal INTERFACE
         hal/peripheral.h
         hal/pin.h
         hal/spi.h
+        hal/system.h
         hal/uart.h)
 
 target_include_directories(abstract_hal INTERFACE

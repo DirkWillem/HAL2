@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+import "nanopb.proto";
+import "vrpc_options.proto";
+
+package nested;
+
+message NestedRequest {
+  string name = 1 [(nanopb).max_length = 16];
+}
+
+message NestedResponse {
+  string message = 1 [(nanopb).max_length = 32];
+}

@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+import "nanopb.proto";
+import "vrpc_options.proto";
+
+package helloworld;
+
+message HelloWorldRequest {
+  string name = 1 [(nanopb).max_length = 16];
+}
+
+message HelloWorldResponse {
+  string message = 1 [(nanopb).max_length = 32];
+}
+
+service HelloWorldService {
+  option (vrpc_svcopt) = {
+    id: 0x100
+  };
+
+  rpc HelloWorld (HelloWorldRequest) returns (HelloWorldResponse) {
+    option (vrpc_methodopt).id = 0x10;
+  }
+}

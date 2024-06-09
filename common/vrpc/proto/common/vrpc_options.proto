@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+import "google/protobuf/descriptor.proto";
+
+import "vrpc.proto";
+
+message VrpcFieldOptions {
+  // Field descriptor
+  string description = 1;
+  // Unit of measure
+  string unit = 2;
+  // Fixed point field
+  vrpc.Fix fp = 10;
+}
+
+extend google.protobuf.FieldOptions {
+  VrpcFieldOptions vrpc_fieldopt = 1020;
+}
+
+
+message VrpcServiceOptions {
+  uint32 id = 1;
+}
+
+extend google.protobuf.ServiceOptions {
+  VrpcServiceOptions vrpc_svcopt = 1020;
+}
+
+message VrpcMethodOptions {
+  uint32 id = 1;
+}
+
+extend google.protobuf.MethodOptions {
+  VrpcServiceOptions vrpc_methodopt = 1020;
+}

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <utility>
 
 namespace hal {
@@ -9,7 +10,7 @@ class Callback {
  public:
   virtual ~Callback() = default;
 
-  virtual void Invoke(Args...) const noexcept = 0;
+  virtual void operator()(Args...) const noexcept = 0;
 };
 
 template <typename T, typename... Args>
@@ -19,10 +20,11 @@ class MethodCallback final : public Callback<Args...> {
  public:
   ~MethodCallback() final = default;
 
-  explicit MethodCallback(T* inst, MethodPtr ptr)
-      : inst{inst}, ptr{ptr} {}
+  MethodCallback(T* inst, MethodPtr ptr)
+      : inst{inst}
+      , ptr{ptr} {}
 
-  void Invoke(Args... args) const noexcept final { (inst->*ptr)(args...); }
+  void operator()(Args... args) const noexcept final { (inst->*ptr)(args...); }
 
  private:
   T*        inst;

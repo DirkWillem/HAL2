@@ -29,6 +29,9 @@ concept AsyncUart = UartBase<Impl> && requires(Impl& impl) {
   impl.Write(std::declval<std::string_view>());
   impl.Write(std::declval<std::span<const std::byte>>());
   impl.Receive(std::declval<std::span<std::byte>>());
+
+  impl.RegisterUartReceiveCallback(
+      std::declval<hal::Callback<std::span<std::byte>>&>());
 };
 
 template <typename Impl>
@@ -48,12 +51,6 @@ concept Uart =
                         || Impl::OperatingMode == UartOperatingMode::Dma,
                     AsyncUart<Impl>));
 
-template <typename Impl>
-concept UartRegisterReceiveCallback = AsyncUart<Impl> && requires(Impl& impl) {
-  impl.RegisterUartReceiveCallback(
-      std::declval<hal::Callback<std::span<std::byte>>&>());
-};
-
 /**
  * Helper class for adding registration of UART receive callbacks to an UART
  * instance
@@ -66,7 +63,7 @@ class RegisterableUartReceiveCallback {
    */
   constexpr void UartReceiveCallback(std::span<std::byte> data) noexcept {
     if (callback != nullptr) {
-      callback->Invoke(data);
+      (*callback)(data);
     }
   }
 

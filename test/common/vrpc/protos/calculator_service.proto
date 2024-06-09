@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+import "nanopb.proto";
+import "vrpc_options.proto";
+
+package calculator;
+
+
+enum CalculatorOp {
+  CALCULATOR_OP_ADD = 0;
+  CALCULATOR_OP_SUB = 1;
+  CALCULATOR_OP_MUL = 2;
+  CALCULATOR_OP_DIV = 3;
+}
+
+
+message CalculatorRequest {
+  int32 lhs = 1;
+  int32 rhs = 2;
+  CalculatorOp op = 3;
+}
+
+message CalculatorResponse {
+  int32 result = 1;
+}
+
+service CalculatorService {
+  option (vrpc_svcopt) = {
+    id: 0x200
+  };
+
+  rpc Calculate (CalculatorRequest) returns (CalculatorResponse) {
+    option (vrpc_methodopt) = {
+      id: 1
+    };
+  }
+}
