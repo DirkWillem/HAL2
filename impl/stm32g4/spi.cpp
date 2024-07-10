@@ -10,7 +10,7 @@ static_assert(ToHalDataSize(4) == SPI_DATASIZE_4BIT);
 static_assert(ToHalDataSize(16) == SPI_DATASIZE_16BIT);
 
 [[nodiscard]] constexpr uint32_t
-ToHalMasterDirection(hal::SpiTransmissionType tt) noexcept {
+ToHalMasterDirection(const hal::SpiTransmissionType tt) noexcept {
   switch (tt) {
   case hal::SpiTransmissionType::FullDuplex: return SPI_DIRECTION_2LINES;
   case hal::SpiTransmissionType::HalfDuplex: return SPI_DIRECTION_1LINE;
@@ -19,7 +19,7 @@ ToHalMasterDirection(hal::SpiTransmissionType tt) noexcept {
   }
 }
 
-void EnableSpiClk(SpiId id) noexcept {
+void EnableSpiClk(const SpiId id) noexcept {
   switch (id) {
   case SpiId::Spi1: __HAL_RCC_SPI1_CLK_ENABLE(); break;
   case SpiId::Spi2: __HAL_RCC_SPI2_CLK_ENABLE(); break;
@@ -28,9 +28,9 @@ void EnableSpiClk(SpiId id) noexcept {
   }
 }
 
-void SetupSpiMaster(SpiId id, SPI_HandleTypeDef& hspi,
-                    SpiBaudPrescaler baud_prescaler, unsigned data_size,
-                    hal::SpiTransmissionType transmission_type) noexcept {
+void SetupSpiMaster(const SpiId id, SPI_HandleTypeDef& hspi,
+                    SpiBaudPrescaler baud_prescaler, const unsigned data_size,
+                    const hal::SpiTransmissionType transmission_type) noexcept {
   EnableSpiClk(id);
 
   hspi.Instance = GetSpiPointer(id);

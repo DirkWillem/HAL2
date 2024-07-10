@@ -87,17 +87,17 @@ void Pin::InitializeAlternate(PinId id, unsigned int af, hal::PinPull pull,
   HAL_GPIO_Init(id.hal_port(), &init);
 }
 
-ConstructibleGpo::ConstructibleGpo(stm32g0::PinId pin, hal::PinPull pull, hal::PinMode mode) noexcept
+Gpo::Gpo(stm32g0::PinId pin, hal::PinPull pull, hal::PinMode mode) noexcept
     : pin{pin} {
   Pin::Initialize(pin, hal::PinDirection::Output, pull, mode);
 }
 
-void ConstructibleGpo::Write(bool value) const noexcept {
+void Gpo::Write(bool value) const noexcept {
   HAL_GPIO_WritePin(pin.hal_port(), pin.hal_pin(),
                     value ? GPIO_PIN_SET : GPIO_PIN_RESET);
 }
 
-void ConstructibleGpo::Toggle() const noexcept {
+void Gpo::Toggle() const noexcept {
   HAL_GPIO_TogglePin(pin.hal_port(), pin.hal_pin());
 }
 

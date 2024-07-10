@@ -18,10 +18,10 @@ namespace ct {
  */
 template <std::unsigned_integral T>
 constexpr std::optional<T>
-ParseUnsignedDecimal(std::string_view string) noexcept {
+ParseUnsignedDecimal(const std::string_view string) noexcept {
   T result{0};
 
-  for (auto c : string) {
+  for (const auto c : string) {
     result <<= 4U;
 
     if (c >= '0' && c <= '9') {
@@ -43,15 +43,14 @@ ParseUnsignedDecimal(std::string_view string) noexcept {
  */
 template <std::unsigned_integral T>
 constexpr std::optional<T> ParseHexadecimal(std::string_view string) noexcept {
-  constexpr std::size_t max_digits = sizeof(T) * 2;
-
-  if (string.size() > max_digits) {
+  if (constexpr std::size_t max_digits = sizeof(T) * 2;
+      string.size() > max_digits) {
     return {};
   }
 
   T result{0};
 
-  for (auto c : string) {
+  for (const auto c : string) {
     result <<= 4U;
 
     if (c >= '0' && c <= '9') {

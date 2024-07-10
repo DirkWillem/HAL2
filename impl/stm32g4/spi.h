@@ -163,7 +163,7 @@ class SpiImpl : public hal::UsedPeripheral {
   static constexpr auto Mode             = M;
   static constexpr auto TransmissionType = TT;
   static constexpr auto DataSize         = DS;
-  using Pinout                           = PinoutHelper::Pinout;
+  using Pinout                           = typename PinoutHelper::Pinout;
   using Data = std::conditional_t<(DS > 8), uint16_t, uint8_t>;
 
   static auto& instance() noexcept {

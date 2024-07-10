@@ -156,7 +156,7 @@ class Gpi {
 /**
  * General-purpose output
  */
-class ConstructibleGpo {
+class Gpo {
  public:
   /**
    * Constructor
@@ -164,7 +164,7 @@ class ConstructibleGpo {
    * @param pull Pin pull
    * @param mode Pin mode
    */
-  explicit ConstructibleGpo(PinId pin, hal::PinPull pull = hal::PinPull::NoPull,
+  explicit Gpo(PinId pin, hal::PinPull pull = hal::PinPull::NoPull,
                hal::PinMode mode = hal::PinMode::PushPull) noexcept;
 
   /**
@@ -185,6 +185,6 @@ class ConstructibleGpo {
 // Validate concepts are implemented
 static_assert(hal::Pin<Pin, PinId>);
 static_assert(hal::Gpi<Gpi, PinId>);
-static_assert(hal::ConstructibleGpo<ConstructibleGpo, PinId>);
+static_assert(hal::ConstructibleGpo<Gpo, PinId>);
 
 }   // namespace stm32g0

@@ -95,4 +95,17 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t size) {
   HANDLE_UART_RECEIVE_CALLBACK(LpUart1)
   HANDLE_UART_RECEIVE_CALLBACK(LpUart2)
 }
+
+#define HANDLE_SPI_RECEIVE_CALLBACK(Inst)                  \
+  if constexpr (hal::IsPeripheralInUse<stm32g0::Inst>()) { \
+    if (hspi == &stm32g0::Inst::instance().hspi) {         \
+      stm32g0::Inst::instance().ReceiveComplete();         \
+    }                                                      \
+  }
+
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef* hspi) {
+  HANDLE_SPI_RECEIVE_CALLBACK(Spi1);
+  HANDLE_SPI_RECEIVE_CALLBACK(Spi2);
+  HANDLE_SPI_RECEIVE_CALLBACK(Spi3);
+}
 }
