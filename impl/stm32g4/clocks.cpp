@@ -102,6 +102,8 @@ bool ClockConfig::Configure() const noexcept {
   }
 
   RCC_PeriphCLKInitTypeDef rcc_periph_init{
+      .PeriphClockSelection = RCC_PERIPHCLK_I2C1 | RCC_PERIPHCLK_I2C2
+                              | RCC_PERIPHCLK_I2C3 | RCC_PERIPHCLK_I2C4,
       .I2c1ClockSelection = GetHalI2c1ClkSource(pscs.i2c1),
       .I2c2ClockSelection = GetHalI2c2ClkSource(pscs.i2c2),
       .I2c3ClockSelection = GetHalI2c3ClkSource(pscs.i2c3),
