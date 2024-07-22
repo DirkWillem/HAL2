@@ -7,7 +7,7 @@
 
 namespace ct {
 
-template<typename T, std::size_t N>
+template <typename T, std::size_t N>
 [[nodiscard]] constexpr T Max(const std::array<T, N>& arr) {
   T result{std::numeric_limits<T>::min()};
 
@@ -18,7 +18,7 @@ template<typename T, std::size_t N>
   return result;
 }
 
-template<std::integral T, std::size_t N>
+template <std::integral T, std::size_t N>
 [[nodiscard]] constexpr T Min(const std::array<T, N>& arr) {
   T result{std::numeric_limits<T>::max()};
 
@@ -29,4 +29,9 @@ template<std::integral T, std::size_t N>
   return result;
 }
 
+[[nodiscard]] constexpr bool
+IsPowerOf2(std::unsigned_integral auto v) noexcept {
+  return v && ((v & (v - 1)) == 0);
 }
+
+}   // namespace ct

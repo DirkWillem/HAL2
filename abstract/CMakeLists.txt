@@ -1,6 +1,7 @@
 add_library(abstract_hal INTERFACE
         hal/callback.h
         hal/dma.h
+        hal/i2c.h
         hal/i2s.h
         hal/peripheral.h
         hal/pin.h

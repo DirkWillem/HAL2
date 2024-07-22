@@ -61,14 +61,27 @@ function(add_stm32g4_hal VARIANT XMLFILE)
             "spi-i2s-pin-mapping"
             "${XMLFILE}"
             "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/spi_i2s_pin_mapping.h")
+    add_generated_file(
+            stm32g4
+            "${VARIANT}"
+            "i2c-pin-mapping"
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/i2c_pin_mapping.h")
 
     # Add library
     add_library("${VARIANT}_hal"
             "stm32g4/generated/${VARIANT}/stm32g4/mappings/uart_pin_mapping.h"
             "stm32g4/generated/${VARIANT}/stm32g4/mappings/spi_i2s_pin_mapping.h"
+            "stm32g4/generated/${VARIANT}/stm32g4/mappings/i2c_pin_mapping.h"
 
-            stm32g4/dma.h
+            stm32g4/internal/i2c_timing.h
+
+            stm32g4/clocks.cpp
+            stm32g4/clocks.h
             stm32g4/dma.cpp
+            stm32g4/dma.h
+            stm32g4/i2c.cpp
+            stm32g4/i2c.h
             stm32g4/interrupts.h
             stm32g4/peripheral_ids.h
             stm32g4/pin.cpp

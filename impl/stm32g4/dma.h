@@ -23,10 +23,17 @@ using DmaChannels = hal::DmaChannels<Channels...>;
  */
 enum class UartDmaRequest { Tx, Rx };
 
+/**
+ *  Possible DMA requests for I2C
+ */
+enum class I2cDmaRequest { Tx, Rx };
+
 namespace detail {
 
 [[nodiscard]] uint32_t GetDmaRequestId(UartId         id,
                                        UartDmaRequest request) noexcept;
+[[nodiscard]] uint32_t GetDmaRequestId(I2cId         id,
+                                       I2cDmaRequest request) noexcept;
 
 [[nodiscard]] uint32_t ToHalDmaDirection(hal::DmaDirection dir) noexcept;
 [[nodiscard]] uint32_t ToHalDmaMode(hal::DmaMode mode) noexcept;

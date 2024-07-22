@@ -29,6 +29,29 @@ namespace stm32g4::detail {
   std::unreachable();
 }
 
+[[nodiscard]] uint32_t GetDmaRequestId(I2cId         id,
+                                       I2cDmaRequest request) noexcept {
+  switch (request) {
+  case I2cDmaRequest::Tx:
+    switch (id) {
+    case I2cId::I2c1: return DMA_REQUEST_I2C1_TX;
+    case I2cId::I2c2: return DMA_REQUEST_I2C2_TX;
+    case I2cId::I2c3: return DMA_REQUEST_I2C3_TX;
+    case I2cId::I2c4: return DMA_REQUEST_I2C4_TX;
+    default: std::unreachable();
+    }
+  case I2cDmaRequest::Rx:
+    switch (id) {
+    case I2cId::I2c1: return DMA_REQUEST_I2C1_RX;
+    case I2cId::I2c2: return DMA_REQUEST_I2C2_RX;
+    case I2cId::I2c3: return DMA_REQUEST_I2C3_RX;
+    case I2cId::I2c4: return DMA_REQUEST_I2C4_RX;
+    default: std::unreachable();
+    }
+  default: std::unreachable();
+  }
+}
+
 [[nodiscard]] uint32_t ToHalDmaDirection(hal::DmaDirection dir) noexcept {
   switch (dir) {
   case hal::DmaDirection::MemToPeriph: return DMA_MEMORY_TO_PERIPH;

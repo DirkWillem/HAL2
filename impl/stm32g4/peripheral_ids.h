@@ -48,6 +48,39 @@ enum class UartId {
   std::unreachable();
 }
 
+enum class I2cId {
+  I2c1,
+  I2c2,
+  I2c3,
+  I2c4,
+};
+
+[[nodiscard]] constexpr I2C_TypeDef* GetI2cPointer(I2cId id) noexcept {
+  switch (id) {
+  case I2cId::I2c1: return I2C1;
+  case I2cId::I2c2: return I2C2;
+  case I2cId::I2c3: return I2C3;
+  case I2cId::I2c4: return I2C4;
+  }
+
+  std::unreachable();
+}
+
+[[nodiscard]] consteval I2cId I2cIdFromName(std::string_view name) noexcept {
+  using std::operator""sv;
+  if (name == "I2C1"sv) {
+    return I2cId::I2c1;
+  } else if (name == "I2C2"sv) {
+    return I2cId::I2c2;
+  } else if (name == "I2C3"sv) {
+    return I2cId::I2c3;
+  } else if (name == "I2C4"sv) {
+    return I2cId::I2c4;
+  }
+
+  std::unreachable();
+}
+
 enum class SpiId {
   Spi1,
   Spi2,
