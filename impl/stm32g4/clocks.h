@@ -9,6 +9,8 @@
 
 #include <stm32g4xx_hal.h>
 
+#include <hal/clocks.h>
+
 #include <constexpr_tools/helpers.h>
 #include <constexpr_tools/math.h>
 
@@ -59,6 +61,8 @@ class ClockConfig {
   static constexpr uint32_t LsiFreq = 32'000;
 
   static constexpr uint32_t HsiFreq = 16'000'000;
+
+  static constexpr uint32_t SysTickFrequency = 1'000;
 
   consteval ClockConfig(uint32_t f_hse, PllSettings pll, MainClockSettings mcs,
                         PeripheralSourceClockSettings pscs = {}) noexcept
@@ -162,7 +166,7 @@ class ClockConfig {
 };
 
 template <typename C>
-concept ClockFrequencies = requires(const C& cfs) {
+concept ClockFrequencies = hal::ClockFrequencies<C> && requires(const C& cfs) {
   {
     cfs.PeripheralClkFreq(std::declval<I2cId>())
   } -> std::convertible_to<uint32_t>;
