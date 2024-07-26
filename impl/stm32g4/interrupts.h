@@ -82,7 +82,7 @@ I2C_ER_IRQ_HANDLER(I2C4)
 
 #define HANDLE_I2C_ERROR_CALLBACK(Inst)                    \
   if constexpr (hal::IsPeripheralInUse<stm32g4::Inst>()) { \
-    if (hi2c == &stm32g4::Inst::instance().hi2c) {        \
+    if (hi2c == &stm32g4::Inst::instance().hi2c) {         \
       stm32g4::Inst::instance().Error();                   \
     }                                                      \
   }
@@ -92,6 +92,63 @@ void HAL_I2C_ErrorCallback(I2C_HandleTypeDef* hi2c) {
   HANDLE_I2C_ERROR_CALLBACK(I2c2)
   HANDLE_I2C_ERROR_CALLBACK(I2c3)
   HANDLE_I2C_ERROR_CALLBACK(I2c4)
+}
+
+#define HANDLE_I2C_RX_CALLBACK(Inst)                       \
+  if constexpr (hal::IsPeripheralInUse<stm32g4::Inst>()) { \
+    if (hi2c == &stm32g4::Inst::instance().hi2c) {         \
+      stm32g4::Inst::instance().RxComplete();              \
+    }                                                      \
+  }
+
+void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef* hi2c) {
+  HANDLE_I2C_RX_CALLBACK(I2c1)
+  HANDLE_I2C_RX_CALLBACK(I2c2)
+  HANDLE_I2C_RX_CALLBACK(I2c3)
+  HANDLE_I2C_RX_CALLBACK(I2c4)
+}
+
+#define HANDLE_I2C_TX_CALLBACK(Inst)                       \
+  if constexpr (hal::IsPeripheralInUse<stm32g4::Inst>()) { \
+    if (hi2c == &stm32g4::Inst::instance().hi2c) {         \
+      stm32g4::Inst::instance().TxComplete();              \
+    }                                                      \
+  }
+
+void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef* hi2c) {
+  HANDLE_I2C_TX_CALLBACK(I2c1)
+  HANDLE_I2C_TX_CALLBACK(I2c2)
+  HANDLE_I2C_TX_CALLBACK(I2c3)
+  HANDLE_I2C_TX_CALLBACK(I2c4)
+}
+
+#define HANDLE_I2C_MEM_RX_CALLBACK(Inst)                   \
+  if constexpr (hal::IsPeripheralInUse<stm32g4::Inst>()) { \
+    if (hi2c == &stm32g4::Inst::instance().hi2c) {         \
+      stm32g4::Inst::instance().MemRxComplete();           \
+    }                                                      \
+  }
+
+void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef* hi2c) {
+  HANDLE_I2C_MEM_RX_CALLBACK(I2c1)
+  HANDLE_I2C_MEM_RX_CALLBACK(I2c2)
+  HANDLE_I2C_MEM_RX_CALLBACK(I2c3)
+  HANDLE_I2C_MEM_RX_CALLBACK(I2c4)
+}
+
+#define HANDLE_I2C_MEM_TX_CALLBACK(Inst)                   \
+  if constexpr (hal::IsPeripheralInUse<stm32g4::Inst>()) { \
+    if (hi2c == &stm32g4::Inst::instance().hi2c) {         \
+      stm32g4::Inst::instance().MemTxComplete();           \
+    }                                                      \
+  }
+
+
+void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef* hi2c) {
+  HANDLE_I2C_MEM_TX_CALLBACK(I2c1)
+  HANDLE_I2C_MEM_TX_CALLBACK(I2c2)
+  HANDLE_I2C_MEM_TX_CALLBACK(I2c3)
+  HANDLE_I2C_MEM_TX_CALLBACK(I2c4)
 }
 
 /**

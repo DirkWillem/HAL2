@@ -19,17 +19,35 @@ ToHalMasterDirection(const hal::SpiTransmissionType tt) noexcept {
   }
 }
 
-void EnableSpiClk(const SpiId id) noexcept {
+inline void EnableSpiClk(const SpiId id) noexcept {
   switch (id) {
   case SpiId::Spi1: __HAL_RCC_SPI1_CLK_ENABLE(); break;
   case SpiId::Spi2: __HAL_RCC_SPI2_CLK_ENABLE(); break;
   case SpiId::Spi3: __HAL_RCC_SPI3_CLK_ENABLE(); break;
+  case SpiId::Spi4: __HAL_RCC_SPI4_CLK_ENABLE(); break;
   default: break;
   }
 }
 
+[[nodiscard]] constexpr IRQn_Type GetSpiIrqn(SpiId id) noexcept {
+  switch (id) {
+  case SpiId::Spi1: return SPI1_IRQn;
+  case SpiId::Spi2: return SPI2_IRQn;
+  case SpiId::Spi3: return SPI3_IRQn;
+  case SpiId::Spi4: return SPI4_IRQn;
+  default: std::unreachable();
+  }
+}
+
+void EnableSpiInterrupt(const SpiId id) noexcept {
+  const auto irqn = GetSpiIrqn(id);
+  HAL_NVIC_SetPriority(irqn, 0, 0);
+  HAL_NVIC_EnableIRQ(irqn);
+}
+
 void SetupSpiMaster(const SpiId id, SPI_HandleTypeDef& hspi,
-                    SpiBaudPrescaler baud_prescaler, const unsigned data_size,
+                    stm32g4::SpiBaudPrescaler      baud_prescaler,
+                    const unsigned                 data_size,
                     const hal::SpiTransmissionType transmission_type) noexcept {
   EnableSpiClk(id);
 

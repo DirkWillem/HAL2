@@ -11,12 +11,15 @@
 
 #include <hal/clocks.h>
 
+#include <constexpr_tools/chrono_ex.h>
 #include <constexpr_tools/helpers.h>
 #include <constexpr_tools/math.h>
 
 #include <stm32g4/peripheral_ids.h>
 
 namespace stm32g4 {
+
+using namespace ct::literals;
 
 enum class PllSource { Hsi = RCC_PLLSOURCE_HSI, Hse = RCC_PLLSOURCE_HSE };
 
@@ -41,8 +44,8 @@ enum class SysClkSource {
 struct MainClockSettings {
   SysClkSource sys_clk_source         = SysClkSource::Pll;
   uint32_t     ahb_prescaler          = 1;
-  uint32_t     apb1_prescaler         = 8;
-  uint32_t     apb2_prescaler         = 2;
+  uint32_t     apb1_prescaler         = 1;
+  uint32_t     apb2_prescaler         = 1;
   uint32_t     system_timer_prescaler = 1;
 };
 
@@ -57,12 +60,76 @@ struct PeripheralSourceClockSettings {
 
 class ClockConfig {
  public:
-  static constexpr uint32_t LseFreq = 32'768;
-  static constexpr uint32_t LsiFreq = 32'000;
+  static constexpr auto LseFreq = 32'768_Hz;
+  static constexpr auto LsiFreq = 32_kHz;
 
-  static constexpr uint32_t HsiFreq = 16'000'000;
+  static constexpr auto HsiFreq = 16_MHz;
 
-  static constexpr uint32_t SysTickFrequency = 1'000;
+  static constexpr auto SysTickFrequency = 1_kHz;
+
+  [[nodiscard]] consteval auto PllClkFreq() const noexcept {
+    ct::hertz result{0};
+    if (pll.source == PllSource::Hsi) {
+      result = HsiFreq.As<ct::Hz>();
+    } else {
+      result = f_hse.As<ct::Hz>();
+    }
+
+    result *= pll.n;
+    result /= pll.m;
+    result /= pll.r;
+
+    return result;
+  }
+
+  [[nodiscard]] consteval auto SysClkFreq() const noexcept {
+    switch (mcs.sys_clk_source) {
+    case SysClkSource::Hsi: return HsiFreq.As<ct::Hz>();
+    case SysClkSource::Hse: return f_hse.As<ct::Hz>();
+    case SysClkSource::Pll: return PllClkFreq().As<ct::Hz>();
+    default: std::unreachable();
+    }
+  }
+
+  [[nodiscard]] consteval auto HclkFreq() const noexcept {
+    return SysClkFreq() / mcs.ahb_prescaler;
+  }
+
+  [[nodiscard]] consteval auto Pclk1Freq() const noexcept {
+    return HclkFreq() / mcs.apb1_prescaler;
+  }
+
+  [[nodiscard]] consteval auto Pclk2Freq() const noexcept {
+    return HclkFreq() / mcs.apb2_prescaler;
+  }
+
+  [[nodiscard]] consteval auto PeripheralClkFreq(I2cId id) const {
+    I2cSourceClock clk_src{};
+
+    switch (id) {
+    case I2cId::I2c1: clk_src = pscs.i2c1; break;
+    case I2cId::I2c2: clk_src = pscs.i2c2; break;
+    case I2cId::I2c3: clk_src = pscs.i2c3; break;
+    case I2cId::I2c4: clk_src = pscs.i2c4; break;
+    default: std::unreachable();
+    }
+
+    switch (clk_src) {
+    case I2cSourceClock::Pclk1: return Pclk1Freq().As<ct::Hz>();
+    case I2cSourceClock::SysClk: return SysClkFreq().As<ct::Hz>();
+    case I2cSourceClock::Hsi: return HsiFreq.As<ct::Hz>();
+    }
+  }
+
+  [[nodiscard]] consteval auto PeripheralClkFreq(SpiId id) const {
+    switch (id) {
+    case SpiId::Spi1: [[fallthrough]];
+    case SpiId::Spi4: return Pclk2Freq().As<ct::Hz>();
+    case SpiId::Spi2: [[fallthrough]];
+    case SpiId::Spi3: return Pclk1Freq().As<ct::Hz>();
+    default: std::unreachable();
+    }
+  }
 
   consteval ClockConfig(uint32_t f_hse, PllSettings pll, MainClockSettings mcs,
                         PeripheralSourceClockSettings pscs = {}) noexcept
@@ -80,7 +147,8 @@ class ClockConfig {
       assert(("PLLQ must be one of 2, 4, 6, 8",
               (pll.r == 2 || pll.r == 4 || pll.r == 6 || pll.r == 8)));
 
-      assert(("PLLCLK may not exceed 170 MHz", (PllClkFreq() <= 170'000'000)));
+      assert(("PLLCLK may not exceed 170 MHz",
+              (PllClkFreq().As<ct::MHz>().count <= 170)));
     }
 
     // Validate main clock settings
@@ -95,71 +163,15 @@ class ClockConfig {
         ("System timer prescaler must be 1 or 8",
          (mcs.system_timer_prescaler == 1 || mcs.system_timer_prescaler == 8)));
 
-    assert(("PCLK1 may not exceed 170 MHz", (Pclk1Freq() <= 170'000'000)));
-    assert(("PCLK2 may not exceed 170 MHz", (Pclk2Freq() <= 170'000'000)));
-  }
-
-  [[nodiscard]] consteval uint32_t PllClkFreq() const noexcept {
-    uint64_t result = 0;
-    if (pll.source == PllSource::Hsi) {
-      result = HsiFreq;
-    } else {
-      result = f_hse;
-    }
-
-    result *= pll.n;
-    result /= pll.m;
-    result /= pll.r;
-
-    if (result > static_cast<uint64_t>(std::numeric_limits<uint32_t>::max())) {
-      return std::numeric_limits<uint32_t>::max();
-    } else {
-      return static_cast<uint32_t>(result);
-    }
-  }
-
-  [[nodiscard]] consteval uint32_t SysClkFreq() const noexcept {
-    switch (mcs.sys_clk_source) {
-    case SysClkSource::Hsi: return HsiFreq;
-    case SysClkSource::Hse: return f_hse;
-    case SysClkSource::Pll: return PllClkFreq();
-    default: std::unreachable();
-    }
-  }
-
-  [[nodiscard]] consteval uint32_t HclkFreq() const noexcept {
-    return SysClkFreq() / mcs.ahb_prescaler;
-  }
-
-  [[nodiscard]] consteval uint32_t Pclk1Freq() const noexcept {
-    return HclkFreq() / mcs.apb1_prescaler;
-  }
-
-  [[nodiscard]] consteval uint32_t Pclk2Freq() const noexcept {
-    return HclkFreq() / mcs.apb2_prescaler;
-  }
-
-  [[nodiscard]] consteval uint32_t PeripheralClkFreq(I2cId id) const {
-    I2cSourceClock clk_src{};
-
-    switch (id) {
-    case I2cId::I2c1: clk_src = pscs.i2c1; break;
-    case I2cId::I2c2: clk_src = pscs.i2c2; break;
-    case I2cId::I2c3: clk_src = pscs.i2c3; break;
-    case I2cId::I2c4: clk_src = pscs.i2c4; break;
-    default: std::unreachable();
-    }
-
-    switch (clk_src) {
-    case I2cSourceClock::Pclk1: return Pclk1Freq();
-    case I2cSourceClock::SysClk: return SysClkFreq();
-    case I2cSourceClock::Hsi: return HsiFreq;
-    }
+    assert(("PCLK1 may not exceed 170 MHz",
+            (Pclk1Freq().As<ct::MHz>().count <= 170)));
+    assert(("PCLK2 may not exceed 170 MHz",
+            (Pclk2Freq().As<ct::MHz>().count <= 170)));
   }
 
   [[nodiscard]] bool Configure() const noexcept;
 
-  uint32_t                      f_hse;
+  ct::hertz                     f_hse;
   PllSettings                   pll;
   MainClockSettings             mcs;
   PeripheralSourceClockSettings pscs;
@@ -167,9 +179,8 @@ class ClockConfig {
 
 template <typename C>
 concept ClockFrequencies = hal::ClockFrequencies<C> && requires(const C& cfs) {
-  {
-    cfs.PeripheralClkFreq(std::declval<I2cId>())
-  } -> std::convertible_to<uint32_t>;
+  { cfs.PeripheralClkFreq(std::declval<I2cId>()) } -> ct::Frequency;
+  { cfs.PeripheralClkFreq(std::declval<SpiId>()) } -> ct::Frequency;
 };
 
 static_assert(ClockFrequencies<ClockConfig>);

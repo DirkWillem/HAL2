@@ -1,12 +1,13 @@
 #pragma once
 
-#include <concepts>
+
+#include <constexpr_tools/chrono_ex.h>
 
 namespace hal {
 
 template<typename C>
 concept ClockFrequencies = requires {
-  { C::SysTickFrequency } -> std::convertible_to<uint32_t>;
+  { C::SysTickFrequency } -> ct::Frequency;
 };
 
 

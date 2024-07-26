@@ -1,9 +1,12 @@
 #pragma once
 
+#include <limits>
 #include <span>
+#include <tuple>
 
 #include <hal/spi.h>
 
+#include <stm32g4/clocks.h>
 #include <stm32g4/dma.h>
 #include <stm32g4/peripheral_ids.h>
 #include <stm32g4/pin.h>
@@ -147,15 +150,66 @@ struct SpiPinoutHelper<Id, hal::SpiMode::Master,
                              hal::SpiTransmissionType::TxOnly> {};
 
 void EnableSpiClk(SpiId id) noexcept;
+void EnableSpiInterrupt(SpiId id) noexcept;
 void SetupSpiMaster(SpiId id, SPI_HandleTypeDef& hspi,
                     SpiBaudPrescaler baud_prescaler, unsigned data_size,
                     hal::SpiTransmissionType transmission_type) noexcept;
 
+template <auto CF>
+  requires ClockFrequencies<decltype(CF)>
+[[nodiscard]] consteval uint32_t
+FindPrescalerValue(SpiId id, ct::Frequency auto baud_rate) {
+  std::array<std::tuple<SpiBaudPrescaler, ct::Hz>, 8> options{{
+      {SpiBaudPrescaler::Prescale2,
+       (CF.PeripheralClkFreq(id) / 2).template As<ct::Hz>()},
+      {SpiBaudPrescaler::Prescale4,
+       (CF.PeripheralClkFreq(id) / 4).template As<ct::Hz>()},
+      {SpiBaudPrescaler::Prescale8,
+       (CF.PeripheralClkFreq(id) / 8).template As<ct::Hz>()},
+      {SpiBaudPrescaler::Prescale16,
+       (CF.PeripheralClkFreq(id) / 16).template As<ct::Hz>()},
+      {SpiBaudPrescaler::Prescale32,
+       (CF.PeripheralClkFreq(id) / 32).template As<ct::Hz>()},
+      {SpiBaudPrescaler::Prescale64,
+       (CF.PeripheralClkFreq(id) / 64).template As<ct::Hz>()},
+      {SpiBaudPrescaler::Prescale128,
+       (CF.PeripheralClkFreq(id) / 128).template As<ct::Hz>()},
+      {SpiBaudPrescaler::Prescale256,
+       (CF.PeripheralClkFreq(id) / 256).template As<ct::Hz>()},
+  }};
+
+  auto best_err      = std::numeric_limits<uint32_t>::max();
+  auto best_prescale = SpiBaudPrescaler::Prescale2;
+
+  const auto desired = baud_rate.template As<ct::Hz>();
+
+  for (const auto [prescale, actual_baud] : options) {
+    const auto err = (actual_baud > desired ? (actual_baud - desired)
+                                            : (desired - actual_baud))
+                         .count;
+
+    if (err < best_err) {
+      best_err      = err;
+      best_prescale = prescale;
+    }
+  }
+
+  return static_cast<uint32_t>(best_prescale);
+}
+
 }   // namespace detail
 
-template <typename Impl, SpiId Id, unsigned DS, hal::SpiMode M,
-          hal::SpiTransmissionType TT>
-  requires(DS >= 4 && DS <= 16)
+template <SpiId Id, hal::DmaPriority Prio = hal::DmaPriority::Low>
+using SpiTxDma = DmaChannel<Id, SpiDmaRequest::Tx, Prio>;
+
+template <SpiId Id, hal::DmaPriority Prio = hal::DmaPriority::Low>
+using SpiRxDma = DmaChannel<Id, SpiDmaRequest::Rx, Prio>;
+
+enum class SpiOperatingMode { Poll, Dma };
+
+template <typename Impl, SpiId Id, auto CF, SpiOperatingMode OM, unsigned DS,
+          hal::SpiMode M, hal::SpiTransmissionType TT>
+  requires ClockFrequencies<decltype(CF)> && (DS >= 4 && DS <= 16)
 class SpiImpl : public hal::UsedPeripheral {
   using PinoutHelper = detail::SpiPinoutHelper<Id, M, TT>;
 
@@ -165,6 +219,8 @@ class SpiImpl : public hal::UsedPeripheral {
   static constexpr auto DataSize         = DS;
   using Pinout                           = typename PinoutHelper::Pinout;
   using Data = std::conditional_t<(DS > 8), uint16_t, uint8_t>;
+
+  void HandleInterrupt() noexcept { HAL_SPI_IRQHandler(&hspi); }
 
   static auto& instance() noexcept {
     static Impl inst{};
@@ -184,10 +240,16 @@ class SpiImpl : public hal::UsedPeripheral {
 
  protected:
   SpiImpl(Pinout pinout, SpiBaudPrescaler baud_prescaler) {
+//    constexpr auto presc = detail::FindPrescalerValue<CF>(Id, ct::Hz{100'000});
+
     PinoutHelper::SetupPins(pinout);
 
-    detail::SetupSpiMaster(Id, hspi, baud_prescaler, DS, TT);
+    detail::SetupSpiMaster(Id, hspi, SpiBaudPrescaler::Prescale2, DS, TT);
   }
+
+  SpiImpl(hal::Dma auto& dma, Pinout pinout, SpiBaudPrescaler baud_prescaler)
+    requires(OM == SpiOperatingMode::Dma)
+  {}
 
  private:
   SPI_HandleTypeDef hspi{};

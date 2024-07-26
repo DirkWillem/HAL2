@@ -18,15 +18,14 @@ template <hal::DmaChannel... Channels>
  */
 using DmaChannels = hal::DmaChannels<Channels...>;
 
-/**
- * Possible DMA requests for UART
- */
+/** Possible DMA requests for UART */
 enum class UartDmaRequest { Tx, Rx };
 
-/**
- *  Possible DMA requests for I2C
- */
+/** Possible DMA requests for I2C */
 enum class I2cDmaRequest { Tx, Rx };
+
+/** Possible DMA requests for SPI */
+enum class SpiDmaRequest { Tx, Rx };
 
 namespace detail {
 
@@ -34,6 +33,8 @@ namespace detail {
                                        UartDmaRequest request) noexcept;
 [[nodiscard]] uint32_t GetDmaRequestId(I2cId         id,
                                        I2cDmaRequest request) noexcept;
+[[nodiscard]] uint32_t GetDmaRequestId(SpiId         id,
+                                       SpiDmaRequest request) noexcept;
 
 [[nodiscard]] uint32_t ToHalDmaDirection(hal::DmaDirection dir) noexcept;
 [[nodiscard]] uint32_t ToHalDmaMode(hal::DmaMode mode) noexcept;

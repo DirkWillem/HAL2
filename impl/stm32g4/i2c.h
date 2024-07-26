@@ -1,5 +1,9 @@
 #pragma once
 
+#include <optional>
+
+#include <constexpr_tools/chrono_ex.h>
+
 #include <stm32g4/internal/i2c_timing.h>
 #include <stm32g4/mappings/i2c_pin_mapping.h>
 
@@ -43,6 +47,17 @@ void SetupI2c(I2cId id, I2C_HandleTypeDef& hi2c,
 
 void EnableI2cInterrupts(I2cId id) noexcept;
 
+template <typename T>
+[[nodiscard]] consteval uint32_t I2cMemAddrSize() {
+  if constexpr (std::is_same_v<std::decay_t<T>, uint8_t>) {
+    return I2C_MEMADD_SIZE_8BIT;
+  } else if constexpr (std::is_same_v<std::decay_t<T>, uint16_t>) {
+    return I2C_MEMADD_SIZE_16BIT;
+  } else {
+    std::unreachable();
+  }
+}
+
 }   // namespace detail
 
 template <I2cId Id, hal::DmaPriority Prio = hal::DmaPriority::Low>
@@ -52,11 +67,6 @@ template <I2cId Id, hal::DmaPriority Prio = hal::DmaPriority::Low>
 using I2cRxDma = DmaChannel<Id, I2cDmaRequest::Rx, Prio>;
 
 enum class I2cOperatingMode { Poll, Dma };
-
-enum class I2cMemoryAddrSize {
-  Bit8  = I2C_MEMADD_SIZE_8BIT,
-  Bit16 = I2C_MEMADD_SIZE_16BIT
-};
 
 template <typename Impl, I2cId Id, auto CF,
           hal::I2cAddressLength AL = hal::I2cAddressLength::Bits7,
@@ -73,7 +83,11 @@ template <typename Impl, I2cId Id, auto CF,
  * @tparam S I2C Speed
  */
 class I2cImpl : public hal::UsedPeripheral {
-  friend void ::HAL_I2C_ErrorCallback(I2C_HandleTypeDef* hi2c);
+  friend void ::HAL_I2C_ErrorCallback(I2C_HandleTypeDef*);
+  friend void ::HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef*);
+  friend void ::HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef*);
+  friend void ::HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef*);
+  friend void ::HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef*);
 
  public:
   static constexpr auto OperatingMode = OM;
@@ -81,7 +95,9 @@ class I2cImpl : public hal::UsedPeripheral {
   using TxDmaChannel                  = DmaChannel<Id, I2cDmaRequest::Tx>;
   using RxDmaChannel                  = DmaChannel<Id, I2cDmaRequest::Rx>;
 
-  void HandleEventInterrupt() noexcept { HAL_I2C_EV_IRQHandler(&hi2c); }
+  void HandleEventInterrupt() noexcept {
+    HAL_I2C_EV_IRQHandler(&hi2c);   //
+  }
   void HandleErrorInterrupt() noexcept { HAL_I2C_ER_IRQHandler(&hi2c); }
 
   static auto& instance() noexcept {
@@ -89,47 +105,148 @@ class I2cImpl : public hal::UsedPeripheral {
     return inst;
   }
 
-  void ReadMemory(uint16_t dev_addr, uint32_t mem_addr,
-                  I2cMemoryAddrSize mem_addr_size, std::span<std::byte> dest,
-                  std::size_t size, uint32_t timeout) noexcept
-    requires(OM == I2cOperatingMode::Poll)
-  {
+  /**
+   * Reads memory from a slave synchronously
+   * @param device_address Slave address
+   * @param memory_address Memory address
+   * @param dest Destination buffer
+   * @param timeout Timeout for reading
+   * @param size Size of the data to read. Defaults to the destination buffer
+   * size
+   */
+  void ReadMemoryBlocking(uint16_t             device_address,
+                          hal::I2cMemAddr auto memory_address,
+                          std::span<std::byte> dest, ct::Duration auto timeout,
+                          std::optional<std::size_t> size = {}) noexcept {
+    dev_addr = device_address;
+    mem_addr = memory_address;
+
+    const auto rx_size = std::min(dest.size(), size.value_or(dest.size()));
+    rx_buf             = dest.subspan(0, rx_size);
+
     HAL_I2C_Mem_Read(
-        &hi2c, dev_addr, mem_addr, static_cast<uint16_t>(mem_addr_size),
-        reinterpret_cast<uint8_t*>(dest.data()),
-        static_cast<uint16_t>(std::min(dest.size(), size)), timeout);
+        &hi2c, dev_addr, mem_addr,
+        detail::I2cMemAddrSize<decltype(memory_address)>(),
+        reinterpret_cast<uint8_t*>(dest.data()), rx_size,
+        std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count());
   }
 
-  void ReadMemory(uint16_t dev_addr, uint32_t mem_addr,
-                  I2cMemoryAddrSize mem_addr_size, std::span<std::byte> dest,
-                  std::size_t size, uint32_t timeout) noexcept
+  /**
+   * Writes memory to a slave synchronously
+   * @param device_address Slave address
+   * @param memory_address Memory address
+   * @param data Data to write
+   * @param timeout Write timeout
+   */
+  void WriteMemoryBlocking(uint16_t             device_address,
+                           hal::I2cMemAddr auto memory_address,
+                           std::span<std::byte> data,
+                           ct::Duration auto    timeout) {
+    dev_addr = device_address;
+    mem_addr = memory_address;
+
+    HAL_I2C_Mem_Write(
+        &hi2c, dev_addr, mem_addr,
+        detail::I2cMemAddrSize<decltype(memory_address)>(),
+        reinterpret_cast<uint8_t*>(data.data()), data.size(),
+        std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count());
+  }
+
+  /**
+   * Writes the bitwise representation of a value to a slave synchronously
+   * @tparam T Type of the value to write
+   * @param device_address Slave address
+   * @param memory_address Memory address
+   * @param value Data to write
+   * @param timeout Write timeout
+   */
+  template <typename T>
+  void WriteMemoryValueBlocking(uint16_t             device_address,
+                                hal::I2cMemAddr auto memory_address,
+                                const T& value, ct::Duration auto timeout) {
+    std::array<std::byte, sizeof(T)> bytes =
+        std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
+    WriteMemoryBlocking(
+        device_address, memory_address, bytes,
+        std::chrono::duration_cast<std::chrono::milliseconds>(timeout).count());
+  }
+
+  /**
+   * Reads memory from a slave asynchronously
+   * @param device_address Slave address
+   * @param memory_address Memory address
+   * @param dest Destination buffer
+   * @param size Size of the memory to read, defaults to destination buffer size
+   */
+  void ReadMemory(uint16_t device_address, hal::I2cMemAddr auto memory_address,
+                  std::span<std::byte>       dest,
+                  std::optional<std::size_t> size = {}) noexcept
     requires(OM == I2cOperatingMode::Dma)
   {
+    dev_addr           = device_address;
+    mem_addr           = memory_address;
+    const auto rx_size = std::min(dest.size(), size.value_or(dest.size()));
+    rx_buf             = dest.subspan(0, rx_size);
+
     HAL_I2C_Mem_Read_DMA(&hi2c, dev_addr, mem_addr,
-                         static_cast<uint16_t>(mem_addr_size),
-                         reinterpret_cast<uint8_t*>(dest.data()),
-                         static_cast<uint16_t>(std::min(dest.size(), size)));
+                         detail::I2cMemAddrSize<decltype(memory_address)>(),
+                         reinterpret_cast<uint8_t*>(rx_buf.data()),
+                         static_cast<uint16_t>(rx_size));
+  }
+
+  /**
+   * Writes memory to a slave asynchronously
+   * @param device_address Slave address
+   * @param memory_address Memory address
+   * @param data Value to write
+   */
+  void WriteMemory(uint16_t device_address, hal::I2cMemAddr auto memory_address,
+                   std::span<std::byte> data)
+    requires(OM == I2cOperatingMode::Dma)
+  {
+    dev_addr = device_address;
+    mem_addr = memory_address;
+    HAL_I2C_Mem_Write_DMA(&hi2c, dev_addr, mem_addr,
+                          detail::I2cMemAddrSize<decltype(memory_address)>(),
+                          reinterpret_cast<uint8_t*>(data.data()), data.size());
+  }
+
+  /**
+   * Writes the bitwise representation of a value to a slave asynchronously
+   * @tparam T Type of the value to write
+   * @param device_address Slave address
+   * @param memory_address Memory address
+   * @param value Data to write
+   */
+  template <typename T>
+  void WriteMemoryValue(uint16_t             device_address,
+                        hal::I2cMemAddr auto memory_address, const T& value)
+    requires(OM == I2cOperatingMode::Dma)
+  {
+    std::array<std::byte, sizeof(T)> bytes =
+        std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
+    WriteMemory(device_address, memory_address, bytes);
   }
 
  protected:
-  I2cImpl(Pinout pinout) noexcept
+  explicit I2cImpl(Pinout pinout) noexcept
     requires(OM == I2cOperatingMode::Poll)
   {
     // Set up sda and scl pins
     Pin::InitializeAlternate(
         pinout.sda,
         hal::FindPinAFMapping(I2cSdaPinMappings, Id, pinout.sda)->af,
-        pinout.pull_sda);
+        pinout.pull_sda, hal::PinMode::OpenDrain);
     Pin::InitializeAlternate(
         pinout.scl,
         hal::FindPinAFMapping(I2cSclPinMappings, Id, pinout.scl)->af,
-        pinout.pull_scl);
+        pinout.pull_scl, hal::PinMode::OpenDrain);
 
     // Initialize I2C peripheral
     constexpr auto timingr =
         detail::CalculateI2cTiming(CF.PeripheralClkFreq(Id), S);
     static_assert(timingr.has_value());
-    detail::SetupI2c(Id, hi2c, AL, *timingr);
+    detail::SetupI2c(Id, hi2c, AL, 0x30A0A9FD);
   }
 
   I2cImpl(hal::Dma auto& dma, Pinout pinout) noexcept
@@ -139,11 +256,11 @@ class I2cImpl : public hal::UsedPeripheral {
     Pin::InitializeAlternate(
         pinout.sda,
         hal::FindPinAFMapping(I2cSdaPinMappings, Id, pinout.sda)->af,
-        pinout.pull_sda);
+        pinout.pull_sda, hal::PinMode::OpenDrain);
     Pin::InitializeAlternate(
         pinout.scl,
         hal::FindPinAFMapping(I2cSclPinMappings, Id, pinout.scl)->af,
-        pinout.pull_scl);
+        pinout.pull_scl, hal::PinMode::OpenDrain);
 
     // Initialize I2C peripheral
     constexpr auto timingr =
@@ -172,13 +289,45 @@ class I2cImpl : public hal::UsedPeripheral {
     }
   }
 
+  void RxComplete() {
+    if constexpr (hal::AsyncI2c<Impl>) {
+      static_cast<Impl*>(this)->I2cReceiveCallback(dev_addr, rx_buf);
+    }
+  }
+
+  void TxComplete() {
+    if constexpr (hal::AsyncI2c<Impl>) {
+      static_cast<Impl*>(this)->I2cTransmitCallback(dev_addr);
+    }
+  }
+
+  void MemRxComplete() {
+    if constexpr (hal::AsyncI2c<Impl>) {
+      static_cast<Impl*>(this)->I2cMemReadCallback(dev_addr, mem_addr, rx_buf);
+    }
+  }
+
+  void MemTxComplete() {
+    if constexpr (hal::AsyncI2c<Impl>) {
+      static_cast<Impl*>(this)->I2cMemWriteCallback(dev_addr, mem_addr);
+    }
+  }
+
  private:
-  I2C_HandleTypeDef hi2c;
+  I2C_HandleTypeDef hi2c{};
+
+  uint16_t             dev_addr{0};
+  uint16_t             mem_addr{0};
+  std::span<std::byte> rx_buf{};
 };
 
 template <I2cId Id>
 class I2c : public hal::UnusedPeripheral<I2c<Id>> {
-  friend void ::HAL_I2C_ErrorCallback(I2C_HandleTypeDef* hi2c);
+  friend void ::HAL_I2C_ErrorCallback(I2C_HandleTypeDef*);
+  friend void ::HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef*);
+  friend void ::HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef*);
+  friend void ::HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef*);
+  friend void ::HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef*);
 
  public:
   constexpr void HandleEventInterrupt() noexcept {}
@@ -186,6 +335,10 @@ class I2c : public hal::UnusedPeripheral<I2c<Id>> {
 
  protected:
   constexpr void Error() noexcept {}
+  constexpr void RxComplete() noexcept {}
+  constexpr void TxComplete() noexcept {}
+  constexpr void MemRxComplete() noexcept {}
+  constexpr void MemTxComplete() noexcept {}
 
   I2C_HandleTypeDef hi2c{};
 };
