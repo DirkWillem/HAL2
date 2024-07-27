@@ -227,11 +227,11 @@ class SpiImpl : public hal::UsedPeripheral {
     requires(OM == SpiOperatingMode::Dma)
   {
     // Validate DMA instance
-    static_assert(ct::Implies(hal::TransmitEnabled(TT),
+    static_assert(ct::Implies(hal::SpiTransmitEnabled(TT),
                               dma.template ChannelEnabled<TxDmaChannel>()),
                   "If the transmission mode allows transmission, the TX DMA "
                   "channel must be enabled");
-    static_assert(ct::Implies(hal::ReceiveEnabled(TT),
+    static_assert(ct::Implies(hal::SpiReceiveEnabled(TT),
                               dma.template ChannelEnabled<RxDmaChannel>()),
                   "If the transmission mode allows transmission, the RX DMA "
                   "channel must be enabled");
@@ -243,14 +243,14 @@ class SpiImpl : public hal::UsedPeripheral {
     detail::SetupSpiMaster(Id, hspi, baud_prescaler, DS, TT);
 
     // Set up DMA channels
-    if constexpr (hal::TransmitEnabled(TT)) {
+    if constexpr (hal::SpiTransmitEnabled(TT)) {
       auto& htxdma = dma.template SetupChannel<TxDmaChannel>(
           hal::DmaDirection::MemToPeriph, hal::DmaMode::Normal,
           hal::DmaDataWidth::Byte, false, hal::DmaDataWidth::Byte, true);
       __HAL_LINKDMA(&hspi, hdmatx, htxdma);
     }
 
-    if constexpr (hal::ReceiveEnabled(TT)) {
+    if constexpr (hal::SpiReceiveEnabled(TT)) {
       auto& hrxdma = dma.template SetupChannel<RxDmaChannel>(
           hal::DmaDirection::PeriphToMem, hal::DmaMode::Normal,
           hal::DmaDataWidth::Byte, hal::DmaDataWidth::Byte, true);

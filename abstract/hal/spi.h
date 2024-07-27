@@ -1,8 +1,11 @@
 #pragma once
 
+#include <chrono>
 #include <concepts>
 #include <cstdint>
 #include <span>
+
+#include "callback.h"
 
 namespace hal {
 
@@ -10,11 +13,13 @@ enum class SpiMode { Master, Slave };
 
 enum class SpiTransmissionType { FullDuplex, HalfDuplex, TxOnly, RxOnly };
 
-[[nodiscard]] constexpr bool TransmitEnabled(SpiTransmissionType tt) noexcept {
+[[nodiscard]] constexpr bool
+SpiTransmitEnabled(SpiTransmissionType tt) noexcept {
   return tt != SpiTransmissionType::RxOnly;
 }
 
-[[nodiscard]] constexpr bool ReceiveEnabled(SpiTransmissionType tt) noexcept {
+[[nodiscard]] constexpr bool
+SpiReceiveEnabled(SpiTransmissionType tt) noexcept {
   return tt != SpiTransmissionType::TxOnly;
 }
 
@@ -39,7 +44,7 @@ concept BlockingRxSpiMaster = SpiMaster<Impl> && requires(Impl& impl) {
 
   {
     impl.ReceiveBlocking(std::declval<std::span<typename Impl::Data>>(),
-                         std::declval<uint32_t>())
+                         std::declval<std::chrono::milliseconds>())
   } -> std::convertible_to<bool>;
 };
 
@@ -47,11 +52,76 @@ template <typename Impl>
 concept AsyncRxSpiMaster = SpiMaster<Impl> && requires(Impl& impl) {
   requires Impl::TransmissionType != SpiTransmissionType::TxOnly;
 
-  impl.SpiReceiveCallback(std::declval<std::span<std::byte>>());
+  impl.SpiReceiveCallback(std::declval<std::span<typename Impl::Data>>());
 
   {
-    impl.Receive(std::declval<std::span<typename Impl::Data>>)
+    impl.Receive(std::declval<std::span<typename Impl::Data>>())
   } -> std::convertible_to<bool>;
 };
+
+template <typename Impl>
+concept RegisterableSpiRxCallback = requires(Impl& impl) {
+  requires std::is_unsigned_v<typename Impl::RxData>;
+
+  impl.RegisterSpiRxCallback(
+      std::declval<hal::Callback<std::span<typename Impl::RxData>>&>());
+};
+
+template <std::unsigned_integral D>
+class SpiRxCallback {
+ public:
+  using RxData = D;
+
+  constexpr void
+  RegisterSpiRxCallback(hal::Callback<std::span<RxData>>& new_callback) noexcept {
+    rx_callback = &new_callback;
+  }
+
+  constexpr void SpiReceiveCallback(std::span<RxData> data) {
+    if (rx_callback != nullptr) {
+      (*rx_callback)(data);
+    }
+  }
+
+ private:
+  hal::Callback<std::span<RxData>>* rx_callback{nullptr};
+};
+
+static_assert(RegisterableSpiRxCallback<SpiRxCallback<uint8_t>>);
+static_assert(RegisterableSpiRxCallback<SpiRxCallback<uint16_t>>);
+
+template <typename Impl>
+concept AsyncTxSpiMaster = SpiMaster<Impl> && requires(Impl& impl) {
+  requires Impl::TransmissionType != SpiTransmissionType::RxOnly;
+
+  impl.SpiTransmitCallback();
+
+  {
+    impl.Transmit(std::declval<std::span<typename Impl::Data>>)
+  } -> std::convertible_to<bool>;
+};
+
+template <typename Impl>
+concept RegisterableSpiTxCallback = requires(Impl& impl) {
+  impl.RegisterSpiTxCallback(std::declval<hal::Callback<>&>());
+};
+
+class SpiTxCallback {
+ public:
+  constexpr void RegisterSpiTxCallback(hal::Callback<>& new_callback) noexcept {
+    tx_callback = &new_callback;
+  }
+
+  constexpr void SpiTransmitCallback() {
+    if (tx_callback != nullptr) {
+      (*tx_callback)();
+    }
+  }
+
+ private:
+  hal::Callback<>* tx_callback{nullptr};
+};
+
+static_assert(RegisterableSpiTxCallback<SpiTxCallback>);
 
 }   // namespace hal

@@ -6,7 +6,8 @@ add_library(constexpr_tools INTERFACE
         constexpr_tools/math.h
         constexpr_tools/spans.h
         constexpr_tools/std_ex.h
-        constexpr_tools/strings.h)
+        constexpr_tools/strings.h
+        constexpr_tools/type_helpers.h)
 target_include_directories(constexpr_tools INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
 

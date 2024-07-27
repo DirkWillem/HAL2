@@ -52,6 +52,51 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t size) {
 }
 
 /**
+ * SPI Interrupts
+ */
+
+#define SPI_IRQ_HANDLER(Name)                                     \
+  void Name##_IRQHandler() {                                      \
+    constexpr auto Inst = stm32g4::SpiIdFromName(#Name);          \
+    if constexpr (hal::IsPeripheralInUse<stm32g4::Spi<Inst>>()) { \
+      stm32g4::Spi<Inst>::instance().HandleInterrupt();           \
+    }                                                             \
+  }
+
+SPI_IRQ_HANDLER(SPI1)
+SPI_IRQ_HANDLER(SPI2)
+SPI_IRQ_HANDLER(SPI3)
+SPI_IRQ_HANDLER(SPI4)
+
+#define HANDLE_SPI_RX_CALLBACK(Inst)                       \
+  if constexpr (hal::IsPeripheralInUse<stm32g4::Inst>()) { \
+    if (hspi == &stm32g4::Inst::instance().hspi) {         \
+      stm32g4::Inst::instance().RxComplete();              \
+    }                                                      \
+  }
+
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef* hspi) {
+  HANDLE_SPI_RX_CALLBACK(Spi1)
+  HANDLE_SPI_RX_CALLBACK(Spi2)
+  HANDLE_SPI_RX_CALLBACK(Spi3)
+  HANDLE_SPI_RX_CALLBACK(Spi4)
+}
+
+#define HANDLE_SPI_TX_CALLBACK(Inst)                       \
+  if constexpr (hal::IsPeripheralInUse<stm32g4::Inst>()) { \
+    if (hspi == &stm32g4::Inst::instance().hspi) {         \
+      stm32g4::Inst::instance().TxComplete();              \
+    }                                                      \
+  }
+
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef* hspi) {
+  HANDLE_SPI_TX_CALLBACK(Spi1)
+  HANDLE_SPI_TX_CALLBACK(Spi2)
+  HANDLE_SPI_TX_CALLBACK(Spi3)
+  HANDLE_SPI_TX_CALLBACK(Spi4)
+}
+
+/**
  * I2C Interrupts
  */
 #define I2C_EV_IRQ_HANDLER(Name)                                  \
@@ -142,7 +187,6 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef* hi2c) {
       stm32g4::Inst::instance().MemTxComplete();           \
     }                                                      \
   }
-
 
 void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef* hi2c) {
   HANDLE_I2C_MEM_TX_CALLBACK(I2c1)

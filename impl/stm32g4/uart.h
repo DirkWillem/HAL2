@@ -191,9 +191,10 @@ class UartImpl : public hal::UsedPeripheral {
     requires(FC == hal::UartFlowControl::None
              && OM == hal::UartOperatingMode::Dma)
       : huart{} {
-    static_assert(dma.template ChannelEnabled<TxDmaChannel>(),
+    using DmaT = std::decay_t<decltype(dma)>;
+    static_assert(DmaT::template ChannelEnabled<TxDmaChannel>(),
                   "TX DMA channel must be enabled");
-    static_assert(dma.template ChannelEnabled<RxDmaChannel>(),
+    static_assert(DmaT::template ChannelEnabled<RxDmaChannel>(),
                   "RX DMA channel must be enabled");
 
     // Set up tx and rx pins

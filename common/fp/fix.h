@@ -92,6 +92,8 @@ class Fix {
   static constexpr float Epsilon = Q > 0 ? static_cast<float>(Scale)
                                          : 1.F / static_cast<float>(Scale);
 
+  Fix() = default;
+
   explicit constexpr Fix(Storage val) noexcept
       : val{val} {}
 
@@ -222,7 +224,7 @@ class Fix {
   [[nodiscard]] constexpr Storage raw() const noexcept { return val; }
 
  private:
-  Storage val;
+  Storage val{0};
 };
 
 template <bool Sl, unsigned Wl, unsigned Fl, int Ql, bool Sr, unsigned Wr,

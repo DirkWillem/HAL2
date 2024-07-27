@@ -131,9 +131,10 @@ class ClockConfig {
     }
   }
 
-  consteval ClockConfig(uint32_t f_hse, PllSettings pll, MainClockSettings mcs,
+  consteval ClockConfig(ct::Frequency auto f_hse, PllSettings pll,
+                        MainClockSettings             mcs,
                         PeripheralSourceClockSettings pscs = {}) noexcept
-      : f_hse{f_hse}
+      : f_hse{f_hse.template As<ct::Hz>()}
       , pll{pll}
       , pscs{pscs} {
     // Validate PLL settings
