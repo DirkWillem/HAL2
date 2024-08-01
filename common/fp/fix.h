@@ -284,6 +284,18 @@ constexpr auto operator/(Fix<Sl, Wl, Fl, Ql> lhs,
 template <unsigned M, unsigned N>
 using UQ = Fix<false, M + N, N>;
 
+template <typename T>
+struct is_fixed_point : std::false_type {};
+
+template <bool S, unsigned W, unsigned F, int Q>
+struct is_fixed_point<Fix<S, W, F, Q>> : std::true_type {};
+
+template <typename T>
+inline constexpr bool is_fixed_point_v = is_fixed_point<T>::value;
+
+template <typename T>
+concept FixedPointType = is_fixed_point_v<T>;
+
 }   // namespace fp
 
 [[nodiscard]] constexpr fp::UQ<1, 15>

@@ -25,6 +25,7 @@ concept UartBase = requires {
 template <typename Impl>
 concept AsyncUart = UartBase<Impl> && requires(Impl& impl) {
   impl.UartReceiveCallback(std::declval<std::span<std::byte>>());
+  impl.UartTransmitCallback();
 
   impl.Write(std::declval<std::string_view>());
   impl.Write(std::declval<std::span<const std::byte>>());
@@ -78,6 +79,23 @@ class RegisterableUartReceiveCallback {
 
  private:
   hal::Callback<std::span<std::byte>>* callback{nullptr};
+};
+
+class RegisterableUartTransmitCallback {
+ public:
+  constexpr void UartTransmitCallback() {
+    if (callback != nullptr) {
+      (*callback)();
+    }
+  }
+
+  constexpr void
+  RegisterUartTransmitCallback(hal::Callback<>& new_callback) noexcept {
+    callback = &new_callback;
+  }
+
+ private:
+  hal::Callback<>* callback{nullptr};
 };
 
 }   // namespace hal

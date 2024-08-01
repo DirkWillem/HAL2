@@ -1,4 +1,5 @@
 add_library(constexpr_tools INTERFACE
+        constexpr_tools/buffer_io.h
         constexpr_tools/chrono_ex.h
         constexpr_tools/crc.h
         constexpr_tools/helpers.h
@@ -17,4 +18,6 @@ add_library(fp INTERFACE
 target_include_directories(fp INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
 
+
+add_subdirectory(sbs)
 add_subdirectory(vrpc)
