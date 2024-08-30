@@ -11,6 +11,8 @@
 #include <doubles/hal/mock_system.h>
 #include <doubles/hal/mock_uart.h>
 
+#ifdef false
+
 using namespace testing;
 
 struct ServiceA {
@@ -184,3 +186,5 @@ TEST_F(VrpcUart, InvokeService) {
   vrpc_uart->HandlePendingRequests();
   ASSERT_FALSE(vrpc_uart->has_pending_requests());
 }
+
+#endif

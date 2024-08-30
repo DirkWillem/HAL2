@@ -7,111 +7,22 @@
 #include <tuple>
 
 #include <constexpr_tools/buffer_io.h>
+#include <constexpr_tools/crc.h>
 #include <constexpr_tools/math.h>
 #include <constexpr_tools/type_helpers.h>
 
+#include <hal/clocks.h>
+
 #include <sbs/sbs.h>
+#include <sbs/sbs_type_name.h>
 
 #include <hal/uart.h>
+
+#include "detail/slot.h"
 
 namespace sbs::uart {
 
 namespace detail {
-
-enum class SlotState { Disabled, Empty, Writing, Ready, Reading };
-
-class GenericFrameSlot {
- public:
-  virtual ~GenericFrameSlot() noexcept = default;
-
-  virtual void Describe(ct::BufferWriter& w) const noexcept = 0;
-
-  void Enable() noexcept {
-    state.store(SlotState::Empty, std::memory_order::seq_cst);
-  }
-
-  void Disable() noexcept {
-    state.store(SlotState::Disabled, std::memory_order::seq_cst);
-  }
-
-  uint32_t               id{0};
-  std::atomic<SlotState> state{SlotState::Disabled};
-
- protected:
-  explicit GenericFrameSlot(uint32_t id) noexcept
-      : id{id} {}
-};
-
-template <typename F>
-class FrameSlot;
-
-template <auto FId, SignalDescriptor... Signals>
-class FrameSlot<Frame<FId, Signals...>> : public GenericFrameSlot {
-  using FrameType = Frame<FId, Signals...>;
-
- protected:
-  FrameSlot()
-      : GenericFrameSlot{static_cast<uint32_t>(FId)} {}
-
-  [[nodiscard]] inline bool
-  Write(const typename FrameType::SignalsTuple& values) noexcept {
-    // Check if the slot is empty or ready
-    SlotState current_state{SlotState::Empty};
-    if (!state.compare_exchange_strong(current_state, SlotState::Writing,
-                                       std::memory_order::acquire)) {
-      current_state = SlotState::Ready;
-      if (!state.compare_exchange_strong(current_state, SlotState::Writing,
-                                         std::memory_order::acquire)) {
-        return false;
-      }
-    }
-
-    // Write the data to the slot
-    data = values;
-
-    // Set the slot state to Ready
-    state.store(SlotState::Ready, std::memory_order::release);
-    return true;
-  }
-
-  [[nodiscard]] inline bool
-  Read(std::invocable<const typename FrameType::SignalsTuple&> auto reader) {
-    // Check if the slot is readable
-    SlotState current_state{SlotState::Ready};
-    if (!state.compare_exchange_strong(current_state, SlotState::Reading,
-                                       std::memory_order::acquire)) {
-      return false;
-    }
-
-    // Read the data
-    reader(data);
-
-    // Set the slot state to Empty
-    state.store(SlotState::Empty, std::memory_order::release);
-    return true;
-  }
-
-  void Describe(ct::BufferWriter& w) const noexcept final {
-    std::array<std::string_view, sizeof...(Signals)> signal_names{
-        Signals::Name...};
-
-    const auto disabled = state.load() == SlotState::Disabled;
-    if (disabled) {
-      w.Write(std::byte{0x00});
-    } else {
-      w.Write(std::byte{0x01});
-    }
-
-    w.Write(static_cast<uint32_t>(signal_names.size()));
-    for (const auto signal_name : signal_names) {
-      w.Write(static_cast<uint32_t>(signal_name.size()));
-      w.WriteString(signal_name);
-    }
-  }
-
- private:
-  typename FrameType::SignalsTuple data{};
-};
 
 template <typename T>
 struct FrameHelper;
@@ -120,9 +31,15 @@ template <auto I, SignalDescriptor... Sts>
 struct FrameHelper<Frame<I, Sts...>> {
   static constexpr auto SignalNames =
       std::array<std::string_view, sizeof...(Sts)>{Sts::Name...};
+
+  static constexpr std::array<std::string_view, sizeof...(Sts)> SignalTypeNames{
+      {TypeName<typename Sts::Type>...}};
 };
 
 }   // namespace detail
+
+inline constexpr auto FrameStartChar = std::byte{0xBB};
+inline constexpr auto FrameEndChar   = std::byte{0xEE};
 
 inline constexpr auto SignalStartChar = std::byte{'s'};
 inline constexpr auto SignalEndChar   = std::byte{'S'};
@@ -139,7 +56,10 @@ inline constexpr auto ListFramesEndChar   = std::byte{'L'};
 inline constexpr auto DescribeFrameStartChar = std::byte{'i'};
 inline constexpr auto DescribeFrameEndChar   = std::byte{'I'};
 
-template <hal::AsyncUart Uart, FrameType... Frames>
+inline constexpr auto NullFrameStartChar = std::byte{'('};
+inline constexpr auto NullFrameEndChar   = std::byte{')'};
+
+template <hal::AsyncUart Uart, hal::Clock C, FrameType... Frames>
   requires(sizeof...(Frames) > 0)
 /**
  * UART Implementation for SBS (Simple Binary Signals)
@@ -153,11 +73,12 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
     ListFrames,
     DescribeFrame,
     EnableFrame,
-    DisableFrame
+    DisableFrame,
+    SendNullFrame,
   };
 
   static constexpr auto MaxFrameSize =
-      2 * sizeof(std::byte) + sizeof(uint32_t)
+      2 * sizeof(std::byte) + 3 * sizeof(uint32_t)
       + ct::Max(
           std::array<std::size_t, sizeof...(Frames)>{Frames::PayloadSize...});
 
@@ -179,7 +100,12 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
 
     for (const auto frame_name :
          detail::FrameHelper<typename Frame::FrameType>::SignalNames) {
-      size += 4 + frame_name.size();
+      size += 1 + frame_name.size();
+    }
+
+    for (const auto type_name :
+         detail::FrameHelper<typename Frame::FrameType>::SignalTypeNames) {
+      size += 1 + type_name.size();
     }
 
     return size;
@@ -189,8 +115,9 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
       ct::Max(std::array<std::size_t, sizeof...(Frames)>{
           FrameInfoResponseSize<Frames>()...});
 
-  static constexpr auto TxBufSize = std::max(
+  static constexpr auto MaxTxPayloadSize = std::max(
       {MaxFrameSize, ListFramesResponseSize(), MaxFrameInfoResponsesSize});
+  static constexpr auto TxBufSize = 11 + MaxTxPayloadSize;
 
  public:
   /**
@@ -225,6 +152,22 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
     return true;
   }
 
+  /**
+   * Sends a null frame over UART
+   * @return Whether the null frame was sent
+   */
+  bool SendNullFrame() noexcept {
+    auto current_command = Command::None;
+    if (pending_command.compare_exchange_strong(current_command,
+                                                Command::SendNullFrame,
+                                                std::memory_order::seq_cst)) {
+      TrySendFrame();
+      return true;
+    } else {
+      return false;
+    }
+  }
+
  private:
   void UartReceiveCallback(std::span<std::byte> data) {
     if (data.empty()) {
@@ -248,7 +191,7 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
 
     if (incoming_command != Command::None) {
       pending_command.store(incoming_command, std::memory_order::seq_cst);
-      TrySendNextFrame();
+      TrySendFrame();
     }
   }
 
@@ -286,6 +229,16 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
     case Command::DescribeFrame: DescribeFrame(); break;
     case Command::EnableFrame: EnableFrame(); break;
     case Command::DisableFrame: DisableFrame(); break;
+    case Command::SendNullFrame: HandleSendNullFrame(); break;
+    }
+  }
+
+  void HandleSendNullFrame() noexcept {
+    ct::BufferWriter buf_writer{tx_payload};
+    buf_writer.Write(NullFrameStartChar);
+    buf_writer.Write(NullFrameEndChar);
+    if (buf_writer.valid()) {
+      SendPayload(buf_writer.WrittenData());
     }
   }
 
@@ -303,7 +256,7 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
         frame_info{{std::make_tuple(
             static_cast<uint32_t>(Frames::FrameType::Id), Frames::Name)...}};
 
-    ct::BufferWriter buf_writer{tx_buffer};
+    ct::BufferWriter buf_writer{tx_payload};
     buf_writer.Write(ListFramesStartChar);
     buf_writer.Write(static_cast<uint32_t>(sizeof...(Frames)));
 
@@ -315,7 +268,7 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
     buf_writer.Write(ListFramesEndChar);
 
     if (buf_writer.valid()) {
-      uart.Write(buf_writer.WrittenData());
+      SendPayload(buf_writer.WrittenData());
     }
   }
 
@@ -334,7 +287,7 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
     // Handle command
     const auto generic_slots = generic_slot_pointers();
 
-    ct::BufferWriter w(tx_buffer);
+    ct::BufferWriter w(tx_payload);
     w.Write(DescribeFrameStartChar);
 
     bool found = false;
@@ -348,7 +301,7 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
     w.Write(DescribeFrameEndChar);
 
     if (found && w.valid()) {
-      uart.Write(w.WrittenData());
+      SendPayload(w.WrittenData());
     }
   };
 
@@ -377,12 +330,12 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
     }
 
     if (found) {
-      ct::BufferWriter w{tx_buffer};
+      ct::BufferWriter w{tx_payload};
       w.Write(EnableFrameStartChar);
       w.Write(EnableFrameEndChar);
 
       if (w.valid()) {
-        uart.Write(w.WrittenData());
+        SendPayload(w.WrittenData());
       }
     }
   }
@@ -412,12 +365,12 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
     }
 
     if (found) {
-      ct::BufferWriter w{tx_buffer};
+      ct::BufferWriter w{tx_payload};
       w.Write(DisableFrameStartChar);
       w.Write(DisableFrameEndChar);
 
       if (w.valid()) {
-        uart.Write(w.WrittenData());
+        SendPayload(w.WrittenData());
       }
     }
   }
@@ -429,21 +382,33 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
           // Calculate frame size
           constexpr auto FrameSize = 2 * sizeof(std::byte)
                                      + sizeof(typename FT::FrameIdType)
-                                     + FT::PayloadSize;
+                                     + 2 * sizeof(uint32_t) + FT::PayloadSize;
 
           // Write start character, stop character and frame ID
-          tx_buffer[0]             = SignalStartChar;
-          tx_buffer[FrameSize - 1] = SignalEndChar;
-          std::memcpy(&tx_buffer[1], &FT::Id, sizeof(FT::Id));
+          tx_payload[0]             = SignalStartChar;
+          tx_payload[FrameSize - 1] = SignalEndChar;
+          std::memcpy(&tx_payload[1], &FT::Id, sizeof(FT::Id));
+
+          // Write timestamp
+          uint32_t timestamp = std::chrono::duration_cast<
+                                   std::chrono::duration<uint32_t, std::milli>>(
+                                   C::TimeSinceBoot())
+                                   .count();
+          std::memcpy(&tx_payload[5], &timestamp, sizeof(timestamp));
+
+          // Write payload size
+          auto size = static_cast<uint32_t>(FT::PayloadSize);
+          std::memcpy(&tx_payload[9], &size, sizeof(size));
 
           // Write frame payload
           auto payload_buf =
-              std::span{&tx_buffer[sizeof(FT::Id) + 1], FT::PayloadSize};
+              std::span{&tx_payload[sizeof(FT::Id) + 2 * sizeof(uint32_t) + 1],
+                        FT::PayloadSize};
           EncodeSignals(data, payload_buf,
                         std::make_index_sequence<FT::NumSignals>());
 
           // Send data
-          uart.Write(std::span{tx_buffer.data(), FrameSize});
+          SendPayload(std::span{tx_payload.data(), FrameSize});
         });
   }
 
@@ -458,6 +423,19 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
   static void EncodeSignal(ST value, std::span<std::byte>& into) noexcept {
     std::memcpy(into.data(), &value, sizeof(value));
     into = into.subspan(sizeof(ST));
+  }
+
+  void SendPayload(std::span<std::byte> payload_view) {
+    ct::BufferWriter start_writer{std::span{tx_buffer}.subspan(0, 8)};
+    start_writer.Write(static_cast<uint32_t>(0xBBBBBBBB));
+    start_writer.Write(static_cast<uint32_t>(payload_view.size()));
+
+    ct::BufferWriter end_writer(
+        std::span{tx_buffer}.subspan(payload_view.size() + 8));
+    end_writer.Write(ct::Crc16(payload_view));
+    end_writer.Write(FrameEndChar);
+
+    uart.Write(std::span{tx_buffer}.subspan(0, payload_view.size() + 11));
   }
 
   [[nodiscard]] inline std::array<detail::GenericFrameSlot*, sizeof...(Frames)>
@@ -483,6 +461,7 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
 
   std::array<std::byte, 128>       rx_buffer{};
   std::array<std::byte, TxBufSize> tx_buffer{};
+  std::span<std::byte>             tx_payload{&tx_buffer[8], MaxTxPayloadSize};
 
   std::span<std::byte> rx_message_view{};
 

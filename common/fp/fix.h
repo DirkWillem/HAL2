@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <type_traits>
 
+#include <constexpr_tools/static_string.h>
+
 namespace fp {
 
 namespace detail {
@@ -60,6 +62,25 @@ template <bool S, unsigned W, unsigned F, int Q = -static_cast<int>(F)>
   requires((S && W >= (F + 1)) || (!S && W >= F)) && (W >= F)
 class Fix {
  public:
+  static consteval ct::StaticString<32> Describe() noexcept {
+    ct::StaticString<32> str{};
+
+    if constexpr (S) {
+      str.Append("sfix(");
+    } else {
+      str.Append("ufix(");
+    }
+
+    str.Append(W);
+    str.Append(", ");
+    str.Append(Q);
+    str.Append(")");
+
+    return str;
+  }
+
+  static constexpr auto Name = Describe();
+
   friend class Fix;
 
   template <bool Sl, unsigned Wl, unsigned Fl, int Ql, bool Sr, unsigned Wr,

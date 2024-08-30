@@ -6,6 +6,7 @@
 #include <fp/fix.h>
 
 using namespace testing;
+using std::operator""sv;
 
 using UQ8_8  = fp::UQ<8, 8>;
 using UQ1_15 = fp::UQ<1, 15>;
@@ -17,6 +18,10 @@ static_assert(std::is_same_v<UQ8_8::Storage, uint16_t>);
 static_assert(std::is_same_v<UQ1_15::Storage, uint16_t>);
 static_assert(std::is_same_v<UQ1_31::Storage, uint32_t>);
 static_assert(UQ8_8::Scale == 256);
+
+// - Descriptions
+static_assert(UQ8_8::Describe().view() == "ufix(16, -8)"sv);
+static_assert(UQ1_31::Describe().view() == "ufix(32, -31)"sv);
 
 // - Operators
 static_assert(std::is_same_v<

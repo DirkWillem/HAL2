@@ -54,7 +54,7 @@ struct Frame {
 
   static constexpr auto Id          = I;
   static constexpr auto NumSignals  = sizeof...(Sts);
-  static constexpr auto PayloadSize = (0 + ... + sizeof(Sts));
+  static constexpr auto PayloadSize = (0 + ... + sizeof(typename Sts::Type));
 };
 
 template <typename T>

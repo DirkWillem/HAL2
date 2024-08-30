@@ -186,4 +186,14 @@ concept ClockFrequencies = hal::ClockFrequencies<C> && requires(const C& cfs) {
 
 static_assert(ClockFrequencies<ClockConfig>);
 
+template <hal::ClockFrequencies auto CF>
+class SysTickClock {
+ public:
+  constexpr static ct::Duration auto TimeSinceBoot() noexcept {
+    constexpr auto systick_freq = CF.SysTickFrequency;
+
+    return HAL_GetTick() * systick_freq.Period();
+  }
+};
+
 }   // namespace stm32g4

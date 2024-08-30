@@ -26,6 +26,10 @@ set(HAL2_TEST_SRCS
         helpers/matchers.h
         helpers/proto_helpers.h
 
+        common/ct/test_crc.cpp
+        common/ct/test_math.cpp
+        common/ct/test_static_string.cpp
+
         common/fp/test_uq.cpp
 
         common/vrpc/uart_calculator_service.h
