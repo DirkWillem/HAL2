@@ -134,6 +134,8 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
     uart.Receive(rx_buffer);
   }
 
+  ~SbsUart() override = default;
+
   template <FrameType F>
     requires std::disjunction_v<std::is_same<F, Frames>...>
   /**

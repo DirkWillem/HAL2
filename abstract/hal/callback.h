@@ -8,7 +8,7 @@ namespace hal {
 template <typename... Args>
 class Callback {
  public:
-  virtual ~Callback() = default;
+  virtual ~Callback() noexcept = default;
 
   virtual void operator()(Args...) const noexcept = 0;
 };
@@ -18,7 +18,7 @@ class MethodCallback final : public Callback<Args...> {
   using MethodPtr = void (T::*)(Args...);
 
  public:
-  ~MethodCallback() final = default;
+  ~MethodCallback() noexcept final = default;
 
   MethodCallback(T* inst, MethodPtr ptr)
       : inst{inst}

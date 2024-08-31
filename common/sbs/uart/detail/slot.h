@@ -39,6 +39,8 @@ class FrameSlot<Frame<FId, Signals...>> : public GenericFrameSlot {
   FrameSlot()
       : GenericFrameSlot{static_cast<uint32_t>(FId)} {}
 
+  ~FrameSlot() override = default;
+
   [[nodiscard]] inline bool
   Write(const typename FrameType::SignalsTuple& values) noexcept {
     // Check if the slot is empty or ready
@@ -103,4 +105,4 @@ class FrameSlot<Frame<FId, Signals...>> : public GenericFrameSlot {
   typename FrameType::SignalsTuple data{};
 };
 
-}
+}   // namespace sbs::uart::detail

@@ -17,6 +17,8 @@ ToHalMasterDirection(const hal::SpiTransmissionType tt) noexcept {
   case hal::SpiTransmissionType::TxOnly: return SPI_DIRECTION_2LINES;
   case hal::SpiTransmissionType::RxOnly: return SPI_DIRECTION_2LINES_RXONLY;
   }
+
+  std::unreachable();
 }
 
 inline void EnableSpiClk(const SpiId id) noexcept {
