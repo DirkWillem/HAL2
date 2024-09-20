@@ -30,6 +30,7 @@ set(HAL2_TEST_SRCS
         common/ct/test_math.cpp
         common/ct/test_static_string.cpp
 
+        common/fp/test_q.cpp
         common/fp/test_uq.cpp
 
         common/vrpc/uart_calculator_service.h

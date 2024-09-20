@@ -78,6 +78,7 @@ function(add_stm32g4_hal VARIANT XMLFILE)
 
             stm32g4/clocks.cpp
             stm32g4/clocks.h
+            stm32g4/cordic.h
             stm32g4/dma.cpp
             stm32g4/dma.h
             stm32g4/i2c.cpp

@@ -4,6 +4,7 @@
 #include <type_traits>
 
 #include <constexpr_tools/static_string.h>
+#include <constexpr_tools/type_helpers.h>
 
 namespace fp {
 
@@ -83,35 +84,13 @@ class Fix {
 
   friend class Fix;
 
-  template <bool Sl, unsigned Wl, unsigned Fl, int Ql, bool Sr, unsigned Wr,
-            unsigned Fr, int Qr>
-  friend constexpr auto operator+(Fix<Sl, Wl, Fl, Ql> lhs,
-                                  Fix<Sr, Wr, Fr, Qr> rhs) noexcept;
-
-  template <bool Sl, unsigned Wl, unsigned Fl, int Ql, bool Sr, unsigned Wr,
-            unsigned Fr, int Qr>
-  friend constexpr auto operator-(Fix<Sl, Wl, Fl, Ql> lhs,
-                                  Fix<Sr, Wr, Fr, Qr> rhs) noexcept;
-
-  template <bool Sl, unsigned Wl, unsigned Fl, int Ql, bool Sr, unsigned Wr,
-            unsigned Fr, int Qr>
-  friend constexpr auto operator*(Fix<Sl, Wl, Fl, Ql> lhs,
-                                  Fix<Sr, Wr, Fr, Qr> rhs) noexcept;
-
-  template <bool Sl, unsigned Wl, unsigned Fl, int Ql, bool Sr, unsigned Wr,
-            unsigned Fr, int Qr>
-  friend constexpr auto operator/(Fix<Sl, Wl, Fl, Ql> lhs,
-                                  Fix<Sr, Wr, Fr, Qr> rhs) noexcept;
-
   using Storage                  = detail::IntN_t<S, W>;
   static constexpr auto WordBits = W;
   static constexpr auto FracBits = F;
   static constexpr auto Exponent = Q;
 
-  static constexpr Storage Scale = static_cast<Storage>(0b1)
-                                   << static_cast<unsigned>(Q > 0 ? Q : -Q);
-  static constexpr float Epsilon = Q > 0 ? static_cast<float>(Scale)
-                                         : 1.F / static_cast<float>(Scale);
+  static constexpr float Scale   = ct::Pow2(-Q);
+  static constexpr float Epsilon = ct::Pow2(Q);
 
   Fix() = default;
 
@@ -147,6 +126,7 @@ class Fix {
   }
 
   template <unsigned Wn, unsigned Fn, int Qn = -static_cast<int>(Fn)>
+    requires(Wn != W || Fn != F || Qn != Q)
   [[nodiscard]] constexpr Fix<S, Wn, Fn, Qn> As() const noexcept {
     using StorageOut = detail::IntN_t<S, Wn>;
 
@@ -172,20 +152,24 @@ class Fix {
     }
   }
 
-  [[nodiscard]] auto Reciprocal() const noexcept {
-    constexpr auto IntegerBits = W - F;
-    constexpr auto Fo          = std::max(IntegerBits, F);
-    constexpr auto Wo          = 2 * Fo;
-    constexpr auto DeltaQ      = Q + static_cast<int>(F);
-    constexpr auto Qo          = -static_cast<int>(Fo) - DeltaQ;
-    using StorageOut           = detail::IntN_t<S, Wo>;
+  template <unsigned Wn, unsigned Fn, int Qn = -static_cast<int>(Fn)>
+    requires(Wn == W && Fn == F && Qn == Q)
+  [[nodiscard]] constexpr Fix<S, Wn, Fn, Qn> As() const noexcept {
+    return *this;
+  }
 
+  [[nodiscard]] Fix<S, W, F, Q> Reciprocal() const noexcept {
     // Shift value to [0.5, 1] range
-    constexpr auto OneRaw  = 1 << Fo;
-    constexpr auto HalfRaw = 1 << (Fo - 1U);
+    constexpr auto OneRaw  = 1 << F;
+    constexpr auto HalfRaw = 1 << (F - 1U);
 
-    auto ar    = static_cast<StorageOut>(val << (Fo - F));
-    int  shift = 0;
+    auto       ar     = static_cast<Storage>(val << (F - F));
+    const auto negate = ar < 0;
+    int        shift  = 0;
+
+    if (negate) {
+      ar = -ar;
+    }
 
     while (ar > OneRaw || ar < HalfRaw) {
       if (ar > OneRaw) {
@@ -198,14 +182,13 @@ class Fix {
     }
 
     // Perform Newton-Raphson divison
-    const auto a   = Fix<S, Wo, Fo, Q>{ar};
+    const auto a   = Fix<S, W, F, Q>{ar};
     auto       xi  = a;
-    const auto Two = Fix<S, Wo, Fo, Q>{2 << Fo};
+    const auto Two = Fix<S, W, F, Q>{2 << F};
 
     for (int i = 0; i < 10; i++) {
       const decltype(xi) xi_new =
-          (xi * (Two - (xi * a).template As<Wo, Fo, Q>()))
-              .template As<Wo, Fo, Q>();
+          (xi * (Two - (xi * a).template As<W, F, Q>())).template As<W, F, Q>();
 
       if (xi_new.raw() == xi.raw()) {
         break;
@@ -221,7 +204,11 @@ class Fix {
       result_raw >>= static_cast<unsigned>(-shift);
     }
 
-    return Fix<S, Wo, Fo, Qo>{result_raw};
+    if (negate) {
+      result_raw = -result_raw;
+    }
+
+    return Fix<S, W, F, Q>{result_raw};
   }
 
   [[nodiscard]] static constexpr auto Approximate(float v) noexcept {
@@ -260,8 +247,23 @@ constexpr auto operator+(Fix<Sl, Wl, Fl, Ql> lhs,
   using Storage = detail::IntN_t<So, Wo>;
 
   return Fix<So, Wo, Fo, Qo>{static_cast<Storage>(
-      static_cast<Storage>(lhs.template As<Wo, Fo, Qo>().val)
-      + static_cast<Storage>(rhs.template As<Wo, Fo, Qo>().val))};
+      static_cast<Storage>(lhs.template As<Wo, Fo, Qo>().raw())
+      + static_cast<Storage>(rhs.template As<Wo, Fo, Qo>().raw()))};
+}
+
+template <bool Sl, unsigned Wl, unsigned Fl, int Ql, ct::Integer R>
+constexpr auto operator+(Fix<Sl, Wl, Fl, Ql> lhs, R rhs) noexcept {
+  constexpr auto So = Sl || std::is_signed_v<R>;
+  constexpr auto Qo = Ql;
+  constexpr auto Wo = Wl;
+  constexpr auto Fo = Fl;
+
+  return lhs.template As<Wo, Fo, Qo>() + Fix<So, Wo, Fo, Qo>::FromInt(rhs);
+}
+
+template <ct::Integer L, bool Sr, unsigned Wr, unsigned Fr, int Qr>
+constexpr auto operator+(L lhs, Fix<Sr, Wr, Fr, Qr> rhs) noexcept {
+  return rhs + lhs;
 }
 
 template <bool Sl, unsigned Wl, unsigned Fl, int Ql, bool Sr, unsigned Wr,
@@ -276,8 +278,31 @@ constexpr auto operator-(Fix<Sl, Wl, Fl, Ql> lhs,
   using Storage = detail::IntN_t<So, Wo>;
 
   return Fix<So, Wo, Fo, Qo>{static_cast<Storage>(
-      static_cast<Storage>(lhs.template As<Wo, Fo, Qo>().val)
-      - static_cast<Storage>(rhs.template As<Wo, Fo, Qo>().val))};
+      static_cast<Storage>(lhs.template As<Wo, Fo, Qo>().raw())
+      - static_cast<Storage>(rhs.template As<Wo, Fo, Qo>().raw()))};
+}
+
+template <unsigned Wl, unsigned Fl, int Ql>
+constexpr auto operator-(Fix<true, Wl, Fl, Ql> rhs) noexcept {
+  return Fix<true, Wl, Fl, Ql>(-rhs.raw());
+}
+
+template <ct::Integer L, bool Sr, unsigned Wr, unsigned Fr, int Qr>
+constexpr auto operator*(L lhs, Fix<Sr, Wr, Fr, Qr> rhs) noexcept {
+  return rhs * lhs;
+}
+
+template <bool Sl, unsigned Wl, unsigned Fl, int Ql, ct::Integer R>
+constexpr auto operator*(Fix<Sl, Wl, Fl, Ql> lhs, R rhs) noexcept {
+  constexpr auto So = Sl || std::is_signed_v<R>;
+  constexpr auto Qo = Ql;
+  constexpr auto Wo = Wl;
+  constexpr auto Fo = Fl;
+
+  using Storage = detail::IntN_t<So, Wo>;
+
+  return Fix<So, Wo, Fo, Qo>{static_cast<Storage>(
+      static_cast<Storage>(lhs.template As<Wo, Fo, Qo>().raw()) * rhs)};
 }
 
 template <bool Sl, unsigned Wl, unsigned Fl, int Ql, bool Sr, unsigned Wr,
@@ -285,14 +310,18 @@ template <bool Sl, unsigned Wl, unsigned Fl, int Ql, bool Sr, unsigned Wr,
 constexpr auto operator*(Fix<Sl, Wl, Fl, Ql> lhs,
                          Fix<Sr, Wr, Fr, Qr> rhs) noexcept {
   constexpr auto So = Sl || Sr;
-  constexpr auto Wo = Wl + Wr;
-  constexpr auto Fo = Fl + Fr;
-  constexpr auto Qo = Ql + Qr;
+  constexpr auto Wo = std::max(Wl, Wr);
+  constexpr auto Fo = std::max(Fl, Fr);
+  constexpr auto Qo = std::min(Ql, Qr);
+  constexpr auto DQ = (Ql + Qr) - Qo;
 
-  using Storage = detail::IntN_t<So, Wo>;
+  using Storage    = detail::IntN_t<So, Wl + Wr>;
+  using StorageOut = detail::IntN_t<So, Wo>;
 
-  return Fix<So, Wo, Fo, Qo>{static_cast<Storage>(
-      static_cast<Storage>(lhs.val) * static_cast<Storage>(rhs.val))};
+  return Fix<So, Wo, Fo, Qo>{static_cast<StorageOut>(
+      (static_cast<Storage>(lhs.template As<Wo, Fo, Ql>().raw())
+       * static_cast<Storage>(rhs.template As<Wo, Fo, Qr>().raw()))
+      >> static_cast<unsigned>(-DQ))};
 }
 
 template <bool Sl, unsigned Wl, unsigned Fl, int Ql, bool Sr, unsigned Wr,
@@ -304,6 +333,10 @@ constexpr auto operator/(Fix<Sl, Wl, Fl, Ql> lhs,
 
 template <unsigned M, unsigned N>
 using UQ = Fix<false, M + N, N>;
+
+template <unsigned M, unsigned N>
+  requires(M >= 1)
+using Q = Fix<true, M + N, N>;
 
 template <typename T>
 struct is_fixed_point : std::false_type {};
@@ -317,9 +350,28 @@ inline constexpr bool is_fixed_point_v = is_fixed_point<T>::value;
 template <typename T>
 concept FixedPointType = is_fixed_point_v<T>;
 
-}   // namespace fp
+namespace literals {
 
-[[nodiscard]] constexpr fp::UQ<1, 15>
+[[nodiscard]] constexpr UQ<1, 15>
 operator""_uq1_15(unsigned long long int v) noexcept {
   return fp::UQ<1, 15>::FromInt(static_cast<uint16_t>(v));
 }
+
+[[nodiscard]] constexpr UQ<1, 31>
+operator""_uq1_31(unsigned long long int v) noexcept {
+  return fp::UQ<1, 31>::FromInt(static_cast<uint32_t>(v));
+}
+
+[[nodiscard]] constexpr Q<1, 15>
+operator""_u1_15(unsigned long long int v) noexcept {
+  return fp::Q<1, 15>::FromInt(static_cast<int16_t>(v));
+}
+
+[[nodiscard]] constexpr Q<1, 31>
+operator""_u1_31(unsigned long long int v) noexcept {
+  return fp::Q<1, 31>::FromInt(static_cast<int32_t>(v));
+}
+
+}   // namespace literals
+
+}   // namespace fp

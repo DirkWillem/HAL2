@@ -29,3 +29,22 @@ TEST(ConstexprMath, NumDigitsBase10) {
   ASSERT_EQ(NumDigits<uint16_t>(std::numeric_limits<uint16_t>::max(), 10), 5);
 }
 
+TEST(ConstexprMath, Pow2) {
+  using namespace ct;
+
+  // Edge cases
+  ASSERT_FLOAT_EQ(Pow2(0), 1.F);
+  ASSERT_FLOAT_EQ(Pow2(1), 2.F);
+
+  // Positive exponent
+  ASSERT_FLOAT_EQ(Pow2(2), 4.F);
+  ASSERT_FLOAT_EQ(Pow2(4), 16.F);
+  ASSERT_FLOAT_EQ(Pow2(9), 512.F);
+  ASSERT_FLOAT_EQ(Pow2(31), 2147483648.F);
+
+  // Negative exponent
+  ASSERT_FLOAT_EQ(Pow2(-1), 0.5F);
+  ASSERT_FLOAT_EQ(Pow2(-3), 0.125F);
+  ASSERT_FLOAT_EQ(Pow2(-16), 1.52587890625e-05F);
+}
+

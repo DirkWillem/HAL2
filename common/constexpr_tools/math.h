@@ -52,4 +52,16 @@ template <std::integral T>
   return n_digits;
 }
 
+constexpr float Pow2(int exp) {
+  if (exp > 0) {
+    const auto Res = static_cast<uint64_t>(0b1U) << static_cast<unsigned>(exp);
+    return static_cast<float>(Res);
+  } else if (exp < 0) {
+    const auto Div = static_cast<uint64_t>(0b1U) << static_cast<unsigned>(-exp);
+    return 1.F / static_cast<float>(Div);
+  } else {
+    return 1.F;
+  }
+}
+
 }   // namespace ct
