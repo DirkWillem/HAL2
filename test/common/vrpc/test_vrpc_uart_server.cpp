@@ -11,8 +11,6 @@
 #include <doubles/hal/mock_system.h>
 #include <doubles/hal/mock_uart.h>
 
-#ifdef false
-
 using namespace testing;
 
 struct ServiceA {
@@ -35,7 +33,7 @@ struct ServiceB {
                hal::Callback<>&));
 };
 
-class VrpcUart : public Test {
+class VrpcUartServer : public Test {
  public:
   void SetUp() final {
     uart = std::make_unique<NiceMock<doubles::MockAsyncUart<>>>();
@@ -44,7 +42,7 @@ class VrpcUart : public Test {
     svc_a = std::make_unique<ServiceA>();
     svc_b = std::make_unique<ServiceB>();
 
-    vrpc_uart = std::make_unique<vrpc::uart::VrpcUart<
+    vrpc_uart = std::make_unique<vrpc::uart::VrpcUartServer<
         doubles::MockAsyncUart<>, doubles::MockCriticalSectionInterface,
         ServiceA, ServiceB>>(*uart, *svc_a, *svc_b);
   }
@@ -62,17 +60,17 @@ class VrpcUart : public Test {
   std::unique_ptr<ServiceB> svc_b{};
 
   std::unique_ptr<doubles::MockAsyncUart<>> uart{};
-  std::unique_ptr<vrpc::uart::VrpcUart<doubles::MockAsyncUart<>,
+  std::unique_ptr<vrpc::uart::VrpcUartServer<doubles::MockAsyncUart<>,
                                        doubles::MockCriticalSectionInterface,
                                        ServiceA, ServiceB>>
       vrpc_uart{};
 };
 
-TEST_F(VrpcUart, HasNoPendingRequestByDefault) {
+TEST_F(VrpcUartServer, HasNoPendingRequestByDefault) {
   ASSERT_FALSE(vrpc_uart->has_pending_requests());
 }
 
-TEST_F(VrpcUart, ReceivePartialCommand) {
+TEST_F(VrpcUartServer, ReceivePartialCommand) {
   constexpr auto WrittenBytes = 12;
 
   EXPECT_CALL(uart->rx_spy, Receive(SizeIs(vrpc_uart->BufSize - WrittenBytes)));
@@ -90,7 +88,7 @@ TEST_F(VrpcUart, ReceivePartialCommand) {
   ASSERT_FALSE(vrpc_uart->has_pending_requests());
 }
 
-TEST_F(VrpcUart, ReceiveCommand) {
+TEST_F(VrpcUartServer, ReceiveCommand) {
   EXPECT_CALL(uart->rx_spy, Receive(SizeIs(vrpc_uart->BufSize)));
 
   SendRxData([](auto& bb) {
@@ -108,7 +106,7 @@ TEST_F(VrpcUart, ReceiveCommand) {
   ASSERT_TRUE(vrpc_uart->has_pending_requests());
 }
 
-TEST_F(VrpcUart, ReceiveTwoCommandsAtOnce) {
+TEST_F(VrpcUartServer, ReceiveTwoCommandsAtOnce) {
   // No receive should be called, because there are no buffers left
   EXPECT_CALL(uart->rx_spy, Receive).Times(0);
 
@@ -138,7 +136,7 @@ TEST_F(VrpcUart, ReceiveTwoCommandsAtOnce) {
   ASSERT_TRUE(vrpc_uart->has_pending_requests());
 }
 
-TEST_F(VrpcUart, ReceiveTwoCommandsConsecutively) {
+TEST_F(VrpcUartServer, ReceiveTwoCommandsConsecutively) {
   // No receive should be called, because there are no buffers left
   EXPECT_CALL(uart->rx_spy, Receive).Times(1);
 
@@ -168,7 +166,7 @@ TEST_F(VrpcUart, ReceiveTwoCommandsConsecutively) {
   ASSERT_TRUE(vrpc_uart->has_pending_requests());
 }
 
-TEST_F(VrpcUart, InvokeService) {
+TEST_F(VrpcUartServer, InvokeService) {
   EXPECT_CALL(*svc_a, HandleCommand(0x10, _, SizeIs(128), _));
 
   SendRxData([](auto& bb) {
@@ -186,5 +184,3 @@ TEST_F(VrpcUart, InvokeService) {
   vrpc_uart->HandlePendingRequests();
   ASSERT_FALSE(vrpc_uart->has_pending_requests());
 }
-
-#endif

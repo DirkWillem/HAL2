@@ -1,0 +1,44 @@
+syntax = "proto3";
+
+package vrpc.server_index;
+
+import "vrpc_options.proto";
+
+
+message GetServiceCountRequest {}
+
+message GetServiceCountResponse {
+  uint32 count = 1;
+}
+
+message GetServiceInfoRequest {
+  uint32 index = 1;
+}
+
+enum GetServiceInfoError {
+  GET_SERVICE_INFO_ERROR_NONE = 0;
+  GET_SERVICE_INFO_ERROR_INDEX_OUT_OF_BOUNDS = 1;
+}
+
+message GetServiceInfoResponse {
+  GetServiceInfoError error = 1;
+  uint32 service_id = 2;
+}
+
+service ServerIndex {
+  option (vrpc_svcopt) = {
+    id: 1
+  };
+
+  rpc GetServiceCount (GetServiceCountRequest) returns (GetServiceCountRequest) {
+    option (vrpc_methodopt) = {
+      id: 1
+    };
+  }
+
+  rpc GetServiceInfo (GetServiceInfoRequest) returns (GetServiceInfoResponse) {
+    option (vrpc_methodopt) = {
+      id: 2
+    };
+  }
+}
