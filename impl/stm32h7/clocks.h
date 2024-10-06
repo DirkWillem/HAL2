@@ -277,8 +277,8 @@ inline constexpr PllsSettings DefaultPllSettings{
     .pll1 =
         {
             .enable = true,
-            .m      = 4,
-            .n      = 60,
+            .m      =5,
+            .n      = 48,
             .p      = 2,
             .q      = 5,
             .r      = 2,
@@ -289,11 +289,11 @@ inline constexpr PllsSettings DefaultPllSettings{
 inline constexpr SysClkSource        DefaultSysClkSource = SysClkSource::Pll;
 inline constexpr SystemClockSettings DefaultSystemClockSettings{
     .d1_core_prescaler      = 1,
-    .d1_ahb_prescaler       = 2,
-    .d1_apb3_prescaler      = 2,
-    .d2_apb1_prescaler      = 2,
-    .d2_apb2_prescaler      = 2,
-    .d3_apb4_prescaler      = 2,
+    .d1_ahb_prescaler       = 1,
+    .d1_apb3_prescaler      = 1,
+    .d2_apb1_prescaler      = 1,
+    .d2_apb2_prescaler      = 1,
+    .d3_apb4_prescaler      = 1,
     .cpu1_systick_prescaler = 1,
     .cpu2_systick_prescaler = 1,
 };
@@ -330,6 +330,10 @@ struct ClockSettings {
   }
 
   [[nodiscard]] consteval bool Validate() const noexcept {
+    // Unimplemented features
+    assert(("PLL2/PLL3 configuration is not yet implemented",
+            !pll.pll2.enable && !pll.pll3.enable));
+
     return system_clock_settings.Validate(
         SysClkSourceClockFrequency().As<ct::Hz>());
   }
@@ -339,7 +343,7 @@ inline constexpr ClockSettings DefaultClockSettings{
     .f_hse                 = (25_MHz).As<ct::Hz>(),
     .pll_source            = PllSource::Hsi,
     .pll                   = DefaultPllSettings,
-    .sysclk_source         = SysClkSource::Pll,
+    .sysclk_source         = SysClkSource::Hsi,
     .system_clock_settings = DefaultSystemClockSettings,
 };
 
@@ -566,11 +570,6 @@ bool ConfigureClocks() noexcept {
   return true;
 }   // namespace stm32h7
 
-// Output P of PLL1 under default settings should be 480 MHz
-static_assert(DefaultPllSettings.pll1.OutputP(HsiFrequency).As<ct::Hz>()
-                  == (480_MHz).As<ct::Hz>(),
-              "Default PLL settings should result in PLL1P = 480MHz");
-
-static_assert(DefaultSystemClockSettings.Validate(480_MHz));
+static_assert(DefaultSystemClockSettings.Validate(64_MHz));
 
 }   // namespace stm32h7
