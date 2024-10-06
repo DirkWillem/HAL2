@@ -71,9 +71,19 @@ class Freq {
     return F{static_cast<typename F::Rep>((count * mul::num) / (mul::den))};
   }
 
-  /** Three-way comparison operator */
-  [[nodiscard]] constexpr auto operator<=>(Freq<R, B> rhs) const noexcept {
-    return count <=> rhs.count;
+  //  /** Three-way comparison operator */
+  //  [[nodiscard]] constexpr std::strong_ordering operator<=>(Freq<R, B> rhs)
+  //  const noexcept {
+  //    return count <=> rhs.count;
+  //  }
+
+  [[nodiscard]] constexpr std::strong_ordering
+  operator<=>(Frequency auto rhs) const noexcept {
+    return count <=> rhs.template As<Freq<R, B>>().count;
+  }
+
+  [[nodiscard]] constexpr auto operator==(Freq<R, B> rhs) const noexcept {
+    return (*this <=> rhs) == std::strong_ordering::equal;
   }
 
   /** Compound addition operator */

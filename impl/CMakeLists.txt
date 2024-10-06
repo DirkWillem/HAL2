@@ -101,6 +101,48 @@ function(add_stm32g4_hal VARIANT XMLFILE)
             "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}")
 endfunction()
 
+function(add_stm32h7_hal VARIANT XMLFILE)
+    # Add generated code
+    add_generated_file(
+            stm32h7
+            "${VARIANT}"
+            "uart-pin-mapping"
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h7/generated/${VARIANT}/stm32h7/mappings/uart_pin_mapping.h")
+    add_generated_file(
+            stm32h7
+            "${VARIANT}"
+            "spi-i2s-pin-mapping"
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h7/generated/${VARIANT}/stm32h7/mappings/spi_i2s_pin_mapping.h")
+    add_generated_file(
+            stm32h7
+            "${VARIANT}"
+            "i2c-pin-mapping"
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h7/generated/${VARIANT}/stm32h7/mappings/i2c_pin_mapping.h")
+
+    # Add library
+    add_library("${VARIANT}_hal"
+            "stm32h7/generated/${VARIANT}/stm32h7/mappings/uart_pin_mapping.h"
+            "stm32h7/generated/${VARIANT}/stm32h7/mappings/spi_i2s_pin_mapping.h"
+            "stm32h7/generated/${VARIANT}/stm32h7/mappings/i2c_pin_mapping.h"
+
+            stm32h7/boot.cpp
+            stm32h7/boot.h
+            stm32h7/clocks.h
+            stm32h7/core.h
+            stm32h7/peripheral_ids.h
+            stm32h7/pin.cpp
+            stm32h7/pin.h
+    )
+
+    target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor")
+    target_include_directories("${VARIANT}_hal" PUBLIC
+            "${CMAKE_CURRENT_LIST_DIR}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h7/generated/${VARIANT}")
+endfunction()
+
 
 if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
     add_stm32g0_hal(stm32g0b1 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G0B1R(B-C-E)Tx.xml")
@@ -108,4 +150,12 @@ endif()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m4")
     add_stm32g4_hal(stm32g474 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G474R(B-C-E)Tx.xml")
+
+    add_multicore_linkopts(stm32h755 cm4)
+    add_stm32h7_hal(stm32h755 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32H755ZITx.xml")
+endif()
+
+if ("${TARGET}" STREQUAL "arm-cortex-m7")
+    add_multicore_linkopts(stm32h755 cm7)
+    add_stm32h7_hal(stm32h755 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32H755ZITx.xml")
 endif()

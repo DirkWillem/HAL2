@@ -22,4 +22,12 @@ namespace ct {
   return a != b;
 }
 
+template<typename T, auto... Values>
+concept ComparableToAll = (... && std::equality_comparable_with<decltype(Values), T>);
+
+template<auto... Values>
+[[nodiscard]] constexpr bool IsOneOf(ComparableToAll<Values...> auto value) noexcept {
+  return (... || (value == Values));
+}
+
 }   // namespace ct

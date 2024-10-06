@@ -19,3 +19,9 @@
 [submodule "common/vrpc/vendor/nanopb"]
 	path = common/vrpc/vendor/nanopb
 	url = git@github.com:nanopb/nanopb.git
+[submodule "vendor/cmsis_device_h7"]
+	path = vendor/stm32h7xx_device
+	url = git@github.com:STMicroelectronics/cmsis_device_h7.git
+[submodule "vendor/stm32h7xx_hal"]
+	path = vendor/stm32h7xx_hal
+	url = git@github.com:STMicroelectronics/stm32h7xx_hal_driver.git
