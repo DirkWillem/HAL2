@@ -277,7 +277,7 @@ inline constexpr PllsSettings DefaultPllSettings{
     .pll1 =
         {
             .enable = true,
-            .m      =5,
+            .m      = 5,
             .n      = 48,
             .p      = 2,
             .q      = 5,
@@ -416,8 +416,8 @@ GetPllVcoRange(ct::Frequency auto vco_freq) noexcept {
   std::unreachable();
 }
 
-[[nodiscard]] consteval uint32_t GetShiftedPllVcoRange(Pll         pll,
-                                                       PllVcoRange range) {
+[[nodiscard]] consteval uint32_t
+GetShiftedPllVcoRange(Pll pll, PllVcoRange range) noexcept {
   switch (pll) {
   case Pll::Pll1:
     return static_cast<uint32_t>(range) << RCC_PLLCFGR_PLL1VCOSEL_Pos;
@@ -430,7 +430,7 @@ GetPllVcoRange(ct::Frequency auto vco_freq) noexcept {
   std::unreachable();
 }
 
-[[nodiscard]] consteval uint32_t GetSysClkDivider(uint32_t div) {
+[[nodiscard]] consteval uint32_t GetSysClkDivider(uint32_t div) noexcept {
   return ct::StaticMap<int, uint32_t, 9>(
       div, {{
                std::make_pair(1, RCC_SYSCLK_DIV1),
@@ -445,7 +445,7 @@ GetPllVcoRange(ct::Frequency auto vco_freq) noexcept {
            }});
 }
 
-[[nodiscard]] consteval uint32_t GetAhbDivider(uint32_t div) {
+[[nodiscard]] consteval uint32_t GetAhbDivider(uint32_t div) noexcept {
   return ct::StaticMap<int, uint32_t, 9>(
       div, {{
                std::make_pair(1, RCC_HCLK_DIV1),
@@ -460,7 +460,7 @@ GetPllVcoRange(ct::Frequency auto vco_freq) noexcept {
            }});
 }
 
-[[nodiscard]] consteval uint32_t GetApb1Divider(uint32_t div) {
+[[nodiscard]] consteval uint32_t GetApb1Divider(uint32_t div) noexcept {
   return ct::StaticMap<int, uint32_t, 5>(div,
                                          {{
                                              std::make_pair(1, RCC_APB1_DIV1),
@@ -471,7 +471,7 @@ GetPllVcoRange(ct::Frequency auto vco_freq) noexcept {
                                          }});
 }
 
-[[nodiscard]] consteval uint32_t GetApb2Divider(uint32_t div) {
+[[nodiscard]] consteval uint32_t GetApb2Divider(uint32_t div) noexcept {
   return ct::StaticMap<int, uint32_t, 5>(div,
                                          {{
                                              std::make_pair(1, RCC_APB2_DIV1),
@@ -482,7 +482,7 @@ GetPllVcoRange(ct::Frequency auto vco_freq) noexcept {
                                          }});
 }
 
-[[nodiscard]] consteval uint32_t GetApb3Divider(uint32_t div) {
+[[nodiscard]] consteval uint32_t GetApb3Divider(uint32_t div) noexcept {
   return ct::StaticMap<int, uint32_t, 5>(div,
                                          {{
                                              std::make_pair(1, RCC_APB3_DIV1),
@@ -493,7 +493,7 @@ GetPllVcoRange(ct::Frequency auto vco_freq) noexcept {
                                          }});
 }
 
-[[nodiscard]] consteval uint32_t GetApb4Divider(uint32_t div) {
+[[nodiscard]] consteval uint32_t GetApb4Divider(uint32_t div) noexcept {
   return ct::StaticMap<int, uint32_t, 5>(div,
                                          {{
                                              std::make_pair(1, RCC_APB4_DIV1),

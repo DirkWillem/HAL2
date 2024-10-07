@@ -34,7 +34,7 @@ WakeUpCortexM4(HardwareSemaphore<BootSemId>& hsem,
   hsem.NotifyOtherCore();
 
   uint32_t n_cycles = 0;
-  while ((__HAL_RCC_GET_FLAG(RCC_FLAG_D2CKRDY) != RESET)) {
+  while ((__HAL_RCC_GET_FLAG(RCC_FLAG_D2CKRDY) == RESET)) {
     if (timeout_cycles.has_value()) {
       n_cycles++;
       if (n_cycles >= *timeout_cycles) {
