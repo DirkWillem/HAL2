@@ -1,6 +1,7 @@
 #include <stm32h7xx_hal.h>
 
 #include <stm32h7/dma.h>
+#include <stm32h7/spi.h>
 #include <stm32h7/peripheral_ids.h>
 
 extern "C" {
