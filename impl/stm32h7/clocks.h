@@ -28,7 +28,7 @@ inline constexpr auto HsiFrequency  = 64_MHz;
 inline constexpr auto Rc48Frequency = 48_MHz;
 inline constexpr auto CsiFrequency  = 4_MHz;
 
-enum class PllSource {
+enum class PllSource : uint32_t {
   Hsi = RCC_PLLSOURCE_HSI,
   Csi = RCC_PLLSOURCE_CSI,
   Hse = RCC_PLLSOURCE_HSE
@@ -102,7 +102,7 @@ struct PllsSettings {
   PllSettings pll3;
 };
 
-enum class SysClkSource {
+enum class SysClkSource : uint32_t {
   Hsi = RCC_SYSCLKSOURCE_HSI,
   Csi = RCC_SYSCLKSOURCE_CSI,
   Hse = RCC_SYSCLKSOURCE_HSE,
@@ -125,8 +125,8 @@ struct SystemClockSettings {
   /** D3 domain APB4 prescaler (D3PPRE) */
   uint32_t d3_apb4_prescaler;
 
-  uint32_t cpu1_systick_prescaler;
-  uint32_t cpu2_systick_prescaler;
+  uint32_t cpu1_systick_prescaler = 1;
+  uint32_t cpu2_systick_prescaler = 1;
 
   [[nodiscard]] consteval bool
   Validate(ct::Frequency auto sysclk) const noexcept {
@@ -298,12 +298,58 @@ inline constexpr SystemClockSettings DefaultSystemClockSettings{
     .cpu2_systick_prescaler = 1,
 };
 
+enum class PerClkSource : uint32_t {
+  Hsi = RCC_CLKPSOURCE_HSI,
+  Csi = RCC_CLKPSOURCE_CSI,
+  Hse = RCC_CLKPSOURCE_HSE,
+};
+
+enum class Spi123ClkSource : uint32_t {
+  Pll1Q   = LL_RCC_SPI123_CLKSOURCE_PLL1Q,
+  Pll2P   = LL_RCC_SPI123_CLKSOURCE_PLL2P,
+  Pll3P   = LL_RCC_SPI123_CLKSOURCE_PLL3P,
+  I2sCkIn = LL_RCC_SPI123_CLKSOURCE_I2S_CKIN,
+  PerCk   = LL_RCC_SPI123_CLKSOURCE_CLKP,
+};
+
+enum class Spi45ClkSource : uint32_t {
+  Pclk2 = LL_RCC_SPI45_CLKSOURCE_PCLK2,
+  Pll2Q = LL_RCC_SPI45_CLKSOURCE_PLL2Q,
+  Pll3R = LL_RCC_SPI45_CLKSOURCE_PLL3Q,
+  Hsi   = LL_RCC_SPI45_CLKSOURCE_HSI,
+  Csi   = LL_RCC_SPI45_CLKSOURCE_CSI,
+  Hse   = LL_RCC_SPI45_CLKSOURCE_HSE,
+};
+
+enum class Spi6ClkSource : uint32_t {
+  Pclk4 = LL_RCC_SPI6_CLKSOURCE_PCLK4,
+  Pll2Q = LL_RCC_SPI6_CLKSOURCE_PLL2Q,
+  Pll3Q = LL_RCC_SPI6_CLKSOURCE_PLL3Q,
+  Hsi   = LL_RCC_SPI6_CLKSOURCE_HSI,
+  Csi   = LL_RCC_SPI6_CLKSOURCE_CSI,
+  Hse   = LL_RCC_SPI6_CLKSOURCE_HSE,
+};
+
+inline constexpr auto DefaultPerClkSource    = PerClkSource::Hsi;
+inline constexpr auto DefaultSpi123ClkSource = Spi123ClkSource::Pll1Q;
+inline constexpr auto DefaultSpi45ClkSource  = Spi45ClkSource::Pclk2;
+inline constexpr auto DefaultSpi6ClkSource   = Spi6ClkSource::Pclk4;
+
+struct PeripheralSourceClocks {
+  Spi123ClkSource spi123 = DefaultSpi123ClkSource;
+  Spi45ClkSource  spi45  = DefaultSpi45ClkSource;
+  Spi6ClkSource   spi6   = DefaultSpi6ClkSource;
+};
+
 struct ClockSettings {
   ct::hertz           f_hse;
-  PllSource           pll_source;
+  PllSource           pll_source = DefaultPllSource;
   PllsSettings        pll;
-  SysClkSource        sysclk_source;
+  SysClkSource        sysclk_source = DefaultSysClkSource;
   SystemClockSettings system_clock_settings;
+
+  PerClkSource           per_clk_source = DefaultPerClkSource;
+  PeripheralSourceClocks peripherals    = {};
 
   [[nodiscard]] consteval ct::Frequency auto
   PllSourceClockFrequency() const noexcept {
@@ -329,10 +375,92 @@ struct ClockSettings {
     std::unreachable();
   }
 
+  [[nodiscard]] consteval ct::Frequency auto
+  PerClockFrequency() const noexcept {
+    switch (per_clk_source) {
+    case PerClkSource::Hsi: return HsiFrequency.As<ct::Hz>();
+    case PerClkSource::Csi: return CsiFrequency.As<ct::Hz>();
+    case PerClkSource::Hse: return f_hse;
+    }
+
+    std::unreachable();
+  }
+
+  /**
+   * Returns the source clock frequency for the given SPI instance
+   * @param spi SPI instance
+   * @return Source clock frequency for the given SPI instance
+   */
+  [[nodiscard]] consteval ct::Frequency auto
+  PeripheralSourceClockFrequency(SpiId spi) const noexcept {
+    const ct::Frequency auto pll_src    = PllSourceClockFrequency();
+    const ct::Frequency auto sysclk_src = SysClkSourceClockFrequency();
+
+    switch (spi) {
+    case SpiId::Spi1: [[fallthrough]];
+    case SpiId::Spi2: [[fallthrough]];
+    case SpiId::Spi3:
+      switch (peripherals.spi123) {
+      case Spi123ClkSource::Pll1Q: return pll.pll1.OutputQ(pll_src);
+      case Spi123ClkSource::Pll2P:
+        assert(("PLL2 must be enabled to use PLL2P as source clock",
+                pll.pll2.enable));
+        return pll.pll2.OutputP(pll_src);
+      case Spi123ClkSource::Pll3P:
+        assert(("PLL3 must be enabled to use PLL3P as source clock",
+                pll.pll3.enable));
+        return pll.pll3.OutputP(pll_src);
+      case Spi123ClkSource::I2sCkIn: assert(("Not implemented yet", false));
+      case Spi123ClkSource::PerCk: return PerClockFrequency();
+      }
+
+      std::unreachable();
+    case SpiId::Spi4: [[fallthrough]];
+    case SpiId::Spi5:
+      switch (peripherals.spi45) {
+      case Spi45ClkSource::Pclk2:
+        return system_clock_settings.Apb2PeripheralsClockFrequency(sysclk_src);
+      case Spi45ClkSource::Pll2Q:
+        assert(("PLL2 must be enabled to use PLL2Q as source clock",
+                pll.pll2.enable));
+        return pll.pll2.OutputQ(pll_src);
+      case Spi45ClkSource::Pll3R:
+        break;
+        assert(("PLL3 must be enabled to use PLL3Q as source clock",
+                pll.pll3.enable));
+        return pll.pll3.OutputQ(pll_src);
+      case Spi45ClkSource::Hsi: return HsiFrequency.As<ct::Hz>();
+      case Spi45ClkSource::Csi: return CsiFrequency.As<ct::Hz>();
+      case Spi45ClkSource::Hse: return f_hse;
+      }
+
+      std::unreachable();
+    case SpiId::Spi6:
+      switch (peripherals.spi6) {
+      case Spi6ClkSource::Pclk4:
+        return system_clock_settings.Apb4PeripheralsClockFrequency(sysclk_src);
+      case Spi6ClkSource::Pll2Q:
+        assert(("PLL2 must be enabled to use PLL2Q as source clock",
+                pll.pll2.enable));
+        return pll.pll2.OutputQ(pll_src);
+      case Spi6ClkSource::Pll3Q:
+        assert(("PLL3 must be enabled to use PLL3RQas source clock",
+                pll.pll3.enable));
+        return pll.pll3.OutputQ(pll_src);
+      case Spi6ClkSource::Hsi: return HsiFrequency.As<ct::Hz>();
+      case Spi6ClkSource::Csi: return CsiFrequency.As<ct::Hz>();
+      case Spi6ClkSource::Hse: return f_hse;
+      }
+
+      std::unreachable();
+    }
+
+    std::unreachable();
+  }
+
   [[nodiscard]] consteval bool Validate() const noexcept {
     // Unimplemented features
-    assert(("PLL2/PLL3 configuration is not yet implemented",
-            !pll.pll2.enable && !pll.pll3.enable));
+    assert(("PLL3 configuration is not yet implemented", !pll.pll3.enable));
 
     return system_clock_settings.Validate(
         SysClkSourceClockFrequency().As<ct::Hz>());
@@ -463,7 +591,7 @@ GetShiftedPllVcoRange(Pll pll, PllVcoRange range) noexcept {
 [[nodiscard]] consteval uint32_t GetApb1Divider(uint32_t div) noexcept {
   return ct::StaticMap<int, uint32_t, 5>(div,
                                          {{
-                                             std::make_pair(1, RCC_APB1_DIV1),
+                                             {1, RCC_APB1_DIV1},
                                              std::make_pair(2, RCC_APB1_DIV2),
                                              std::make_pair(4, RCC_APB1_DIV4),
                                              std::make_pair(8, RCC_APB1_DIV8),
@@ -519,7 +647,7 @@ bool ConfigureClocks() noexcept {
   };
 
   // Configure PLL1
-  if (CS.pll.pll1.enable) {
+  if constexpr (CS.pll.pll1.enable) {
     osc_init.PLL = {
         .PLLState  = RCC_PLL_ON,
         .PLLSource = static_cast<uint32_t>(CS.pll_source),
@@ -544,6 +672,22 @@ bool ConfigureClocks() noexcept {
     return false;
   }
 
+  // Configure PLL2 if necessary
+  if constexpr (CS.pll.pll2.enable) {
+    LL_RCC_PLL2_Disable();
+    LL_RCC_PLL2_SetFRACN(0);
+    LL_RCC_PLL2_SetM(CS.pll.pll2.m);
+    LL_RCC_PLL2_SetN(CS.pll.pll2.n);
+    LL_RCC_PLL2_SetP(CS.pll.pll2.p);
+    LL_RCC_PLL2_SetQ(CS.pll.pll2.q);
+    LL_RCC_PLL2_SetR(CS.pll.pll2.r);
+    LL_RCC_PLL2_Enable();
+
+    while (!LL_RCC_PLL2_IsReady()) {
+      __asm("nop;");
+    }
+  }
+
   // Configure System Clocks
   RCC_ClkInitTypeDef clk_init{
       .ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
@@ -565,6 +709,44 @@ bool ConfigureClocks() noexcept {
 
   if (HAL_RCC_ClockConfig(&clk_init, FLASH_LATENCY_4) != HAL_OK) {
     return false;
+  }
+
+  // Configure SPI1/2/3 clock
+  if constexpr (CS.peripherals.spi123 != DefaultSpi123ClkSource) {
+    switch (CS.peripherals.spi123) {
+    case Spi123ClkSource::Pll1Q:
+      __HAL_RCC_PLLCLKOUT_ENABLE(RCC_PLL1_DIVQ);
+      break;
+    case Spi123ClkSource::Pll2P:
+      __HAL_RCC_PLLCLKOUT_ENABLE(RCC_PLL2_DIVP);
+      break;
+    case Spi123ClkSource::Pll3P:
+      __HAL_RCC_PLLCLKOUT_ENABLE(RCC_PLL3_DIVP);
+      break;
+    }
+    LL_RCC_SetSPIClockSource(static_cast<uint32_t>(CS.peripherals.spi123));
+  }
+
+  // Configure SPI4/5 clock
+  if constexpr (CS.peripherals.spi45 != DefaultSpi45ClkSource) {
+    switch (CS.peripherals.spi45) {
+    case Spi45ClkSource::Pll2Q:
+      __HAL_RCC_PLLCLKOUT_ENABLE(RCC_PLL2_DIVQ);
+      break;
+    case Spi45ClkSource::Pll3R:
+      __HAL_RCC_PLLCLKOUT_ENABLE(RCC_PLL3_DIVR);
+      break;
+    }
+    LL_RCC_SetSPIClockSource(static_cast<uint32_t>(CS.peripherals.spi45));
+  }
+
+  // Configure SPI6 clock
+  if constexpr (CS.peripherals.spi6 != DefaultSpi6ClkSource) {
+    switch (CS.peripherals.spi6) {
+    case Spi6ClkSource::Pll2Q: __HAL_RCC_PLLCLKOUT_ENABLE(RCC_PLL2_DIVQ); break;
+    case Spi6ClkSource::Pll3Q: __HAL_RCC_PLLCLKOUT_ENABLE(RCC_PLL3_DIVQ); break;
+    }
+    LL_RCC_SetSPIClockSource(static_cast<uint32_t>(CS.peripherals.spi6));
   }
 
   return true;

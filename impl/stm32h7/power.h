@@ -14,14 +14,14 @@
 
 namespace stm32h7 {
 
-enum class PowerScale {
+enum class PowerScale : uint32_t  {
   Vos0 = PWR_REGULATOR_VOLTAGE_SCALE0,
   Vos1 = PWR_REGULATOR_VOLTAGE_SCALE1,
   Vos2 = PWR_REGULATOR_VOLTAGE_SCALE2,
   Vos3 = PWR_REGULATOR_VOLTAGE_SCALE3,
 };
 
-enum class CoreVoltageSource {
+enum class CoreVoltageSource : uint32_t  {
   Smps = PWR_DIRECT_SMPS_SUPPLY,
   Ldo  = PWR_LDO_SUPPLY,
 };

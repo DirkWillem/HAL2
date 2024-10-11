@@ -36,6 +36,12 @@ enum class Port : uint8_t {
 #ifdef GPIOI
   I,
 #endif
+#ifdef GPIOJ
+  J,
+#endif
+#ifdef GPIOK
+  K,
+#endif
 };
 
 using PinNum = uint8_t;
@@ -74,6 +80,13 @@ static constexpr auto* GetHalPort(Port port) noexcept {
 #ifdef GPIOI
   case Port::I: return GPIOI;
 #endif
+#ifdef GPIOJ
+  case Port::J: return GPIOJ;
+#endif
+#ifdef GPIOI
+  case Port::K: return GPIOK;
+#endif
+
   }
 
   std::unreachable();
