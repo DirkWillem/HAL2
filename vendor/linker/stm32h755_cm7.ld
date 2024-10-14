@@ -2,7 +2,7 @@
 ENTRY(Reset_Handler)
 
 /* Highest address of the user mode stack */
-_estack = ORIGIN(RAM_D1) + LENGTH(RAM_D1); /* end of "RAM_D1" Ram type memory */
+_estack = ORIGIN(DTCMRAM) + LENGTH(DTCMRAM); /* end of "RAM_D1" Ram type memory */
 
 _Min_Heap_Size = 0x200; /* required amount of heap  */
 _Min_Stack_Size = 0x400; /* required amount of stack */
@@ -10,12 +10,13 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 /* Memories definition */
 MEMORY
 {
-  RAM_D1 (xrw)   : ORIGIN = 0x24000000, LENGTH =  512K
-  FLASH   (rx)   : ORIGIN = 0x08000000, LENGTH = 1024K    /* Memory is divided. Actual start is 0x08000000 and actual length is 2048K */
-  DTCMRAM (xrw)  : ORIGIN = 0x20000000, LENGTH = 128K
-  RAM_D2 (xrw)   : ORIGIN = 0x30000000, LENGTH = 288K
-  RAM_D3 (xrw)   : ORIGIN = 0x38000000, LENGTH = 64K
-  ITCMRAM (xrw)  : ORIGIN = 0x00000000, LENGTH = 64K
+  FLASH    (rx)     : ORIGIN = 0x08000000, LENGTH = 1024K    /* Memory is divided. Actual start is 0x08000000 and actual length is 2048K */
+
+  AXI_SRAM (xrw)    : ORIGIN = 0x24000000, LENGTH =  512K
+  DTCMRAM  (xrw)    : ORIGIN = 0x20000000, LENGTH =  128K
+  SRAM1_2_3  (xrw)  : ORIGIN = 0x30000000, LENGTH =  288K
+  SRAM4    (xrw)    : ORIGIN = 0x38000000, LENGTH =   64K
+  ITCMRAM  (xrw)    : ORIGIN = 0x00000000, LENGTH =   64K
 }
 
 /* Sections */
@@ -114,7 +115,15 @@ SECTIONS
 
     . = ALIGN(4);
     _edata = .;        /* define a global symbol at data end */
-  } >RAM_D1 AT> FLASH
+  } >ICTMRAM AT> FLASH
+
+    .dma_buffers :
+    {
+      . = ALIGN(8);
+      _dma_buffers_start = .;
+      *(.dma_buffers)
+      _dma_buffers_end = .;
+    } >AXI_SRAM
 
   /* Uninitialized data section into "RAM" Ram type memory */
   . = ALIGN(4);
@@ -130,7 +139,7 @@ SECTIONS
     . = ALIGN(4);
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
-  } >RAM_D1
+  } >AXI_SRAM
 
   /* User_heap_stack section, used to check that there is enough "RAM" Ram  type memory left */
   ._user_heap_stack :
@@ -141,7 +150,7 @@ SECTIONS
     . = . + _Min_Heap_Size;
     . = . + _Min_Stack_Size;
     . = ALIGN(8);
-  } >RAM_D1
+  } >DTCMRAM
 
   /* Remove information from the compiler libraries */
   /DISCARD/ :

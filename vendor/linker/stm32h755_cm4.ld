@@ -10,8 +10,8 @@ _Min_Stack_Size = 0x400; /* required amount of stack */
 /* Specify the memory areas */
 MEMORY
 {
-FLASH (rx)     : ORIGIN = 0x08100000, LENGTH = 1024K
-RAM (xrw)      : ORIGIN = 0x10000000, LENGTH = 288K
+    FLASH   (rx)    : ORIGIN = 0x08100000, LENGTH = 1024K    /* Memory is divided. Actual start is 0x08000000 and actual length is 2048K */
+    RAM (xrw)       : ORIGIN = 0x10000000, LENGTH = 288K     /* SRAM1/2/3 alias */
 }
 
 /* Define output sections */
