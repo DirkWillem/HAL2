@@ -72,8 +72,8 @@ class SpiRxCallback {
  public:
   using RxData = D;
 
-  constexpr void
-  RegisterSpiRxCallback(hal::Callback<std::span<RxData>>& new_callback) noexcept {
+  constexpr void RegisterSpiRxCallback(
+      hal::Callback<std::span<RxData>>& new_callback) noexcept {
     rx_callback = &new_callback;
   }
 
@@ -123,5 +123,8 @@ class SpiTxCallback {
 };
 
 static_assert(RegisterableSpiTxCallback<SpiTxCallback>);
+
+template <typename Impl>
+concept AsyncDuplexSpiMaster = AsyncRxSpiMaster<Impl> && AsyncTxSpiMaster<Impl>;
 
 }   // namespace hal

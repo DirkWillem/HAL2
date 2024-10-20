@@ -277,11 +277,11 @@ class SpiImpl : public hal::UsedPeripheral {
     static_assert(ct::Implies(hal::SpiTransmitEnabled(TT),
                               DmaT::template ChannelEnabled<TxDmaChannel>()),
                   "If the transmission mode allows transmission, the TX DMA "
-                  "channel must be enabled");
+                  "channel must be enabled for this core");
     static_assert(ct::Implies(hal::SpiReceiveEnabled(TT),
                               DmaT::template ChannelEnabled<RxDmaChannel>()),
                   "If the transmission mode allows transmission, the RX DMA "
-                  "channel must be enabled");
+                  "channel must be enabled for this core");
 
     detail::EnableSpiClk(Id);
 
