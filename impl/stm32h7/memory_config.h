@@ -277,6 +277,8 @@ inline constexpr MpuRegionConfig MpuDefaultSramConfig{
     .bufferable = CacheWbwa.bufferable,
 };
 
+#if defined(CORE_CM7)
+
 inline void SetInstructionCacheEnabled(bool enable) noexcept {
   if (enable) {
     SCB_EnableICache();
@@ -292,5 +294,7 @@ inline void SetDataCacheEnabled(bool enable) noexcept {
     SCB_DisableDCache();
   }
 }
+
+#endif
 
 }   // namespace stm32h7
