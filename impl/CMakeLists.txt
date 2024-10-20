@@ -136,6 +136,8 @@ function(add_stm32h7_hal VARIANT XMLFILE)
             stm32h7/dma.h
             stm32h7/hardware_semaphore.h
             stm32h7/interrupts.h
+            stm32h7/memory_config.cpp
+            stm32h7/memory_config.h
             stm32h7/peripheral_ids.h
             stm32h7/pin.cpp
             stm32h7/pin.h

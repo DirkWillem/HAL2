@@ -5,6 +5,7 @@ add_library(constexpr_tools INTERFACE
         constexpr_tools/helpers.h
         constexpr_tools/logic.h
         constexpr_tools/math.h
+        constexpr_tools/memory_size.h
         constexpr_tools/spans.h
         constexpr_tools/static_mapping.h
         constexpr_tools/static_string.h
