@@ -320,7 +320,7 @@ class DmaImpl<Impl, DmaChannels<Chans...>> : public hal::UsedPeripheral {
     const std::array<BDMA_Channel_TypeDef*, NMaxBdmaChannels> chans{
         BDMA_Channel0, BDMA_Channel1, BDMA_Channel2, BDMA_Channel3,
         BDMA_Channel4, BDMA_Channel5, BDMA_Channel6, BDMA_Channel7};
-    return chans[DmaChannels::template DmaChannelIndex<Chan>()];
+    return chans[BdmaChannels::template DmaChannelIndex<Chan>()];
   }
 
   template <hal::DmaChannelId Chan>

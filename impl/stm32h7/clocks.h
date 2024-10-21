@@ -704,7 +704,7 @@ bool ConfigureClocks() noexcept {
       .APB2CLKDivider =
           GetApb2Divider(CS.system_clock_settings.d2_apb2_prescaler),
       .APB4CLKDivider =
-          GetApb2Divider(CS.system_clock_settings.d3_apb4_prescaler),
+          GetApb4Divider(CS.system_clock_settings.d3_apb4_prescaler),
   };
 
   if (HAL_RCC_ClockConfig(&clk_init, FLASH_LATENCY_4) != HAL_OK) {

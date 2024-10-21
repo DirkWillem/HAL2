@@ -117,13 +117,21 @@ SECTIONS
     _edata = .;        /* define a global symbol at data end */
   } >ICTMRAM AT> FLASH
 
-    .dma_buffers :
-    {
-      . = ALIGN(8);
-      _dma_buffers_start = .;
-      *(.dma_buffers)
-      _dma_buffers_end = .;
-    } >AXI_SRAM
+  .dma_buffers :
+  {
+    . = ALIGN(8);
+    _dma_buffers_start = .;
+    *(.dma_buffers)
+    _dma_buffers_end = .;
+  } >AXI_SRAM
+
+  .bdma_buffers :
+  {
+    . = ALIGN(8);
+    _bdma_buffers_start = .;
+    *(.bdma_buffers)
+    _bdma_buffers_end = .;
+  } >SRAM4
 
   /* Uninitialized data section into "RAM" Ram type memory */
   . = ALIGN(4);
