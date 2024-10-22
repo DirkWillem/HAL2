@@ -57,6 +57,38 @@ SPI_IRQ_HANDLER(SPI4)
 SPI_IRQ_HANDLER(SPI5)
 SPI_IRQ_HANDLER(SPI6)
 
+#define HANDLE_SPI_RX_CALLBACK(Inst)                       \
+  if constexpr (hal::IsPeripheralInUse<stm32h7::Inst>()) { \
+    if (hspi == &stm32h7::Inst::instance().hspi) {         \
+      stm32h7::Inst::instance().RxComplete();              \
+    }                                                      \
+  }
+
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef* hspi) {
+  HANDLE_SPI_RX_CALLBACK(Spi1)
+  HANDLE_SPI_RX_CALLBACK(Spi2)
+  HANDLE_SPI_RX_CALLBACK(Spi3)
+  HANDLE_SPI_RX_CALLBACK(Spi4)
+  HANDLE_SPI_RX_CALLBACK(Spi5)
+  HANDLE_SPI_RX_CALLBACK(Spi6)
+}
+
+#define HANDLE_SPI_TX_CALLBACK(Inst)                       \
+  if constexpr (hal::IsPeripheralInUse<stm32h7::Inst>()) { \
+    if (hspi == &stm32h7::Inst::instance().hspi) {         \
+      stm32h7::Inst::instance().TxComplete();              \
+    }                                                      \
+  }
+
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef* hspi) {
+  HANDLE_SPI_TX_CALLBACK(Spi1)
+  HANDLE_SPI_TX_CALLBACK(Spi2)
+  HANDLE_SPI_TX_CALLBACK(Spi3)
+  HANDLE_SPI_TX_CALLBACK(Spi4)
+  HANDLE_SPI_TX_CALLBACK(Spi5)
+  HANDLE_SPI_TX_CALLBACK(Spi6)
+}
+
 #define DMA_IRQ_HANDLER(Inst, Chan)                                            \
   void DMA##Inst##_Stream##Chan##_IRQHandler() {                               \
     if constexpr (hal::IsPeripheralInUse<                                      \

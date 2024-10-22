@@ -206,9 +206,20 @@ using SpiRxDma = DmaChannel<C, Id, SpiDmaRequest::Rx, Prio>;
 enum class SpiOperatingMode { Poll, Dma };
 
 template <typename Impl, SpiId Id, ClockSettings CS, SpiOperatingMode OM,
-          unsigned DS, hal::SpiMode M, hal::SpiTransmissionType TT>
+          unsigned DS, hal::SpiMode M, hal::SpiTransmissionType TT,
+          typename DTO = void>
   requires(DS >= 4 && DS <= 16)
 class SpiImpl : public hal::UsedPeripheral {
+  static constexpr auto HasDataTypeOverride = !std::is_same_v<DTO, void>;
+
+  static_assert(ct::Implies(std::is_same_v<DTO, std::byte>, DS == 8),
+                "std::byte is only a valid data type if data size is 8");
+
+  static_assert(
+      ct::Implies(HasDataTypeOverride,
+                  std::is_same_v<DTO, std::byte> || std::is_unsigned_v<DTO>),
+      "Only unsigned integers and std::byte are valid data type overrides");
+
   friend void ::HAL_SPI_TxCpltCallback(SPI_HandleTypeDef*);
   friend void ::HAL_SPI_RxCpltCallback(SPI_HandleTypeDef*);
   using PinoutHelper = detail::SpiPinoutHelper<Id, M, TT>;
@@ -220,7 +231,9 @@ class SpiImpl : public hal::UsedPeripheral {
   using TxDmaChannel = DmaChannel<CurrentCore, Id, SpiDmaRequest::Tx>;
   using RxDmaChannel = DmaChannel<CurrentCore, Id, SpiDmaRequest::Rx>;
   using Pinout       = typename PinoutHelper::Pinout;
-  using Data         = std::conditional_t<(DS > 8), uint16_t, uint8_t>;
+
+  using DataInfer = std::conditional_t<(DS > 8), uint16_t, uint8_t>;
+  using Data      = std::conditional_t<HasDataTypeOverride, DTO, DataInfer>;
 
   void HandleInterrupt() noexcept { HAL_SPI_IRQHandler(&hspi); }
 

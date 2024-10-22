@@ -31,7 +31,8 @@ concept SpiBase = requires {
   { Impl::DataSize } -> std::convertible_to<unsigned>;
 
   // SPI data size
-  requires std::is_unsigned_v<typename Impl::Data>;
+  requires std::is_same_v<typename Impl::Data, std::byte>
+               || std::is_unsigned_v<typename Impl::Data>;
   requires std::numeric_limits<typename Impl::Data>::digits <= Impl::DataSize;
 };
 
@@ -61,13 +62,14 @@ concept AsyncRxSpiMaster = SpiMaster<Impl> && requires(Impl& impl) {
 
 template <typename Impl>
 concept RegisterableSpiRxCallback = requires(Impl& impl) {
-  requires std::is_unsigned_v<typename Impl::RxData>;
+  requires std::is_same_v<typename Impl::RxData, std::byte>
+               || std::is_unsigned_v<typename Impl::RxData>;
 
   impl.RegisterSpiRxCallback(
       std::declval<hal::Callback<std::span<typename Impl::RxData>>&>());
 };
 
-template <std::unsigned_integral D>
+template <typename D>
 class SpiRxCallback {
  public:
   using RxData = D;
@@ -97,7 +99,7 @@ concept AsyncTxSpiMaster = SpiMaster<Impl> && requires(Impl& impl) {
   impl.SpiTransmitCallback();
 
   {
-    impl.Transmit(std::declval<std::span<typename Impl::Data>>)
+    impl.Transmit(std::declval<std::span<typename Impl::Data>>())
   } -> std::convertible_to<bool>;
 };
 
