@@ -1,8 +1,30 @@
 #include <stm32h7xx_hal.h>
 
 #include <stm32h7/dma.h>
-#include <stm32h7/spi.h>
+#include <stm32h7/hardware_semaphore.h>
 #include <stm32h7/peripheral_ids.h>
+#include <stm32h7/spi.h>
+
+namespace {
+
+template <std::size_t Id>
+inline void CheckHsemInterruptCallback(uint32_t sem_mask) {
+  if constexpr (hal::IsPeripheralInUse<stm32h7::HsemInterrupt<Id>>()) {
+    constexpr auto IdMask = stm32h7::HsemInterrupt<Id>::IdMask;
+
+    if ((sem_mask & IdMask) == IdMask) {
+      stm32h7::HsemInterrupt<Id>::instance().FreeCallback();
+    }
+  }
+}
+
+template <std::size_t... Ids>
+inline void CheckHsemInterruptCallbacks(uint32_t sem_mask,
+                                        std::index_sequence<Ids...>) {
+  (..., CheckHsemInterruptCallback<Ids>(sem_mask));
+}
+
+}   // namespace
 
 extern "C" {
 
@@ -85,4 +107,20 @@ BDMA_IRQ_HANDLER(1, 4)
 BDMA_IRQ_HANDLER(1, 5)
 BDMA_IRQ_HANDLER(1, 6)
 BDMA_IRQ_HANDLER(1, 7)
+
+#if defined(CORE_CM7)
+void HSEM1_IRQHandler() {
+  HAL_HSEM_IRQHandler();
+}
+#endif
+
+#if defined(CORE_CM4)
+void HSEM2_IRQHandler() {
+  HAL_HSEM_IRQHandler();
+}
+#endif
+
+void HAL_HSEM_FreeCallback(uint32_t sem_mask) {
+  CheckHsemInterruptCallbacks(sem_mask, std::make_index_sequence<32>());
+}
 }

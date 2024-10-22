@@ -1,5 +1,8 @@
 #pragma once
 
+#include <hal/callback.h>
+#include <hal/peripheral.h>
+
 #include <stm32h7xx_hal.h>
 
 #include "core.h"
@@ -37,6 +40,62 @@ class HardwareSemaphore {
     HAL_HSEM_FastTake(Id);
     HAL_HSEM_Release(Id, 0);
   }
+};
+
+namespace detail {
+
+void InitializeHsemInterrupt() noexcept;
+
+}
+
+struct HsemInterruptConfig {
+  bool keep_notification_active_after_irq = true;
+};
+
+template <typename Impl, uint32_t I, HsemInterruptConfig C = {}>
+  requires(I < 32)
+class HsemInterruptImpl
+    : public hal::UsedPeripheral
+    , public HardwareSemaphore<I> {
+ public:
+  static constexpr uint32_t Id     = I;
+  static constexpr uint32_t IdMask = 0b1U << I;
+  static constexpr auto     Config = C;
+
+  static auto& instance() noexcept {
+    static Impl inst{};
+    return inst;
+  }
+
+  void RegisterFreeCallback(hal::Callback<>& callback) {
+    free_callback = &callback;
+  }
+
+  void FreeCallback() noexcept {
+    if constexpr (Config.keep_notification_active_after_irq) {
+      this->EnableNotification();
+    }
+    if (free_callback != nullptr) {
+      (*free_callback)();
+    }
+  }
+
+ protected:
+  HsemInterruptImpl() noexcept { detail::InitializeHsemInterrupt(); }
+
+ private:
+  hal::Callback<>* free_callback{nullptr};
+};
+
+template <uint32_t I>
+class HsemInterrupt : public hal::UnusedPeripheral<HsemInterrupt<I>> {
+  friend void ::HAL_HSEM_FreeCallback(uint32_t sem_mask);
+
+ public:
+  static constexpr uint32_t Id     = I;
+  static constexpr uint32_t IdMask = 0b1U << I;
+
+  constexpr void FreeCallback() noexcept {}
 };
 
 }   // namespace stm32h7
