@@ -31,4 +31,6 @@ class MethodCallback final : public Callback<Args...> {
   MethodPtr ptr;
 };
 
+
+
 }   // namespace hal

@@ -47,10 +47,25 @@ template <hal::DmaChannelId Lhs, hal::DmaChannelId Rhs>
   }
 }
 
+template <std::size_t Idx, DmaChannel... Cs>
+struct GetChannelByIndexHelper;
+
+template <std::size_t Idx, DmaChannel Cur, DmaChannel... Rest>
+struct GetChannelByIndexHelper<Idx, Cur, Rest...> {
+  using Channel = GetChannelByIndexHelper<Idx - 1, Rest...>::Channel;
+};
+
+template <DmaChannel Cur, DmaChannel... Rest>
+struct GetChannelByIndexHelper<0, Cur, Rest...> {
+  using Channel = Cur;
+};
+
 }   // namespace detail
 
 template <DmaChannel... Channels>
 struct DmaChannels {
+  static constexpr std::size_t count = sizeof...(Channels);
+
   template <hal::DmaChannelId Chan>
   static consteval bool ContainsChanId() noexcept {
     return (... || detail::DmaChanIdEq<Chan, Channels>());
@@ -86,6 +101,15 @@ struct DmaChannels {
 
     std::unreachable();
   }
+
+  template <std::size_t Idx>
+    requires(Idx < sizeof...(Channels))
+  [[nodiscard]] static consteval auto GetPeripheralByIndex() noexcept {
+    return detail::GetChannelByIndexHelper<Idx,
+                                           Channels...>::Channel::Peripheral;
+  }
+
+ private:
 };
 
 template <typename Impl>

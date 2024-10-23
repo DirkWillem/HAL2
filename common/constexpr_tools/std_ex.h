@@ -23,6 +23,11 @@ struct ratio_reciprocal_helper {
 template <typename T>
 using ratio_reciprocal = ratio_reciprocal_helper<T>::type;
 
+template <typename T>
+concept BoolConstant = requires {
+  { T::value } -> std::convertible_to<bool>;
+};
+
 namespace chrono {
 
 template <typename T>
