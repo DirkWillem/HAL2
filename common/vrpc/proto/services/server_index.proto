@@ -2,7 +2,10 @@ syntax = "proto3";
 
 package vrpc.server_index;
 
+import "nanopb.proto";
 import "vrpc_options.proto";
+
+option csharp_namespace = "Vrpc.Generated.ServerIndex";
 
 
 message GetServiceCountRequest {}
@@ -18,19 +21,23 @@ message GetServiceInfoRequest {
 enum GetServiceInfoError {
   GET_SERVICE_INFO_ERROR_NONE = 0;
   GET_SERVICE_INFO_ERROR_INDEX_OUT_OF_BOUNDS = 1;
+  GET_SERVICE_INFO_ERROR_INTERNAL = 500;
 }
 
 message GetServiceInfoResponse {
   GetServiceInfoError error = 1;
   uint32 service_id = 2;
+  string service_identifier = 3 [(nanopb).max_length = 32];
 }
 
 service ServerIndex {
   option (vrpc_svcopt) = {
     id: 1
+    identifier: "vrpc.server_index"
+    display_name: "Server Index"
   };
 
-  rpc GetServiceCount (GetServiceCountRequest) returns (GetServiceCountRequest) {
+  rpc GetServiceCount (GetServiceCountRequest) returns (GetServiceCountResponse) {
     option (vrpc_methodopt) = {
       id: 1
     };

@@ -34,7 +34,7 @@ set(HAL2_TEST_SRCS
         common/fp/test_uq.cpp
 
         common/vrpc/uart_calculator_service.h
-        common/vrpc/test_vrpc_uart.cpp
+        common/vrpc/test_vrpc_uart_server.cpp
         common/vrpc/test_vrpc_uart_decoder.cpp
         common/vrpc/test_vrpc_uart_integration.cpp)
 
@@ -42,7 +42,7 @@ set(HAL2_TEST_SRCS
 add_library(hal2_tests_lib STATIC ${HAL2_TEST_SRCS})
 link_library_hdronly(hal2_tests_lib PUBLIC GTest::gtest)
 link_library_hdronly(hal2_tests_lib PUBLIC GTest::gmock)
-target_link_libraries(hal2_tests_lib PUBLIC abstract_hal fp)
+target_link_libraries(hal2_tests_lib PUBLIC abstract_hal fp test_protos)
 target_include_directories(hal2_tests_lib PUBLIC "${CMAKE_CURRENT_LIST_DIR}")
 
 add_executable(hal2_tests ${HAL2_TEST_SRCS})

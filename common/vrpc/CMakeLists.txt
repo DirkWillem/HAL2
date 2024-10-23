@@ -113,6 +113,7 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
 
     # "Bare" library
     add_library(${TARGET}_bare STATIC ${GEN_SRCS})
+    message("${TARGET}" "${GEN_SRCS}")
     target_include_directories(${TARGET}_bare PUBLIC "${DSTDIR_ABS}")
     target_link_libraries(${TARGET}_bare
             PUBLIC nanopb_headers)
@@ -120,16 +121,27 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
     if (NOT ${GENERATE_VRPC_NO_DEPEND_COMMON})
         target_link_libraries(${TARGET} PUBLIC vrpc_common_protos)
         target_link_libraries(${TARGET}_bare PUBLIC vrpc_common_protos_bare)
+
+        if ("uart" IN_LIST GENERATE_VRPC_GEN_TYPES)
+            target_link_libraries(${TARGET} PUBLIC vrpc_uart)
+        endif()
     endif ()
 endfunction()
 
 generate_vrpc(vrpc_common_protos proto/common generated/common NO_DEPEND_COMMON)
-generate_vrpc(vrpc_system_protos proto/services generated/services)
+generate_vrpc(vrpc_system_protos proto/services generated/services GEN_TYPES uart)
 
-add_library(vrpc INTERFACE
+add_library(vrpc STATIC
         vrpc.h
-        proto_helpers.h)
-target_include_directories(vrpc INTERFACE "${CMAKE_CURRENT_LIST_DIR}/..")
+        proto_helpers.h
+        proto_helpers.cpp)
+target_include_directories(vrpc PUBLIC "${CMAKE_CURRENT_LIST_DIR}/..")
+target_link_libraries(vrpc PUBLIC nanopb)
+
+
+add_library(vrpc_builtins INTERFACE
+        builtins/server_index.h)
+target_link_libraries(vrpc_builtins INTERFACE vrpc)
 
 
 add_library(vrpc_uart STATIC
@@ -137,6 +149,7 @@ add_library(vrpc_uart STATIC
         uart/vrpc_uart_encode.cpp
         uart/vrpc_uart_encode.h
         uart/vrpc_uart.h
-        uart/vrpc_uart_frames.h)
+        uart/vrpc_uart_frames.h
+        uart/vrpc_uart_server.h)
 target_link_libraries(vrpc_uart PUBLIC
-        vrpc abstract_hal constexpr_tools)
+        vrpc abstract_hal constexpr_tools vrpc_system_protos vrpc_builtins)

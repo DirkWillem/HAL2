@@ -6,6 +6,8 @@
 #include <span>
 #include <utility>
 
+#include <constexpr_tools/crc.h>
+
 #include "vrpc_uart_frames.h"
 
 namespace vrpc::uart {
@@ -45,6 +47,32 @@ EncodeCommandFrame(std::span<std::byte> dst, uint32_t service_id,
   cur_dst = EncodeValue(cmd_id, cur_dst, n_written);
   cur_dst = EncodeValue(req_id, cur_dst, n_written);
   (void)EncodeValue(static_cast<uint32_t>(payload.size()), cur_dst, n_written);
+
+  const auto payload_with_header = dst.subspan(0, n_written + payload.size());
+  const auto crc                 = ct::Crc16(payload_with_header, CrcPoly);
+
+  (void)EncodeValue(crc, dst.subspan(payload_with_header.size()), n_written);
+
+  return dst.subspan(0, n_written + payload.size());
+}
+
+constexpr std::span<const std::byte>
+EncodeServerInfoResponseFrame(std::span<std::byte> dst, uint32_t req_id,
+                              std::span<const std::byte> payload) noexcept {
+  auto        cur_dst   = dst;
+  std::size_t n_written = 2;
+
+  cur_dst[0] = std::byte{FrameStart};
+  cur_dst[1] = std::byte{FrameTypeServerInfoResponse};
+  cur_dst    = cur_dst.subspan(2);
+
+  cur_dst = EncodeValue(req_id, cur_dst, n_written);
+  (void)EncodeValue(static_cast<uint32_t>(payload.size()), cur_dst, n_written);
+
+  const auto payload_with_header = dst.subspan(0, n_written + payload.size());
+  const auto crc                 = ct::Crc16(payload_with_header, CrcPoly);
+
+  (void)EncodeValue(crc, dst.subspan(payload_with_header.size()), n_written);
 
   return dst.subspan(0, n_written + payload.size());
 }

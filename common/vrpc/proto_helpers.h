@@ -1,6 +1,7 @@
 #pragma once
 
 #include <span>
+#include <string_view>
 #include <tuple>
 
 #include <pb.h>
@@ -28,5 +29,7 @@ ProtoEncode(const Msg& src, std::span<std::byte> dst) noexcept {
 
   return {true, dst.subspan(0, ostream.bytes_written)};
 }
+
+[[nodiscard]] bool WriteProtoString(std::string_view src, std::span<char> dst) noexcept;
 
 }   // namespace vrpc
