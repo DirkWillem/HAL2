@@ -21,9 +21,11 @@ namespace vrpc {
 
 static constexpr uint16_t CrcPoly = 0xA001;
 
-static constexpr auto FrameStart           = std::byte{'V'};
-static constexpr auto FrameTypeCmdRequest  = std::byte{'C'};
-static constexpr auto FrameTypeCmdResponse = std::byte{'R'};
+inline constexpr auto FrameStart                  = std::byte{'V'};
+inline constexpr auto FrameTypeCmdRequest         = std::byte{'c'};
+inline constexpr auto FrameTypeCmdResponse        = std::byte{'C'};
+inline constexpr auto FrameTypeServerInfoRequest  = std::byte{'i'};
+inline constexpr auto FrameTypeServerInfoResponse = std::byte{'I'};
 
 /**
  * Represents a vRPC command frame
@@ -37,5 +39,12 @@ struct CommandRequestFrame {
 
 using CommandRequestFrameRef =
     std::reference_wrapper<const CommandRequestFrame>;
+
+struct ServerInfoRequestFrame {
+  uint32_t request_id;
+};
+
+using ServerInfoRequestRef =
+    std::reference_wrapper<const ServerInfoRequestFrame>;
 
 }   // namespace vrpc

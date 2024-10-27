@@ -111,6 +111,9 @@ class UartDecoder {
     CmdPayloadLen,
     CmdPayload,
 
+    // Server info frame
+    ServerInfoReqId,
+
     // End of frame
     Crc,
   };
@@ -120,13 +123,18 @@ class UartDecoder {
       2 * sizeof(std::byte) + 4 * sizeof(uint32_t);
   static constexpr std::size_t CmdFrameTailLength = sizeof(uint16_t);
 
+  static constexpr std::size_t ServerInfoFrameHeaderLength =
+      2 * sizeof(std::byte) + 2 * sizeof(uint32_t);
+  static constexpr std::size_t ServerInfoFrameTailLength = sizeof(uint16_t);
+
   enum class Error {
     InvalidFrameType,
     InvalidCrc,
     UnknownParserState,
   };
 
-  using Result = std::variant<std::monostate, Error, CommandRequestFrameRef>;
+  using Result = std::variant<std::monostate, Error, CommandRequestFrameRef,
+                              ServerInfoRequestRef>;
 
   /**
    * Constructor
@@ -159,11 +167,14 @@ class UartDecoder {
         }
         break;
       case State::FrameType:
-        switch (ReadByte()) {
+        reading_frame_type = ReadByte();
+        switch (reading_frame_type) {
         case FrameTypeCmdRequest: state = State::CmdServiceId; break;
+        case FrameTypeServerInfoRequest: state = State::ServerInfoReqId; break;
         default: state = State::StartOfFrame; return Error::InvalidFrameType;
         }
         break;
+
       case State::CmdServiceId:
         if (ReadInto(cmd_request_frame.service_id)) {
           state = State::CmdCmdId;
@@ -208,6 +219,14 @@ class UartDecoder {
         break;
       }
 
+      case State::ServerInfoReqId:
+        if (ReadInto(server_info_request_frame.request_id)) {
+          state = State::Crc;
+        } else {
+          return {};
+        }
+        break;
+
       case State::Crc: {
         const auto crc_data = full_input_buffer.subspan(0, read_pos);
         uint16_t   crc_recv{};
@@ -218,7 +237,12 @@ class UartDecoder {
           if (crc_calc != crc_recv) {
             return Error::InvalidCrc;
           } else {
-            return std::ref(cmd_request_frame);
+            switch (reading_frame_type) {
+            case FrameTypeCmdRequest: return std::ref(cmd_request_frame);
+            case FrameTypeServerInfoRequest:
+              return std::ref(server_info_request_frame);
+            default: return Error::UnknownParserState;
+            }
           }
         } else {
           return {};
@@ -280,8 +304,11 @@ class UartDecoder {
   std::span<std::byte> unparsed_buffer{};
   State                state{State::StartOfFrame};
 
-  uint32_t            payload_length{};
-  CommandRequestFrame cmd_request_frame{};
+  uint32_t               payload_length{};
+  CommandRequestFrame    cmd_request_frame{};
+  ServerInfoRequestFrame server_info_request_frame{};
+
+  std::byte reading_frame_type{};
 };
 
 }   // namespace vrpc

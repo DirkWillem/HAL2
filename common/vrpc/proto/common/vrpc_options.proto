@@ -20,6 +20,8 @@ extend google.protobuf.FieldOptions {
 
 message VrpcServiceOptions {
   uint32 id = 1;
+  string identifier = 2;
+  string display_name = 10;
 }
 
 extend google.protobuf.ServiceOptions {

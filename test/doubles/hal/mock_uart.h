@@ -43,6 +43,8 @@ class MockAsyncUart {
   MOCK_METHOD(void, RegisterUartReceiveCallback,
               (hal::Callback<std::span<std::byte>>&), ());
 
+  MOCK_METHOD(void, UartTransmitCallback, (), ());
+
   void RedirectRxToFake() {
     ON_CALL(*this, Receive).WillByDefault([this](auto buf) {
       rx_spy.Receive(buf);
@@ -64,6 +66,6 @@ class MockAsyncUart {
 };
 
 static_assert(hal::BlockingUart<MockBlockingUart<hal::UartFlowControl::None>>);
-//static_assert(hal::AsyncUart<MockAsyncUart<>>);
+// static_assert(hal::AsyncUart<MockAsyncUart<>>);
 
 }   // namespace doubles
