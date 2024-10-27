@@ -33,6 +33,7 @@ void SysTick_Handler() {
 }
 
 [[noreturn]] void HardFault_Handler() {
+  const volatile auto* scb = SCB;
   while (true) {}
 }
 

@@ -16,7 +16,7 @@ struct Map_t {
 };
 
 template <typename T, typename U>
-using Map = Map_t<T, U>::type;
+using Map = U;
 
 namespace detail {
 
