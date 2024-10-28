@@ -1,4 +1,5 @@
 #include <span>
+#include <utility>
 
 namespace ct {
 
@@ -43,6 +44,42 @@ constexpr std::span<T> MergeContiguousSpans(std::span<T> a,
   }
 
   return {a.begin(), b.end()};
+}
+
+template <typename T>
+concept ByteLike = std::is_same_v<std::decay_t<T>, std::byte>
+                   || std::is_same_v<std::decay_t<T>, unsigned char>;
+
+template <ByteLike TOut, typename TIn>
+/**
+ * Returns a byte view over the data contained in a span
+ * @tparam TOut Output type, must be a type that is able to access the raw
+ *   memory representation of an object (std::byte, unsigned char)
+ * @tparam TIn Input type
+ * @param in Input span
+ * @return Byte view over the passed span
+ */
+std::span<TOut> ReinterpretSpan(std::span<TIn> in) noexcept {
+  return std::span{
+      reinterpret_cast<TOut*>(in.data()),
+      in.size() * (sizeof(TIn) / sizeof(TOut)),
+  };
+}
+
+template <ByteLike TOut, typename TIn>
+/**
+ * Returns a byte view over the data contained in a span
+ * @tparam TOut Output type, must be a type that is able to access the raw
+ *   memory representation of an object (std::byte, unsigned char)
+ * @tparam TIn Input type
+ * @param in Input span
+ * @return Byte view over the passed span
+ */
+std::span<const TOut> ReinterpretSpan(std::span<const TIn> in) noexcept {
+  return std::span{
+      reinterpret_cast<const TOut*>(in.data()),
+      in.size() * (sizeof(TIn) / sizeof(TOut)),
+  };
 }
 
 }   // namespace ct
