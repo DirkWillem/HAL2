@@ -16,11 +16,35 @@ target_include_directories(constexpr_tools INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
 
 
+# Proxy library for CMSIS-DSP which allows disabling it under certain build conditions
+add_library(cmsis_dsp INTERFACE)
+target_link_libraries(cmsis_dsp INTERFACE CMSISDSP)
+target_compile_definitions(cmsis_dsp INTERFACE HAS_CMSIS_DSP)
+
+
 add_library(fp INTERFACE
         fp/fix.h)
 target_include_directories(fp INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
 
+add_library(math INTERFACE
+        math/functions/transcendental/trigonometric.h
+
+        math/functions/common.h
+        math/functions/transcendental.h
+
+        math/geometry/transformation_matrix.h
+
+        math/linalg/vector.h
+        math/linalg/matrix.h
+
+        math/math_config.h)
+
+target_link_libraries(math INTERFACE cmsis_dsp)
+target_compile_definitions(math INTERFACE HAL2_CMSIS_DSP_ENABLED)
+
+target_include_directories(math INTERFACE
+        ${CMAKE_CURRENT_LIST_DIR})
 
 add_subdirectory(sbs)
 add_subdirectory(vrpc)

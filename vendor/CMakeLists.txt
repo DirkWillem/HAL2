@@ -1,12 +1,9 @@
 add_subdirectory(linker)
+add_subdirectory(cmsis_dsp)
 
 add_library(stm32_system STATIC
         stm32_system/syscalls.c
         stm32_system/sysmem.c)
-
-FetchContent_Declare(cmsis_dsp URL https://github.com/ARM-software/CMSIS-DSP/archive/refs/tags/v1.16.2.zip)
-set(CMSISCORE "${CMAKE_CURRENT_LIST_DIR}/cmsis_core")
-FetchContent_MakeAvailable(cmsis_dsp)
 
 
 function(add_stm32g0_vendor_hal VARIANT)

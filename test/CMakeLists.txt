@@ -55,3 +55,8 @@ target_link_libraries(hal2_tests PUBLIC
         GTest::gmock
         GTest::gtest_main)
 target_include_directories(hal2_tests PUBLIC "${CMAKE_CURRENT_LIST_DIR}")
+
+
+add_executable(playground main.cpp)
+target_link_libraries(playground math)
+target_compile_options(playground PUBLIC -g3)
