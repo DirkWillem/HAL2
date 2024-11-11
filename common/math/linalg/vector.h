@@ -1,7 +1,9 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <concepts>
+#include <ranges>
 
 #ifdef HAS_CMSIS_DSP
 
@@ -10,9 +12,12 @@ extern "C" {
 }
 #endif
 
+#include <math/concepts.h>
+#include <math/functions/transcendental.h>
+
 namespace math {
 
-template <std::size_t N, std::floating_point F = float>
+template <std::size_t N, Real R = float>
 /**
  * Implementation of a column vector
  * @tparam N Vector dimension
@@ -31,7 +36,7 @@ struct Vec {
    * @param x X-component
    * @param y Y-component
    */
-  constexpr Vec(F x, F y) noexcept
+  constexpr Vec(R x, R y) noexcept
     requires(N == 2)
       : vals{{x, y}} {}
 
@@ -41,7 +46,7 @@ struct Vec {
    * @param y Y-component
    * @param z Z-component
    */
-  constexpr Vec(F x, F y, F z) noexcept
+  constexpr Vec(R x, R y, R z) noexcept
     requires(N == 3)
       : vals{{x, y, z}} {}
 
@@ -49,7 +54,7 @@ struct Vec {
    * General constructor
    * @param vals Vector values
    */
-  explicit constexpr Vec(std::array<F, N> vals)
+  explicit constexpr Vec(std::array<R, N> vals)
       : vals{vals} {}
 
   /**
@@ -57,7 +62,7 @@ struct Vec {
    * @param rhs Right-hand side
    * @return Current instance
    */
-  constexpr Vec<N, F>& operator+=(const Vec<N, F>& rhs) noexcept {
+  constexpr Vec<N, R>& operator+=(const Vec<N, R>& rhs) noexcept {
     for (auto i = 0; i < N; i++) {
       vals[i] += rhs.vals[i];
     }
@@ -70,7 +75,7 @@ struct Vec {
    * @param rhs Right-hand side of the sum
    * @return Sum of the two vectors
    */
-  constexpr Vec<N, F> operator+(const Vec<N, F>& rhs) const noexcept {
+  constexpr Vec<N, R> operator+(const Vec<N, R>& rhs) const noexcept {
     auto result = *this;
     result += rhs;
     return result;
@@ -81,7 +86,7 @@ struct Vec {
    * @param rhs Right-hand side of the operation
    * @return Current instance
    */
-  constexpr Vec<N, F>& operator-=(const Vec<N, F>& rhs) noexcept {
+  constexpr Vec<N, R>& operator-=(const Vec<N, R>& rhs) noexcept {
     for (auto i = 0; i < N; i++) {
       vals[i] -= rhs.vals[i];
     }
@@ -94,7 +99,7 @@ struct Vec {
    * @param rhs Right-hand side of the operation
    * @return Difference between two vectors
    */
-  constexpr Vec<N, F> operator-(const Vec<N, F>& rhs) const noexcept {
+  constexpr Vec<N, R> operator-(const Vec<N, R>& rhs) const noexcept {
     auto result = *this;
     result -= rhs;
     return result;
@@ -104,12 +109,12 @@ struct Vec {
    * Negation operator
    * @return Negated vector
    */
-  constexpr Vec<N, F> operator-() const noexcept {
-    std::array<F, N> result{};
+  constexpr Vec<N, R> operator-() const noexcept {
+    std::array<R, N> result{};
     for (auto i = 0; i < N; i++) {
       result[i] = -vals[i];
     }
-    return Vec<N, F>{result};
+    return Vec<N, R>{result};
   }
 
   /**
@@ -117,7 +122,7 @@ struct Vec {
    * @param rhs Right-hand side of the operation
    * @return Current instance
    */
-  constexpr Vec<N, F>& operator*=(F rhs) noexcept {
+  constexpr Vec<N, R>& operator*=(R rhs) noexcept {
     for (auto i = 0; i < N; i++) {
       vals[i] *= rhs;
     }
@@ -130,10 +135,10 @@ struct Vec {
    * @param rhs Right-hand side of the operation
    * @return Vector multiplied by scalar
    */
-  constexpr Vec<N, F> operator*(F rhs) const noexcept {
+  constexpr Vec<N, R> operator*(R rhs) const noexcept {
     auto result = *this;
     result *= rhs;
-    return *this;
+    return result;
   }
 
   /**
@@ -141,7 +146,7 @@ struct Vec {
    * @param rhs Right-hand side of the operation
    * @return Current instance
    */
-  constexpr Vec<N, F>& operator/=(F rhs) noexcept {
+  constexpr Vec<N, R>& operator/=(R rhs) noexcept {
     for (auto i = 0; i < N; i++) {
       vals[i] *= rhs;
     }
@@ -154,10 +159,40 @@ struct Vec {
    * @param rhs Right-hand side of the operation
    * @return Vector divided by scalar
    */
-  constexpr Vec<N, F> operator/(F rhs) const noexcept {
+  constexpr Vec<N, R> operator/(R rhs) const noexcept {
     auto result = *this;
     result *= rhs;
     return *this;
+  }
+
+  template <FuncSettings S = FuncSettings{}>
+  /**
+   * Computes the magnitude of the vector
+   * @tparam S Function settings to use when computing the magnitude
+   * @return Vector magnitude
+   */
+  constexpr R Magnitude() const noexcept {
+    R sum_of_squares{};
+    for (auto x : vals) {
+      sum_of_squares += x * x;
+    }
+    return Sqrt<R, S>(sum_of_squares);
+  }
+
+  template <FuncSettings S = FuncSettings{}>
+  /**
+   * Returns the normalized version of the current vector, i.e. a vector
+   *   in the same direction with magnitude 1
+   * @tparam S Function settings
+   * @return Normalized vector
+   */
+  constexpr Vec<N, R> Normalized() const noexcept {
+    const auto mag = Magnitude<S>();
+
+    std::array<R, N> normalized_vals{};
+    std::ranges::transform(vals, normalized_vals.begin(),
+                           [mag](const auto x) { return x / mag; });
+    return Vec<N, R>{normalized_vals};
   }
 
   /**
@@ -165,8 +200,8 @@ struct Vec {
    * @param rhs Right-hand side of the operation
    * @return Dot product of two vectors
    */
-  constexpr F Dot(const Vec<N, F>& rhs) noexcept {
-    F result{};
+  constexpr R Dot(const Vec<N, R>& rhs) const noexcept {
+    R result{};
 
     for (auto i = 0; i < N; i++) {
       result += vals[i] * rhs.vals[i];
@@ -176,10 +211,25 @@ struct Vec {
   }
 
   /**
+   * Cross product operator
+   * @param rhs Right-hand side of the operation
+   * @return Cross product
+   */
+  constexpr Vec<3, R> Cross(const Vec<N, R>& rhs) const noexcept
+    requires(N == 3)
+  {
+    return {
+        y() * rhs.z() - z() * rhs.y(),
+        z() * rhs.x() - x() * rhs.z(),
+        x() * rhs.y() - y() * rhs.x(),
+    };
+  }
+
+  /**
    * Returns the x-component of the vector in case of a 2D or 3D vector
    * @return X-component
    */
-  [[nodiscard]] constexpr float x() const noexcept
+  [[nodiscard]] constexpr R x() const noexcept
     requires(N == 2 || N == 3)
   {
     return vals[0];
@@ -189,7 +239,7 @@ struct Vec {
    * Returns the x-component of the vector in case of a 2D or 3D vector
    * @return X-component
    */
-  [[nodiscard]] constexpr float y() const noexcept
+  [[nodiscard]] constexpr R y() const noexcept
     requires(N == 2 || N == 3)
   {
     return vals[1];
@@ -199,23 +249,18 @@ struct Vec {
    * Returns the x-component of the vector in case of a 2D or 3D vector
    * @return X-component
    */
-  [[nodiscard]] constexpr float z() const noexcept
+  [[nodiscard]] constexpr R z() const noexcept
     requires(N == 3)
   {
     return vals[2];
   }
 
-  std::array<F, N> vals{};
+  std::array<R, N> vals{};
 };
 
-template <std::size_t N, std::floating_point F>
-constexpr Vec<N, F> operator*(F lhs, const Vec<N, F>& rhs) noexcept {
+template <std::size_t N, Real R>
+constexpr Vec<N, R> operator*(R lhs, const Vec<N, R>& rhs) noexcept {
   return rhs * lhs;
-}
-
-template <std::size_t N, std::floating_point F>
-constexpr Vec<N, F> operator/(F lhs, const Vec<N, F>& rhs) noexcept {
-  return rhs / lhs;
 }
 
 }   // namespace math

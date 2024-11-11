@@ -1,8 +1,67 @@
 #pragma once
 
+#include <array>
+#include <concepts>
 #include <type_traits>
 
 namespace ct {
+
+template <std::equality_comparable auto V, typename T>
+struct ValToType {
+  static constexpr auto Value = V;
+  using Type                  = T;
+};
+
+namespace detail {
+
+template <std::equality_comparable auto V, typename... Ms>
+struct MapValToTypeHelper;
+
+template <std::equality_comparable auto                                 V,
+          std::equality_comparable_with<std::decay_t<decltype(V)>> auto Vc,
+          typename Tc, typename... Rest>
+struct MapValToTypeHelper<V, ValToType<Vc, Tc>, Rest...> {
+  using Type =
+      std::conditional_t<(V == Vc), Tc,
+                         typename MapValToTypeHelper<V, Rest...>::Type>;
+};
+
+}   // namespace detail
+
+template <std::equality_comparable auto V, typename... Ms>
+using MapValToType = detail::MapValToTypeHelper<V, Ms...>::Type;
+
+template <typename T, T... Vals>
+struct Values {
+  static consteval std::array<T, sizeof...(Vals)> ToArray() noexcept {
+    return {Vals...};
+  }
+
+  static consteval bool AreEqual() noexcept
+    requires(std::equality_comparable<T>)
+  {
+    const auto arr = ToArray();
+    if (arr.size() == 0) {
+      return true;
+    }
+
+    for (auto& el : arr) {
+      if (el != arr[0]) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  static consteval T SingleValue() noexcept {
+    static_assert(sizeof...(Vals) > 0 && AreEqual(),
+                  "SingleValue is only defined for Values where there is at "
+                  "least one value, and all values are equal");
+
+    return ToArray()[0];
+  }
+};
 
 template <std::size_t V>
 using Size = std::integral_constant<std::size_t, V>;

@@ -14,6 +14,8 @@ enum class Implementation {
   ForceStandardLibrary,
   /** Always use a taylor series approximation */
   ForceTaylorSeriesApproximation,
+  /** Always use a Newton-Raphson approximation */
+  ForceNewtonRaphsonApproximation,
   /** Always use the CMSIS-DSP implementation */
   ForceCmsisDsp,
 };
@@ -29,19 +31,30 @@ struct FuncSettings {
    * the order of the approximation
    */
   unsigned taylor_series_order = 9;
+  /** Number of iteration sto use in case of using the Newton-Raphson method */
+  unsigned newton_raphson_iterations = 20;
 };
 
 namespace detail {
 
-enum class ChosenImpl { StdLib, Taylor, CmsisDsp };
+enum class ConstEvalImpl { Taylor, NewtonRaphson };
+
+enum class ChosenImpl { StdLib, Taylor, NewtonRaphson, CmsisDsp };
 
 constexpr ChosenImpl
 ChooseImplementation(Implementation preference, bool is_constant_evaluated,
-                     bool supported_by_cmsis_dsp) noexcept {
+                     bool supported_by_cmsis_dsp, ConstEvalImpl const_eval_impl) noexcept {
   switch (preference) {
   case Implementation::Default:
     if (is_constant_evaluated) {
-      return ChosenImpl::Taylor;
+      switch (const_eval_impl) {
+      case ConstEvalImpl::Taylor:
+        return ChosenImpl::Taylor;
+      case ConstEvalImpl::NewtonRaphson:
+        return ChosenImpl::NewtonRaphson;
+      default:
+        std::unreachable();
+      }
     } else if (CmsisDspAvailable && supported_by_cmsis_dsp) {
       return ChosenImpl::CmsisDsp;
     }
@@ -50,6 +63,8 @@ ChooseImplementation(Implementation preference, bool is_constant_evaluated,
   case Implementation::ForceStandardLibrary: return ChosenImpl::StdLib;
   case Implementation::ForceTaylorSeriesApproximation:
     return ChosenImpl::Taylor;
+  case Implementation::ForceNewtonRaphsonApproximation:
+    return ChosenImpl::NewtonRaphson;
   case Implementation::ForceCmsisDsp:
     if (!CmsisDspAvailable || !supported_by_cmsis_dsp) {
       std::unreachable();

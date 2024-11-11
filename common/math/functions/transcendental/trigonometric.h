@@ -3,6 +3,7 @@
 #include <cmath>
 #include <utility>
 
+#include <math/concepts.h>
 #include <math/functions/common.h>
 
 #ifdef HAS_CMSIS_DSP
@@ -13,27 +14,30 @@ namespace math {
 
 namespace detail {
 
-template <std::floating_point F>
+template <Real R>
 /**
  * Shifts x to the range [-pi, +pi]
- * @tparam F Floating point type of x
+ * @tparam R Real type of x
  * @param x Value to shift
  * @return Shifted value
  */
-constexpr F ShiftToPmPi(F x) {
-  const F pi = static_cast<F>(M_PI);
+constexpr R ShiftToPmPi(R x) {
+  const R pi     = R{M_PI};
+  const R two_pi = R{M_PI * 2};
   while (x > pi) {
-    x -= 2 * pi;
+    x -= two_pi;
   }
 
-  while (x < -pi) {
-    x += 2 * pi;
+  if constexpr (!fp::is_unsigned_fixed_point_v<R>) {
+    while (x < -pi) {
+      x += two_pi;
+    }
   }
 
   return x;
 }
 
-template <std::floating_point F>
+template <Real R>
 /**
  * Approximates sin(x) using a taylor expansion around x=0
  * @tparam F Floating point type
@@ -41,13 +45,13 @@ template <std::floating_point F>
  * @param order Taylor series order
  * @return Approximation of sin(x)
  */
-constexpr F SinTaylorApprox(F x, unsigned order) noexcept {
+constexpr R SinTaylorApprox(R x, unsigned order) noexcept {
   unsigned int factorial = 1;
-  const F      x2        = x * x;
+  const R      x2        = x * x;
 
   // Start at order 1 term
-  F xn     = x;
-  F result = x;
+  R xn     = x;
+  R result = x;
 
   // Compute higher-order terms
   bool positive = false;
@@ -56,9 +60,9 @@ constexpr F SinTaylorApprox(F x, unsigned order) noexcept {
     xn *= x2;
 
     if (positive) {
-      result += xn / static_cast<F>(factorial);
+      result += xn / static_cast<R>(factorial);
     } else {
-      result -= xn / static_cast<F>(factorial);
+      result -= xn / static_cast<R>(factorial);
     }
 
     positive = !positive;
@@ -67,21 +71,21 @@ constexpr F SinTaylorApprox(F x, unsigned order) noexcept {
   return result;
 }
 
-template <std::floating_point F = float>
+template <Real R = float>
 /**
  * Approximates cos(x) using a taylor expansion around x=0
- * @tparam F Floating point type
+ * @tparam R Real type
  * @param x Value to calculate cosine approximation of
  * @param order Taylor series order
  * @return Approximation of cos(x)
  */
-constexpr F CosTaylorApprox(F x, unsigned order) noexcept {
+constexpr R CosTaylorApprox(R x, unsigned order) noexcept {
   unsigned int factorial = 1;
-  const F      x2        = x * x;
+  const R      x2        = x * x;
 
   // Start at order 0 term
-  F xn     = static_cast<F>(1.0);
-  F result = static_cast<F>(1.0);
+  R xn{1};
+  R result{1};
 
   // Compute higher-order terms
   bool positive = false;
@@ -90,9 +94,9 @@ constexpr F CosTaylorApprox(F x, unsigned order) noexcept {
     xn *= x2;
 
     if (positive) {
-      result += xn / static_cast<F>(factorial);
+      result += xn / static_cast<R>(factorial);
     } else {
-      result -= xn / static_cast<F>(factorial);
+      result -= xn / static_cast<R>(factorial);
     }
 
     positive = !positive;
@@ -101,19 +105,18 @@ constexpr F CosTaylorApprox(F x, unsigned order) noexcept {
   return result;
 }
 
-template <bool CE, std::floating_point F = float,
-          FuncSettings S = FuncSettings{}>
-constexpr F SinImpl(F x) noexcept {
+template <bool CE, Real R = float, FuncSettings S = FuncSettings{}>
+constexpr R SinImpl(R x) noexcept {
   constexpr auto implementation =
-      ChooseImplementation(S.implementation, CE, true);
+      ChooseImplementation(S.implementation, CE, true, ConstEvalImpl::Taylor);
 
   if constexpr (implementation == ChosenImpl::StdLib) {
     return std::sin(x);
   } else if constexpr (implementation == ChosenImpl::Taylor) {
-    constexpr F Pi0_25 = static_cast<F>(0.25 * M_PI);
-    constexpr F Pi0_5  = static_cast<F>(0.5 * M_PI);
-    constexpr F Pi0_75 = static_cast<F>(0.75 * M_PI);
-    constexpr F Pi     = static_cast<F>(M_PI);
+    constexpr R Pi0_25{0.25 * M_PI};
+    constexpr R Pi0_5{0.5 * M_PI};
+    constexpr R Pi0_75{0.75 * M_PI};
+    constexpr R Pi{M_PI};
 
     // Shift x to the range +/- pi
     x = ShiftToPmPi(x);
@@ -133,30 +136,28 @@ constexpr F SinImpl(F x) noexcept {
     // No closer approximation, return taylor approximation around 0
     return SinTaylorApprox(x, S.taylor_series_order);
   } else if constexpr (implementation == ChosenImpl::CmsisDsp) {
-    static_assert(std::is_same_v<F, float>,
-                  "CMSIS-DSP sin is only supported for f32");
-
-    if constexpr (std::is_same_v<F, float>) {
+    if constexpr (std::is_same_v<R, float>) {
       return arm_sin_f32(x);
+    } else {
+      std::unreachable();
     }
   } else {
     std::unreachable();
   }
 }
 
-template <bool CE, std::floating_point F = float,
-          FuncSettings S = FuncSettings{}>
-constexpr F CosImpl(F x) noexcept {
+template <bool CE, Real R = float, FuncSettings S = FuncSettings{}>
+constexpr R CosImpl(R x) noexcept {
   constexpr auto implementation =
-      ChooseImplementation(S.implementation, CE, true);
+      ChooseImplementation(S.implementation, CE, true, ConstEvalImpl::Taylor);
 
   if constexpr (implementation == ChosenImpl::StdLib) {
     return std::cos(x);
   } else if constexpr (implementation == ChosenImpl::Taylor) {
-    constexpr F Pi0_25 = static_cast<F>(0.25 * M_PI);
-    constexpr F Pi0_5  = static_cast<F>(0.5 * M_PI);
-    constexpr F Pi0_75 = static_cast<F>(0.75 * M_PI);
-    constexpr F Pi     = static_cast<F>(M_PI);
+    constexpr R Pi0_25{0.25 * M_PI};
+    constexpr R Pi0_5{0.5 * M_PI};
+    constexpr R Pi0_75{0.75 * M_PI};
+    constexpr R Pi{M_PI};
 
     // Shift x to the range +/- pi
     x = ShiftToPmPi(x);
@@ -176,10 +177,10 @@ constexpr F CosImpl(F x) noexcept {
     // No closer approximation, return taylor approximation around 0
     return CosTaylorApprox(x, S.taylor_series_order);
   } else if constexpr (implementation == ChosenImpl::CmsisDsp) {
-    static_assert(std::is_same_v<F, float>,
+    static_assert(std::is_same_v<R, float>,
                   "CMSIS-DSP cos is only supported for f32");
 
-    if constexpr (std::is_same_v<F, float>) {
+    if constexpr (std::is_same_v<R, float>) {
       return arm_cos_f32(x);
     }
   } else {
@@ -187,21 +188,20 @@ constexpr F CosImpl(F x) noexcept {
   }
 }
 
-template <bool CE, std::floating_point F = float,
-          FuncSettings S = FuncSettings{}>
-constexpr std::pair<F, F> SinCosImpl(F x) noexcept {
+template <bool CE, Real R = float, FuncSettings S = FuncSettings{}>
+constexpr std::pair<R, R> SinCosImpl(R x) noexcept {
   constexpr auto implementation =
-      ChooseImplementation(S.implementation, CE, true);
+      ChooseImplementation(S.implementation, CE, true, ConstEvalImpl::Taylor);
 
   if constexpr (implementation == ChosenImpl::StdLib) {
     return {std::sin(x), std::cos(x)};
   } else if constexpr (implementation == ChosenImpl::Taylor) {
-    return {SinImpl<CE, F, S>(x), CosImpl<CE, F, S>(x)};
+    return {SinImpl<CE, R, S>(x), CosImpl<CE, R, S>(x)};
   } else if constexpr (implementation == ChosenImpl::CmsisDsp) {
-    static_assert(std::is_same_v<F, float>,
+    static_assert(std::is_same_v<R, float>,
                   "CMSIS-DSP sin/cos is only supported for f32");
 
-    if constexpr (std::is_same_v<F, float>) {
+    if constexpr (std::is_same_v<R, float>) {
       float s;
       float c;
       arm_sin_cos_f32(x, &s, &c);
@@ -214,45 +214,45 @@ constexpr std::pair<F, F> SinCosImpl(F x) noexcept {
 
 }   // namespace detail
 
-template <std::floating_point F = float, FuncSettings S = FuncSettings{}>
+template <Real R = float, FuncSettings S = FuncSettings{}>
 /**
  * Computes the sine using a taylor expansion
  * @param x Value to compute the sine of
  * @return Approximation of the sine of x
  */
-constexpr F Sin(F x) noexcept {
+constexpr R Sin(R x) noexcept {
   if (std::is_constant_evaluated()) {
-    return detail::SinImpl<true, F, S>(x);
+    return detail::SinImpl<true, R, S>(x);
   } else {
-    return detail::SinImpl<false, F, S>(x);
+    return detail::SinImpl<false, R, S>(x);
   }
 }
 
-template <std::floating_point F = float, FuncSettings S = FuncSettings{}>
+template <Real R = float, FuncSettings S = FuncSettings{}>
 /**
  * Computes the cosine of x
  * @param x Value to compute the cosine of
  * @return Approximation of the cosine of x
  */
-constexpr F Cos(F x) noexcept {
+constexpr R Cos(R x) noexcept {
   if (std::is_constant_evaluated()) {
-    return detail::CosImpl<true, F, S>(x);
+    return detail::CosImpl<true, R, S>(x);
   } else {
-    return detail::CosImpl<false, F, S>(x);
+    return detail::CosImpl<false, R, S>(x);
   }
 }
 
-template <std::floating_point F = float, FuncSettings S = FuncSettings{}>
+template <Real R = float, FuncSettings S = FuncSettings{}>
 /**
  * Computes the sine and cosine of x
  * @param x Value to compute the cosine of
  * @return Approximation of the cosine of x
  */
-constexpr std::pair<F, F> SinCos(F x) noexcept {
+constexpr std::pair<R, R> SinCos(R x) noexcept {
   if (std::is_constant_evaluated()) {
-    return detail::SinCosImpl<true, F, S>(x);
+    return detail::SinCosImpl<true, R, S>(x);
   } else {
-    return detail::SinCosImpl<false, F, S>(x);
+    return detail::SinCosImpl<false, R, S>(x);
   }
 }
 

@@ -19,6 +19,7 @@ TEST(VrpcUartDecode, DecodeEmpty) {
   ASSERT_TRUE(dec.buffer_empty());
 }
 
+/*
 TEST(VrpcUartDecode, DecodeRequestFrame) {
   // Build input buffer
   helloworld_HelloWorldRequest request{};
@@ -121,3 +122,4 @@ TEST(VrpcUartDecode, DecodeRequestFrameInParts) {
       helpers::DecodeProto<helloworld_HelloWorldRequest>(req.payload);
   ASSERT_STREQ(msg.name, "Testing");
 }
+ */

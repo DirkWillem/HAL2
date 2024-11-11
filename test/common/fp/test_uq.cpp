@@ -99,8 +99,8 @@ TEST(FP_UQ, MultiplicationByInteger) {
   const uint16_t period     = 2500;
   const auto     duty_cycle = UQ16_16::Approximate(0.5F);
 
-  ASSERT_EQ((duty_cycle * period).raw(), (UQ16_16::FromInt(1250).raw()));
-  ASSERT_EQ((period * duty_cycle).raw(), (UQ16_16::FromInt(1250).raw()));
+  ASSERT_EQ((duty_cycle * period).raw(), (UQ16_16{1250}.raw()));
+  ASSERT_EQ((period * duty_cycle).raw(), (UQ16_16{1250}.raw()));
 }
 
 TEST(FP_UQ, Reciprocal) {
@@ -118,9 +118,9 @@ TEST(FP_UQ, Reciprocal) {
 
 TEST(FP_UQ, DivisionOfSameType) {
   using OutType = decltype(std::declval<UQ16_16>() / std::declval<UQ16_16>());
-  const auto a  = UQ16_16::FromInt(2);
-  const auto b  = UQ16_16::FromInt(8);
-  const auto c  = UQ16_16::FromInt(3);
+  const auto a  = UQ16_16{2};
+  const auto b  = UQ16_16{8};
+  const auto c  = UQ16_16{3};
 
   ASSERT_EQ((a / b).raw(), OutType::Scale / 4);
   ASSERT_EQ((b / a).raw(), OutType::Scale * 4);
@@ -130,9 +130,9 @@ TEST(FP_UQ, DivisionOfSameType) {
 }
 
 TEST(FP_UQ, Round) {
-  ASSERT_EQ(UQ8_8::Approximate(0.25F).Round(), 0);
-  ASSERT_EQ(UQ8_8::Approximate(3.45F).Round(), 3);
-  ASSERT_EQ(UQ8_8::Approximate(12.75F).Round(), 13);
+  ASSERT_EQ(UQ8_8{0.25F}.Round(), 0);
+  ASSERT_EQ(UQ8_8{3.45F}.Round(), 3);
+  ASSERT_EQ(UQ8_8{12.75F}.Round(), 13);
 
   ASSERT_EQ(UQ1_15::Approximate(1.25F).Round(), 1);
   ASSERT_EQ(UQ1_15::Approximate(1.76F).Round(), 2);

@@ -150,6 +150,8 @@ if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
         add_library(cmsis_core_includes INTERFACE)
         target_include_directories(cmsis_core_includes INTERFACE
                 "cmsis_core/Include")
+
+        target_link_libraries(CMSISDSP PUBLIC cmsis_core_includes)
     endif ()
 
     add_stm32g0_vendor_hal(stm32g0b1)
@@ -161,6 +163,8 @@ if ("${TARGET}" STREQUAL "arm-cortex-m4")
         add_library(cmsis_core_includes INTERFACE)
         target_include_directories(cmsis_core_includes INTERFACE
                 "cmsis_core/Include")
+
+        target_link_libraries(CMSISDSP PUBLIC cmsis_core_includes)
     endif ()
 
     add_stm32g4_vendor_hal(stm32g474)
@@ -173,6 +177,8 @@ if ("${TARGET}" STREQUAL "arm-cortex-m7")
         add_library(cmsis_core_includes INTERFACE)
         target_include_directories(cmsis_core_includes INTERFACE
                 "cmsis_core/Include")
+
+        target_link_libraries(CMSISDSP PUBLIC cmsis_core_includes)
     endif ()
 
     add_stm32h7_dualcore_vendor_hal(stm32h755 dualcore_boot_cm4_cm7)

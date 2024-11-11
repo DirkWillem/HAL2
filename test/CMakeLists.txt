@@ -33,6 +33,10 @@ set(HAL2_TEST_SRCS
         common/fp/test_q.cpp
         common/fp/test_uq.cpp
 
+        common/math/test_functions_power.cpp
+        common/math/test_functions_trigonometric.cpp
+        common/math/test_interpolation_bilinear.cpp
+
         common/vrpc/uart_calculator_service.h
         common/vrpc/test_vrpc_uart_server.cpp
         common/vrpc/test_vrpc_uart_decoder.cpp
@@ -51,6 +55,7 @@ target_link_libraries(hal2_tests PUBLIC
         fp
         vrpc_uart
         test_protos
+        math
 
         GTest::gmock
         GTest::gtest_main)
