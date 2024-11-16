@@ -262,10 +262,10 @@ class SpiImpl : public hal::UsedPeripheral {
            == HAL_OK;
   }
 
-  [[nodiscard]] bool Transmit(std::span<Data> data) noexcept
+  [[nodiscard]] bool Transmit(std::span<const Data> data) noexcept
     requires(OM == SpiOperatingMode::Dma && hal::SpiTransmitEnabled(TT))
   {
-    return HAL_SPI_Transmit_DMA(&hspi, reinterpret_cast<uint8_t*>(data.data()),
+    return HAL_SPI_Transmit_DMA(&hspi, reinterpret_cast<const uint8_t*>(data.data()),
                                 data.size())
            == HAL_OK;
   }
