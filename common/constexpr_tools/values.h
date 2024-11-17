@@ -92,6 +92,20 @@ struct Values {
 
     return {};
   }
+
+  [[nodiscard]] static consteval std::size_t GetIndex(T value) noexcept
+    requires(std::equality_comparable<T>)
+  {
+    constexpr auto arr = ToArray();
+
+    for (std::size_t i = 0; i < Count; i++) {
+      if (arr[i] == value) {
+        return i;
+      }
+    }
+
+    std::unreachable();
+  }
 };
 
 namespace detail {

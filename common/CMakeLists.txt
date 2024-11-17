@@ -13,6 +13,7 @@ add_library(constexpr_tools INTERFACE
         constexpr_tools/std_ex.h
         constexpr_tools/strings.h
         constexpr_tools/type_helpers.h
+        constexpr_tools/types.h
         constexpr_tools/values.h)
 target_include_directories(constexpr_tools INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
