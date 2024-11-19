@@ -101,6 +101,20 @@ function(add_stm32g4_hal VARIANT XMLFILE)
             "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}")
 endfunction()
 
+
+function(add_stm32h5_hal VARIANT XMLFILE)
+    # Add library
+    add_library("${VARIANT}_hal"
+            stm32h5/clocks.h
+            stm32h5/pin.cpp
+            stm32h5/pin.h
+    )
+
+    target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor")
+    target_include_directories("${VARIANT}_hal" PUBLIC
+            "${CMAKE_CURRENT_LIST_DIR}")
+endfunction()
+
 function(add_stm32h7_hal VARIANT XMLFILE)
     # Add generated code
     add_generated_file(
@@ -168,4 +182,8 @@ endif()
 if ("${TARGET}" STREQUAL "arm-cortex-m7")
     add_multicore_linkopts(stm32h755 cm7)
     add_stm32h7_hal(stm32h755 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32H755ZITx.xml")
+endif()
+
+if ("${TARGET}" STREQUAL "arm-cortex-m33")
+    add_stm32h5_hal(stm32h533 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32H533RETx.xml")
 endif()

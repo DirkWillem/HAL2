@@ -28,3 +28,9 @@
 [submodule "vendor/cmsis_dsp"]
 	path = vendor/cmsis_dsp
 	url = git@github.com:ARM-software/CMSIS-DSP.git
+[submodule "vendor/stm32h5xx_device"]
+	path = vendor/stm32h5xx_device
+	url = git@github.com:STMicroelectronics/cmsis_device_h5.git
+[submodule "vendor/stm32h5xx_hal"]
+	path = vendor/stm32h5xx_hal
+	url = git@github.com:STMicroelectronics/stm32h5xx_hal_driver.git
