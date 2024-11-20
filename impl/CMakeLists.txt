@@ -103,9 +103,28 @@ endfunction()
 
 
 function(add_stm32h5_hal VARIANT XMLFILE)
+    # Add generated code
+    add_generated_file(
+            stm32h5
+            "${VARIANT}"
+            "uart-pin-mapping"
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/uart_pin_mapping.h")
+    add_generated_file(
+            stm32h5
+            "${VARIANT}"
+            "spi-i2s-pin-mapping"
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/spi_i2s_pin_mapping.h")
+
     # Add library
     add_library("${VARIANT}_hal"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/uart_pin_mapping.h"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/spi_i2s_pin_mapping.h"
+
             stm32h5/clocks.h
+            stm32h5/interrupts.h
+            stm32h5/peripheral_ids.h
             stm32h5/pin.cpp
             stm32h5/pin.h
     )

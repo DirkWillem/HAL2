@@ -1,0 +1,15 @@
+{%- macro spi_pin_mappings(var_name, pins) -%}
+inline constexpr std::array<SpiPinMapping, {{pins | length}}> {{var_name}} {% raw %}{{{% endraw %}
+{% for pin in pins -%}
+{# #}    { .pin=PIN({{pin.pin[0]}}, {{pin.pin[1]}}), .peripheral = SpiIdFromName("{{ pin.instance }}"), .af={{pin.af}}U },
+{% endfor -%}
+{%- raw %}}};{% endraw -%}
+{% endmacro -%}
+
+{%- macro i2s_pin_mappings(var_name, pins) -%}
+inline constexpr std::array<I2sPinMapping, {{pins | length}}> {{var_name}} {% raw %}{{{% endraw %}
+{% for pin in pins -%}
+{# #}    { .pin=PIN({{pin.pin[0]}}, {{pin.pin[1]}}), .peripheral = I2sIdFromName("{{ pin.instance }}"), .af={{pin.af}}U },
+{% endfor -%}
+{%- raw %}}};{% endraw -%}
+{% endmacro -%}
