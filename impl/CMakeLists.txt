@@ -178,6 +178,8 @@ function(add_stm32h7_hal VARIANT XMLFILE)
             stm32h7/power.h
             stm32h7/spi.cpp
             stm32h7/spi.h
+            stm32h7/uart.cpp
+            stm32h7/uart.h
     )
 
     target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor")

@@ -20,6 +20,9 @@ namespace stm32h7 {
 template <hal::DmaChannel... Chans>
 using DmaChannels = hal::DmaChannels<Chans...>;
 
+/** Possible DMA requests for UART */
+enum class UartDmaRequest { Tx, Rx };
+
 /** Possible DMA requests for SPI */
 enum class SpiDmaRequest { Tx, Rx };
 
@@ -39,6 +42,42 @@ inline constexpr auto IsBdmaChannel = IsBdmaChannel_t<Chan>::value;
 template <hal::DmaChannel Chan>
 inline constexpr auto IsChannelForCurrentCore =
     std::get<0>(Chan::Peripheral) == CurrentCore;
+
+[[nodiscard]] constexpr uint32_t
+GetDmaRequestId(UartId uart, UartDmaRequest request) noexcept {
+  switch (request) {
+  case UartDmaRequest::Tx:
+    switch (uart) {
+    case UartId::Usart1: return DMA_REQUEST_USART1_TX;
+    case UartId::Usart2: return DMA_REQUEST_USART2_TX;
+    case UartId::Usart3: return DMA_REQUEST_USART3_TX;
+    case UartId::Uart4: return DMA_REQUEST_UART4_TX;
+    case UartId::Uart5: return DMA_REQUEST_UART5_TX;
+    case UartId::Usart6: return DMA_REQUEST_USART6_TX;
+    case UartId::Uart7: return DMA_REQUEST_UART7_TX;
+    case UartId::Uart8: return DMA_REQUEST_UART8_TX;
+    case UartId::LpUart1: return DMA_REQUEST_USART1_TX;
+    }
+
+    std::unreachable();
+  case UartDmaRequest::Rx:
+    switch (uart) {
+    case UartId::Usart1: return DMA_REQUEST_USART1_RX;
+    case UartId::Usart2: return DMA_REQUEST_USART2_RX;
+    case UartId::Usart3: return DMA_REQUEST_USART3_RX;
+    case UartId::Uart4: return DMA_REQUEST_UART4_RX;
+    case UartId::Uart5: return DMA_REQUEST_UART5_RX;
+    case UartId::Usart6: return DMA_REQUEST_USART6_RX;
+    case UartId::Uart7: return DMA_REQUEST_UART7_RX;
+    case UartId::Uart8: return DMA_REQUEST_UART8_RX;
+    case UartId::LpUart1: return DMA_REQUEST_USART1_RX;
+    }
+
+    std::unreachable();
+  }
+
+  std::unreachable();
+}
 
 [[nodiscard]] constexpr uint32_t
 GetDmaRequestId(SpiId spi, SpiDmaRequest request) noexcept {
@@ -66,6 +105,8 @@ GetDmaRequestId(SpiId spi, SpiDmaRequest request) noexcept {
 
     std::unreachable();
   }
+
+  std::unreachable();
 }
 
 [[nodiscard]] uint32_t ToHalDmaDirection(hal::DmaDirection dir) noexcept;
@@ -149,7 +190,7 @@ class DmaImpl<Impl, DmaChannels<Chans...>> : public hal::UsedPeripheral {
 
   template <unsigned DmaInst, unsigned Chan>
     requires((DmaInst == 1 && Chan < NDma1Channels)
-                 || (DmaInst == 2 && Chan < NDma2Channels))
+             || (DmaInst == 2 && Chan < NDma2Channels))
   [[nodiscard]] static consteval bool DmaChannelInUseForCurrentCore() noexcept {
     if constexpr (DmaInst == 1) {
       constexpr auto Idx = Chan;
@@ -227,7 +268,7 @@ class DmaImpl<Impl, DmaChannels<Chans...>> : public hal::UsedPeripheral {
 
   template <unsigned DmaInst, unsigned Chan>
     requires((DmaInst == 1 && Chan < NDma1Channels)
-                 || (DmaInst == 2 && Chan < NDma2Channels))
+             || (DmaInst == 2 && Chan < NDma2Channels))
   /**
    * DMA interrupt handler
    * @tparam ChanIdx DMA channel index
@@ -244,7 +285,7 @@ class DmaImpl<Impl, DmaChannels<Chans...>> : public hal::UsedPeripheral {
 
   template <unsigned DmaInst, unsigned Chan>
     requires((DmaInst == 1 && Chan < NDma1Channels)
-                 || (DmaInst == 2 && Chan < NDma2Channels))
+             || (DmaInst == 2 && Chan < NDma2Channels))
   /**
    * BDMA interrupt handler
    * @tparam ChanIdx BDMA channel index

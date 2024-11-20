@@ -3,8 +3,17 @@
 #include <array>
 #include <concepts>
 #include <optional>
+#include <type_traits>
 
 namespace ct {
+
+template <typename T, typename V>
+concept ValueMapping = requires {
+  { T::Map(std::declval<V>()) };
+};
+
+template <typename T, ValueMapping<T> VM>
+using ValueMappingResult = decltype(VM::Map(std::declval<T>()));
 
 template <typename T, T... Vals>
 /**
@@ -21,6 +30,9 @@ struct Values {
 
   /** Returns the list of values as an array */
   static consteval Array ToArray() noexcept { return {Vals...}; }
+
+  template <ValueMapping<T> VM>
+  using Map = Values<ValueMappingResult<T, VM>, VM::Map(Vals)...>;
 
   /**
    * Returns whether all values in the list are equal

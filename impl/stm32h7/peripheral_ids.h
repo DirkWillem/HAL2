@@ -9,6 +9,49 @@
 
 namespace stm32h7 {
 
+enum class UartId {
+  Usart1,
+  Usart2,
+  Usart3,
+  Uart4,
+  Uart5,
+  Usart6,
+  Uart7,
+  Uart8,
+  LpUart1,
+};
+
+[[nodiscard]] constexpr USART_TypeDef* GetUartPointer(UartId uart) noexcept {
+  switch (uart) {
+  case UartId::Usart1: return USART1;
+  case UartId::Usart2: return USART2;
+  case UartId::Usart3: return USART3;
+  case UartId::Uart4: return UART4;
+  case UartId::Uart5: return UART5;
+  case UartId::Usart6: return USART6;
+  case UartId::Uart7: return UART7;
+  case UartId::Uart8: return UART8;
+  case UartId::LpUart1: return LPUART1;
+  }
+
+  std::unreachable();
+}
+
+[[nodiscard]] consteval UartId UartIdFromName(std::string_view name) noexcept {
+  return ct::StaticMap<std::string_view, UartId, 9>(
+      name, {{
+                {"USART1", UartId::Usart1},
+                {"USART2", UartId::Usart2},
+                {"USART3", UartId::Usart3},
+                {"UART4", UartId::Uart4},
+                {"UART5", UartId::Uart5},
+                {"USART6", UartId::Usart6},
+                {"UART7", UartId::Uart7},
+                {"UART8", UartId::Uart8},
+                {"LPUART1", UartId::LpUart1},
+            }});
+}
+
 enum class SpiId {
   Spi1,
   Spi2,
