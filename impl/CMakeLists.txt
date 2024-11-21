@@ -123,15 +123,20 @@ function(add_stm32h5_hal VARIANT XMLFILE)
             "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/spi_i2s_pin_mapping.h"
 
             stm32h5/clocks.h
+            stm32h5/dma.cpp
+            stm32h5/dma.h
             stm32h5/interrupts.h
             stm32h5/peripheral_ids.h
             stm32h5/pin.cpp
             stm32h5/pin.h
+            stm32h5/uart.cpp
+            stm32h5/uart.h
     )
 
     target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor")
     target_include_directories("${VARIANT}_hal" PUBLIC
-            "${CMAKE_CURRENT_LIST_DIR}")
+            "${CMAKE_CURRENT_LIST_DIR}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}")
 endfunction()
 
 function(add_stm32h7_hal VARIANT XMLFILE)
