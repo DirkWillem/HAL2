@@ -1,0 +1,23 @@
+{% import "usb_macros" as usb -%}
+#pragma once
+
+#include <hal/pin.h>
+
+#include <{{family}}/pin.h>
+#include <{{family}}/peripheral_ids.h>
+
+namespace {{ family }} {
+
+using UsbPinMapping = hal::AFMapping<PinId, UsbId>;
+
+/** DP pin mappings */
+{{ usb::pin_mappings(var_name="UsbDpPinMappings", pins=usb_pins.dp) }}
+
+/** DM pin mappings */
+{{ usb::pin_mappings(var_name="UsbDmPinMappings", pins=usb_pins.dm) }}
+
+/** SOF pin mappings */
+{{ usb::pin_mappings(var_name="UsbSofPinMappings", pins=usb_pins.sof) }}
+
+}
+

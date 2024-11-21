@@ -9,6 +9,21 @@
 
 namespace stm32h5 {
 
+enum class UsbId { Usb };
+
+[[nodiscard]] constexpr USB_DRD_TypeDef* GetUsbPointer(UsbId usb) noexcept {
+  switch (usb) {
+  case UsbId::Usb: return USB_DRD_FS;
+  }
+
+  std::unreachable();
+}
+
+[[nodiscard]] consteval UsbId UsbIdFromName(std::string_view name) noexcept {
+  return ct::StaticMap<std::string_view, UsbId, 1>(name,
+                                                   {{{"USB", UsbId::Usb}}});
+}
+
 enum class UartId {
   Usart1,
   Usart2,

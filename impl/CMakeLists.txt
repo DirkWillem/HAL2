@@ -116,11 +116,19 @@ function(add_stm32h5_hal VARIANT XMLFILE)
             "spi-i2s-pin-mapping"
             "${XMLFILE}"
             "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/spi_i2s_pin_mapping.h")
+    add_generated_file(
+            stm32h5
+            "${VARIANT}"
+            "usb-pin-mapping"
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/usb_pin_mapping.h")
+
 
     # Add library
     add_library("${VARIANT}_hal"
             "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/uart_pin_mapping.h"
             "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/spi_i2s_pin_mapping.h"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/usb_pin_mapping.h"
 
             stm32h5/clocks.h
             stm32h5/dma.cpp
