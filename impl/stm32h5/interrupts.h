@@ -4,6 +4,8 @@
 
 extern "C" {
 
+extern PCD_HandleTypeDef hpcd_USB_DRD_FS;
+
 void SysTick_Handler() {
   HAL_IncTick();
 }
@@ -99,5 +101,9 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
   HANDLE_UART_TX_CALLBACK(Uart5)
   HANDLE_UART_TX_CALLBACK(Usart6)
   HANDLE_UART_TX_CALLBACK(LpUart1)
+}
+
+void USB_DRD_FS_IRQHandler() {
+  HAL_PCD_IRQHandler(&hpcd_USB_DRD_FS);
 }
 }

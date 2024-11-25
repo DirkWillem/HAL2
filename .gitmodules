@@ -34,3 +34,6 @@
 [submodule "vendor/stm32h5xx_hal"]
 	path = vendor/stm32h5xx_hal
 	url = git@github.com:STMicroelectronics/stm32h5xx_hal_driver.git
+[submodule "vendor/stm32_mw_usb_device"]
+	path = vendor/stm32_mw_usb_device
+	url = git@github.com:STMicroelectronics/stm32-mw-usb-device.git

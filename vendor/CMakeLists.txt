@@ -156,9 +156,9 @@ function(add_stm32h7_dualcore_vendor_hal VARIANT BOOT_TYPE)
 
     if ("${TARGET}" STREQUAL "arm-cortex-m4")
         target_compile_definitions("${VARIANT}_device" INTERFACE "CORE_CM4")
-    elseif("${TARGET}" STREQUAL "arm-cortex-m7")
+    elseif ("${TARGET}" STREQUAL "arm-cortex-m7")
         target_compile_definitions("${VARIANT}_device" INTERFACE "CORE_CM7")
-    endif()
+    endif ()
 
     # stm32g0xx_hal library
     file(GLOB HAL_HEADERS "stm32h7xx_hal/Inc/stm32h7xx_*.h")
@@ -182,9 +182,9 @@ function(add_stm32h7_dualcore_vendor_hal VARIANT BOOT_TYPE)
 
     if ("${TARGET}" STREQUAL "arm-cortex-m4")
         target_link_libraries("${VARIANT}_vendor" PUBLIC "${VARIANT}_cm4_linkopts")
-    elseif("${TARGET}" STREQUAL "arm-cortex-m7")
+    elseif ("${TARGET}" STREQUAL "arm-cortex-m7")
         target_link_libraries("${VARIANT}_vendor" PUBLIC "${VARIANT}_cm7_linkopts")
-    endif()
+    endif ()
 endfunction()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
@@ -225,7 +225,7 @@ if ("${TARGET}" STREQUAL "arm-cortex-m7")
     endif ()
 
     add_stm32h7_dualcore_vendor_hal(stm32h755 dualcore_boot_cm4_cm7)
-endif()
+endif ()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m33")
     # CMSIS core includes
@@ -238,4 +238,60 @@ if ("${TARGET}" STREQUAL "arm-cortex-m33")
     endif ()
 
     add_stm32h5_vendor_hal(stm32h533)
-endif()
+endif ()
+
+if ("${TARGET}" STREQUAL "arm-cortex-m0plus"
+        OR "${TARGET}" STREQUAL "arm-cortex-m4"
+        OR "${TARGET}" STREQUAL "arm-cortex-m7"
+        OR "${TARGET}" STREQUAL "arm-cortex-m33")
+    set(STM32_MW_USBD_CORE_SRCS
+            stm32_mw_usb_device/Core/Inc/usbd_core.h
+            stm32_mw_usb_device/Core/Inc/usbd_ctlreq.h
+            stm32_mw_usb_device/Core/Inc/usbd_def.h
+            stm32_mw_usb_device/Core/Inc/usbd_ioreq.h
+
+            stm32_mw_usb_device/Core/Src/usbd_core.c
+            stm32_mw_usb_device/Core/Src/usbd_ctlreq.h
+            stm32_mw_usb_device/Core/Src/usbd_ioreq.c)
+
+
+    # - USBD CDC class
+    set(STM32_MW_USBD_CLASS_CDC_SRCS
+            stm32_mw_usb_device/Class/CDC/Inc/usbd_cdc.h
+            stm32_mw_usb_device/Class/CDC/Src/usbd_cdc.c)
+
+    function(add_usbd_library NAME)
+        set(MULTI_VALUE_ARGS CONF_FILES CLASSES LIBS)
+
+        cmake_parse_arguments(ADD_USBD "" "" "${MULTI_VALUE_ARGS}" ${ARGN})
+
+        set(TARGET "usbd_${NAME}")
+
+        add_library(${TARGET} STATIC
+                ${STM32_MW_USBD_CORE_SRCS}
+                ${ADD_USBD_CONF_FILES})
+
+        foreach (CONF_FILE ${ADD_USBD_CONF_FILES})
+            get_filename_component(CONF_FILE_DIR "${CONF_FILE}" DIRECTORY)
+            if (NOT CONF_FILE_DIRS)
+                list(APPEND CONF_FILE_DIRS "${CONF_FILE_DIR}")
+            else ()
+                if (NOT ("${CONF_FILE_DIR}" IN_LIST CONF_FILE_DIRS))
+                    list(APPEND CONF_FILE_DIRS "${CONF_FILE_DIR}")
+                endif ()
+            endif ()
+        endforeach ()
+
+        target_include_directories(${TARGET} PUBLIC
+                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/stm32_mw_usb_device/Core/Inc"
+                ${CONF_FILE_DIRS})
+        target_link_libraries(${TARGET} PUBLIC ${ADD_USBD_LIBS})
+
+        if ("CDC" IN_LIST ADD_USBD_CLASSES)
+            target_sources(${TARGET} PRIVATE
+                    ${STM32_MW_USBD_CLASS_CDC_SRCS})
+            target_include_directories(${TARGET} PUBLIC
+                    "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/stm32_mw_usb_device/Class/CDC/Inc")
+        endif ()
+    endfunction()
+endif ()
