@@ -1,3 +1,5 @@
+#pragma once
+
 #include <span>
 #include <utility>
 
@@ -59,7 +61,7 @@ template <ByteLike TOut, typename TIn>
  * @param in Input span
  * @return Byte view over the passed span
  */
-std::span<TOut> ReinterpretSpan(std::span<TIn> in) noexcept {
+std::span<TOut> ReinterpretSpanMut(std::span<TIn> in) noexcept {
   return std::span{
       reinterpret_cast<TOut*>(in.data()),
       in.size() * (sizeof(TIn) / sizeof(TOut)),

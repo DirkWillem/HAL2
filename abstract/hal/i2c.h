@@ -37,6 +37,8 @@ concept AsyncI2cCallbacks = requires(Impl& impl) {
 
 template <typename Impl>
 concept AsyncI2c = AsyncI2cCallbacks<Impl> && requires(Impl& impl) {
+  impl.Transmit(std::declval<uint16_t>(), std::declval<std::span<std::byte>>());
+
   impl.ReadMemory(std::declval<uint16_t>(), std::declval<uint16_t>(),
                   std::declval<std::span<std::byte>>());
   impl.ReadMemory(std::declval<uint16_t>(), std::declval<uint16_t>(),
@@ -46,6 +48,13 @@ concept AsyncI2c = AsyncI2cCallbacks<Impl> && requires(Impl& impl) {
                    std::declval<std::span<std::byte>>());
   impl.WriteMemoryValue(std::declval<uint16_t>(), std::declval<uint16_t>(),
                         std::declval<std::byte>());
+};
+
+template <typename Impl>
+concept AsyncI2cRegisterableCallbacks = requires(Impl& impl) {
+  impl.RegisterI2cReceiveCallback(
+      std::declval<hal::Callback<uint16_t, std::span<std::byte>>&>());
+  impl.RegisterI2cTransmitCallback(std::declval<hal::Callback<uint16_t>&>());
 };
 
 class I2cCallbacks {

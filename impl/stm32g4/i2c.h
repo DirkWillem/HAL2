@@ -3,6 +3,7 @@
 #include <optional>
 
 #include <constexpr_tools/chrono_ex.h>
+#include <constexpr_tools/spans.h>
 
 #include <stm32g4/internal/i2c_timing.h>
 #include <stm32g4/mappings/i2c_pin_mapping.h>
@@ -192,6 +193,20 @@ class I2cImpl : public hal::UsedPeripheral {
                          detail::I2cMemAddrSize<decltype(memory_address)>(),
                          reinterpret_cast<uint8_t*>(rx_buf.data()),
                          static_cast<uint16_t>(rx_size));
+  }
+
+  /**
+   * Transmits data to the given device
+   * @param device_address Address of the device to transmit to
+   * @param data Data to transmit
+   */
+  bool Transmit(uint16_t device_address, std::span<std::byte> data)
+    requires(OM == I2cOperatingMode::Dma)
+  {
+    return HAL_I2C_Master_Transmit_DMA(
+               &hi2c, dev_addr, ct::ReinterpretSpanMut<uint8_t>(data).data(),
+               data.size())
+           == HAL_OK;
   }
 
   /**
