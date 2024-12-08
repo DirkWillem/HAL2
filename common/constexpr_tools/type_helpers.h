@@ -2,6 +2,7 @@
 
 #include <array>
 #include <concepts>
+#include <optional>
 #include <type_traits>
 
 namespace ct {
@@ -30,38 +31,6 @@ struct MapValToTypeHelper<V, ValToType<Vc, Tc>, Rest...> {
 
 template <std::equality_comparable auto V, typename... Ms>
 using MapValToType = detail::MapValToTypeHelper<V, Ms...>::Type;
-
-template <typename T, T... Vals>
-struct Values {
-  static consteval std::array<T, sizeof...(Vals)> ToArray() noexcept {
-    return {Vals...};
-  }
-
-  static consteval bool AreEqual() noexcept
-    requires(std::equality_comparable<T>)
-  {
-    const auto arr = ToArray();
-    if (arr.size() == 0) {
-      return true;
-    }
-
-    for (auto& el : arr) {
-      if (el != arr[0]) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  static consteval T SingleValue() noexcept {
-    static_assert(sizeof...(Vals) > 0 && AreEqual(),
-                  "SingleValue is only defined for Values where there is at "
-                  "least one value, and all values are equal");
-
-    return ToArray()[0];
-  }
-};
 
 template <std::size_t V>
 using Size = std::integral_constant<std::size_t, V>;

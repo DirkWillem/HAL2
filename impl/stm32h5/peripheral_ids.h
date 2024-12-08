@@ -5,9 +5,24 @@
 
 #include <constexpr_tools/static_mapping.h>
 
-#include <stm32h7xx.h>
+#include <stm32h5xx.h>
 
-namespace stm32h7 {
+namespace stm32h5 {
+
+enum class UsbId { Usb };
+
+[[nodiscard]] constexpr USB_DRD_TypeDef* GetUsbPointer(UsbId usb) noexcept {
+  switch (usb) {
+  case UsbId::Usb: return USB_DRD_FS;
+  }
+
+  std::unreachable();
+}
+
+[[nodiscard]] consteval UsbId UsbIdFromName(std::string_view name) noexcept {
+  return ct::StaticMap<std::string_view, UsbId, 1>(name,
+                                                   {{{"USB", UsbId::Usb}}});
+}
 
 enum class UartId {
   Usart1,
@@ -16,8 +31,6 @@ enum class UartId {
   Uart4,
   Uart5,
   Usart6,
-  Uart7,
-  Uart8,
   LpUart1,
 };
 
@@ -29,8 +42,6 @@ enum class UartId {
   case UartId::Uart4: return UART4;
   case UartId::Uart5: return UART5;
   case UartId::Usart6: return USART6;
-  case UartId::Uart7: return UART7;
-  case UartId::Uart8: return UART8;
   case UartId::LpUart1: return LPUART1;
   }
 
@@ -38,7 +49,7 @@ enum class UartId {
 }
 
 [[nodiscard]] consteval UartId UartIdFromName(std::string_view name) noexcept {
-  return ct::StaticMap<std::string_view, UartId, 9>(
+  return ct::StaticMap<std::string_view, UartId, 7>(
       name, {{
                 {"USART1", UartId::Usart1},
                 {"USART2", UartId::Usart2},
@@ -46,8 +57,6 @@ enum class UartId {
                 {"UART4", UartId::Uart4},
                 {"UART5", UartId::Uart5},
                 {"USART6", UartId::Usart6},
-                {"UART7", UartId::Uart7},
-                {"UART8", UartId::Uart8},
                 {"LPUART1", UartId::LpUart1},
             }});
 }
@@ -57,8 +66,6 @@ enum class SpiId {
   Spi2,
   Spi3,
   Spi4,
-  Spi5,
-  Spi6,
 };
 
 [[nodiscard]] constexpr SPI_TypeDef* GetSpiPointer(SpiId spi) noexcept {
@@ -67,22 +74,18 @@ enum class SpiId {
   case SpiId::Spi2: return SPI2;
   case SpiId::Spi3: return SPI3;
   case SpiId::Spi4: return SPI4;
-  case SpiId::Spi5: return SPI5;
-  case SpiId::Spi6: return SPI6;
   }
 
   std::unreachable();
 }
 
 [[nodiscard]] consteval SpiId SpiIdFromName(std::string_view name) noexcept {
-  return ct::StaticMap<std::string_view, SpiId, 6>(name,
+  return ct::StaticMap<std::string_view, SpiId, 4>(name,
                                                    {{
                                                        {"SPI1", SpiId::Spi1},
                                                        {"SPI2", SpiId::Spi2},
                                                        {"SPI3", SpiId::Spi3},
                                                        {"SPI4", SpiId::Spi4},
-                                                       {"SPI5", SpiId::Spi5},
-                                                       {"SPI6", SpiId::Spi6},
                                                    }});
 }
 
@@ -101,4 +104,4 @@ enum class I2sId {
                                                    }});
 }
 
-}   // namespace stm32h7
+}   // namespace stm32h5

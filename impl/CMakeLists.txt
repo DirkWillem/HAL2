@@ -101,6 +101,52 @@ function(add_stm32g4_hal VARIANT XMLFILE)
             "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}")
 endfunction()
 
+
+function(add_stm32h5_hal VARIANT XMLFILE)
+    # Add generated code
+    add_generated_file(
+            stm32h5
+            "${VARIANT}"
+            "uart-pin-mapping"
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/uart_pin_mapping.h")
+    add_generated_file(
+            stm32h5
+            "${VARIANT}"
+            "spi-i2s-pin-mapping"
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/spi_i2s_pin_mapping.h")
+    add_generated_file(
+            stm32h5
+            "${VARIANT}"
+            "usb-pin-mapping"
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/usb_pin_mapping.h")
+
+
+    # Add library
+    add_library("${VARIANT}_hal"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/uart_pin_mapping.h"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/spi_i2s_pin_mapping.h"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/usb_pin_mapping.h"
+
+            stm32h5/clocks.h
+            stm32h5/dma.cpp
+            stm32h5/dma.h
+            stm32h5/interrupts.h
+            stm32h5/peripheral_ids.h
+            stm32h5/pin.cpp
+            stm32h5/pin.h
+            stm32h5/uart.cpp
+            stm32h5/uart.h
+    )
+
+    target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor")
+    target_include_directories("${VARIANT}_hal" PUBLIC
+            "${CMAKE_CURRENT_LIST_DIR}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}")
+endfunction()
+
 function(add_stm32h7_hal VARIANT XMLFILE)
     # Add generated code
     add_generated_file(
@@ -145,6 +191,8 @@ function(add_stm32h7_hal VARIANT XMLFILE)
             stm32h7/power.h
             stm32h7/spi.cpp
             stm32h7/spi.h
+            stm32h7/uart.cpp
+            stm32h7/uart.h
     )
 
     target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor")
@@ -168,4 +216,8 @@ endif()
 if ("${TARGET}" STREQUAL "arm-cortex-m7")
     add_multicore_linkopts(stm32h755 cm7)
     add_stm32h7_hal(stm32h755 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32H755ZITx.xml")
+endif()
+
+if ("${TARGET}" STREQUAL "arm-cortex-m33")
+    add_stm32h5_hal(stm32h533 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32H533RETx.xml")
 endif()

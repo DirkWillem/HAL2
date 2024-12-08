@@ -64,4 +64,13 @@ constexpr float Pow2(int exp) {
   }
 }
 
+template <std::unsigned_integral T>
+constexpr T FirstMultipleAfter(T multiplier, T x) noexcept {
+  if (x % multiplier == 0) {
+    return x;
+  } else {
+    return multiplier * (1 + x / multiplier);
+  }
+}
+
 }   // namespace ct

@@ -5,7 +5,7 @@ set(CMAKE_SYSTEM_PROCESSOR arm)
 # so tell cmake to only test if arm-none-eabi-gcc can compile object files
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
-set(MACHINE_FLAGS "-mcpu=cortex-m7 -mthumb -mfloat-abi=hard -mfpu=fpv5-d16")
+set(MACHINE_FLAGS "-mcpu=cortex-m33 -mthumb -mfloat-abi=hard -mfpu=fpv5-sp-d16")
 
 set(CMAKE_AR           arm-none-eabi-ar${CMAKE_EXECUTABLE_SUFFIX})
 set(CMAKE_ASM_COMPILER arm-none-eabi-gcc${CMAKE_EXECUTABLE_SUFFIX})
@@ -29,4 +29,4 @@ set(CMAKE_EXECUTABLE_SUFFIX_C   .elf)
 set(CMAKE_EXECUTABLE_SUFFIX_CXX .elf)
 set(CMAKE_EXECUTABLE_SUFFIX_ASM .elf)
 
-set(TARGET "arm-cortex-m7")
+set(TARGET "arm-cortex-m33")

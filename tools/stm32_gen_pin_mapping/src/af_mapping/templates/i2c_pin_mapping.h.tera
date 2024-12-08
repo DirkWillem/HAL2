@@ -1,0 +1,23 @@
+{% import "i2c_macros" as i2c -%}
+#pragma once
+
+#include <hal/pin.h>
+
+#include <{{family}}/pin.h>
+#include <{{family}}/peripheral_ids.h>
+
+namespace {{ family }} {
+
+using I2cPinMapping = hal::AFMapping<PinId, I2cId>;
+
+/** I2C SCL pin mappings */
+{{ i2c::i2c_pin_mappings(var_name="I2cSclPinMappings", pins=i2c_pins.scl) }}
+
+/** I2C SDA pin mappings */
+{{ i2c::i2c_pin_mappings(var_name="I2cSdaPinMappings", pins=i2c_pins.sda) }}
+
+/** I2C SMBA pin mapping  */
+{{ i2c::i2c_pin_mappings(var_name="I2cSmbaPinMappings", pins=i2c_pins.smba) }}
+
+
+}
