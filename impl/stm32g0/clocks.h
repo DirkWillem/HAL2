@@ -223,6 +223,22 @@ namespace detail {
            }});
 }
 
+[[nodiscard]] consteval uint32_t GetPllM(uint32_t div) noexcept {
+  return (div - 1 << RCC_PLLCFGR_PLLM_Pos) & RCC_PLLCFGR_PLLM_Msk;
+}
+
+[[nodiscard]] consteval uint32_t GetPllPDiv(uint32_t div) noexcept {
+  return ((div - 1) << RCC_PLLCFGR_PLLP_Pos) & RCC_PLLCFGR_PLLP_Msk;
+}
+
+[[nodiscard]] consteval uint32_t GetPllQDiv(uint32_t div) noexcept {
+  return ((div - 1) << RCC_PLLCFGR_PLLQ_Pos) & RCC_PLLCFGR_PLLQ_Msk;
+}
+
+[[nodiscard]] consteval uint32_t GetPllRDiv(uint32_t div) noexcept {
+  return ((div - 1) << RCC_PLLCFGR_PLLR_Pos) & RCC_PLLCFGR_PLLR_Msk;
+}
+
 [[nodiscard]] consteval uint32_t GetAhbDivider(uint32_t div) noexcept {
   return ct::StaticMap<int, uint32_t, 9>(
       div, {
@@ -298,29 +314,32 @@ bool ConfigurePowerAndClocks() noexcept {
 
   // Initialize oscillators
   RCC_OscInitTypeDef osc_init{
-      .OscillatorType = RCC_OSCILLATORTYPE_HSI,
-      .HSEState       = RCC_HSE_OFF,
-      .LSEState       = RCC_LSE_OFF,
-      .HSIState       = RCC_HSI_ON,
-      .HSIDiv         = GetHsiPrescaler(CS.hsi_prescaler),
-      .LSIState       = RCC_LSI_OFF,
-      .HSI48State     = RCC_HSI48_OFF,
-      .PLL            = {.PLLState = RCC_PLL_OFF},
+      .OscillatorType      = RCC_OSCILLATORTYPE_HSI,
+      .HSEState            = RCC_HSE_OFF,
+      .LSEState            = RCC_LSE_OFF,
+      .HSIState            = RCC_HSI_ON,
+      .HSIDiv              = GetHsiPrescaler(CS.hsi_prescaler),
+      .HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT,
+      .LSIState            = RCC_LSI_OFF,
+      .HSI48State          = RCC_HSI48_ON,
+      .PLL                 = {.PLLState = RCC_PLL_OFF},
   };
 
   if (CS.pll.enable) {
     osc_init.PLL = {
         .PLLState  = RCC_PLL_ON,
         .PLLSource = static_cast<uint32_t>(CS.pll_source),
-        .PLLM      = CS.pll.m,
+        .PLLM      = GetPllM(CS.pll.m),
         .PLLN      = CS.pll.n,
-        .PLLP      = CS.pll.p,
-        .PLLQ      = CS.pll.q,
-        .PLLR      = CS.pll.r,
+        .PLLP      = GetPllPDiv(CS.pll.p),
+        .PLLQ      = GetPllQDiv(CS.pll.q),
+        .PLLR      = GetPllRDiv(CS.pll.r),
     };
   }
 
-  if (HAL_RCC_OscConfig(&osc_init) != HAL_OK) {
+  // Somehow this is required due to the PLL not being de-initialized?
+  HAL_RCC_DeInit();
+  if (const auto result = HAL_RCC_OscConfig(&osc_init); result != HAL_OK) {
     return false;
   }
 
@@ -338,8 +357,9 @@ bool ConfigurePowerAndClocks() noexcept {
       .APB1CLKDivider = GetApbDivider(CS.system_clock_settings.apb_prescaler),
   };
 
-  if (HAL_RCC_ClockConfig(&clk_init, static_cast<uint32_t>(FlashLatency))
-      != HAL_OK) {
+  if (const auto result =
+          HAL_RCC_ClockConfig(&clk_init, static_cast<uint32_t>(FlashLatency));
+      result != HAL_OK) {
     return false;
   }
 
