@@ -6,6 +6,7 @@
 
 #include <hal/spi.h>
 
+#include <stm32g0/clocks.h>
 #include <stm32g0/dma.h>
 
 #include <stm32g0/mappings/spi_i2s_pin_mapping.h>
@@ -152,6 +153,44 @@ void SetupSpiMaster(SpiId id, SPI_HandleTypeDef& hspi,
                     SpiBaudPrescaler baud_prescaler, unsigned data_size,
                     hal::SpiTransmissionType transmission_type) noexcept;
 
+template <ClockSettings CS>
+[[nodiscard]] constexpr SpiBaudPrescaler
+FindPrescalerValue(ct::Frequency auto baud_rate) {
+  const auto f_src =
+      CS.system_clock_settings
+          .ApbPeripheralsClockFrequency(CS.SysClkSourceClockFrequency())
+          .As<ct::Hz>();
+
+  std::array<std::tuple<SpiBaudPrescaler, ct::Hz>, 8> options{{
+      {SpiBaudPrescaler::Prescale2, f_src / 2},
+      {SpiBaudPrescaler::Prescale4, f_src / 4},
+      {SpiBaudPrescaler::Prescale8, f_src / 8},
+      {SpiBaudPrescaler::Prescale16, f_src / 16},
+      {SpiBaudPrescaler::Prescale32, f_src / 32},
+      {SpiBaudPrescaler::Prescale64, f_src / 64},
+      {SpiBaudPrescaler::Prescale128, f_src / 128},
+      {SpiBaudPrescaler::Prescale256, f_src / 256},
+  }};
+
+  auto best_err      = std::numeric_limits<uint32_t>::max();
+  auto best_prescale = SpiBaudPrescaler::Prescale2;
+
+  const auto desired = baud_rate.template As<ct::Hz>();
+
+  for (const auto [prescale, actual_baud] : options) {
+    const auto err = (actual_baud > desired ? (actual_baud - desired)
+                                            : (desired - actual_baud))
+                         .count;
+
+    if (err < best_err) {
+      best_err      = err;
+      best_prescale = prescale;
+    }
+  }
+
+  return best_prescale;
+}
+
 }   // namespace detail
 
 template <SpiId Id, hal::DmaPriority Prio = hal::DmaPriority::Low>
@@ -162,9 +201,9 @@ using SpiRxDma = DmaChannel<Id, SpiDmaRequest::Rx, Prio>;
 
 enum class SpiOperatingMode { Poll, Dma };
 
-template <typename Impl, SpiId Id, SpiOperatingMode OM, unsigned DS,
-          hal::SpiMode M, hal::SpiTransmissionType TT>
-  requires(DS >= 4 && DS <= 16)
+template <typename Impl, SpiId Id, ClockSettings CS, SpiOperatingMode OM,
+          unsigned DS, hal::SpiMode M, hal::SpiTransmissionType TT>
+  requires(DS == 8 || DS == 16)
 class SpiImpl : public hal::UsedPeripheral {
   using PinoutHelper = detail::SpiPinoutHelper<Id, M, TT>;
 
@@ -188,9 +227,7 @@ class SpiImpl : public hal::UsedPeripheral {
 
   [[nodiscard]] bool ReceiveBlocking(std::span<Data> into,
                                      uint32_t        timeout) noexcept
-    requires(TT == hal::SpiTransmissionType::FullDuplex
-             || TT == hal::SpiTransmissionType::HalfDuplex
-             || TT == hal::SpiTransmissionType::RxOnly)
+    requires(hal::SpiReceiveEnabled(TT))
   {
     return HAL_SPI_Receive(&hspi, reinterpret_cast<uint8_t*>(into.data()),
                            into.size(), timeout)
@@ -198,13 +235,18 @@ class SpiImpl : public hal::UsedPeripheral {
   }
 
   [[nodiscard]] bool Receive(std::span<Data> into) noexcept
-    requires(OM == SpiOperatingMode::Dma
-             && (TT == hal::SpiTransmissionType::FullDuplex
-                 || TT == hal::SpiTransmissionType::HalfDuplex
-                 || TT == hal::SpiTransmissionType::RxOnly))
+    requires(OM == SpiOperatingMode::Dma && hal::SpiReceiveEnabled(TT))
   {
     return HAL_SPI_Receive_DMA(&hspi, reinterpret_cast<uint8_t*>(into.data()),
                                into.size())
+           == HAL_OK;
+  }
+
+  [[nodiscard]] bool Transmit(std::span<Data> data) noexcept
+    requires(OM == SpiOperatingMode::Dma && hal::SpiTransmitEnabled(TT))
+  {
+    return HAL_SPI_Transmit_DMA(&hspi, reinterpret_cast<uint8_t*>(data.data()),
+                                data.size())
            == HAL_OK;
   }
 
@@ -223,7 +265,7 @@ class SpiImpl : public hal::UsedPeripheral {
     detail::SetupSpiMaster(Id, hspi, baud_prescaler, DS, TT);
   }
 
-  SpiImpl(hal::Dma auto& dma, Pinout pinout, SpiBaudPrescaler baud_prescaler)
+  SpiImpl(hal::Dma auto& dma, Pinout pinout, ct::Frequency auto clock_frequency)
     requires(OM == SpiOperatingMode::Dma)
   {
     // Validate DMA instance
@@ -240,7 +282,8 @@ class SpiImpl : public hal::UsedPeripheral {
     PinoutHelper::SetupPins(pinout);
 
     // Initialize SPI master
-    detail::SetupSpiMaster(Id, hspi, baud_prescaler, DS, TT);
+    const auto presc = detail::FindPrescalerValue<CS>(clock_frequency);
+    detail::SetupSpiMaster(Id, hspi, presc, DS, TT);
 
     // Set up DMA channels
     if constexpr (hal::SpiTransmitEnabled(TT)) {
