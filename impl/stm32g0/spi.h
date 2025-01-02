@@ -217,6 +217,7 @@ class SpiImpl : public hal::UsedPeripheral {
   using Data         = std::conditional_t<(DS > 8), uint16_t, uint8_t>;
   using TxDmaChannel = DmaChannel<Id, SpiDmaRequest::Tx>;
   using RxDmaChannel = DmaChannel<Id, SpiDmaRequest::Rx>;
+  using Type         = Impl;
 
   void HandleInterrupt() noexcept { HAL_SPI_IRQHandler(&hspi); }
 
