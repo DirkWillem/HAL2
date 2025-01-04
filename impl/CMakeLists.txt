@@ -29,6 +29,7 @@ function(add_stm32g0_hal VARIANT XMLFILE)
             "stm32g0/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.h"
             "stm32g0/generated/${VARIANT}/stm32g0/mappings/spi_i2s_pin_mapping.h"
 
+            stm32g0/clocks.h
             stm32g0/dma.h
             stm32g0/dma.cpp
             stm32g0/i2s.cpp

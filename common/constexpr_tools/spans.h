@@ -84,4 +84,9 @@ std::span<const TOut> ReinterpretSpan(std::span<const TIn> in) noexcept {
   };
 }
 
+template <ByteLike TOut, typename TIn>
+std::span<TOut> MutByteViewOver(TIn& in) {
+  return std::span{reinterpret_cast<TOut*>(&in), sizeof(in)};
+}
+
 }   // namespace ct
