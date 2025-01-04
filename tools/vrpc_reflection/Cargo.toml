@@ -1,0 +1,18 @@
+[package]
+name = "vrpc_reflection"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.83"
+protobuf = "3.4.0"
+protobuf-parse = "3.4.0"
+regex = "1.10.4"
+serde = {  version ="1.0.202", features=["derive"] }
+tempfile = "3.10.1"
+
+[build-dependencies]
+protobuf = "3.4.0"
+protobuf-codegen = "3.4.0"

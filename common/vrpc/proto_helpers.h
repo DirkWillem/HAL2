@@ -5,8 +5,11 @@
 #include <tuple>
 
 #include <pb.h>
+#include <pb_common.h>
 #include <pb_decode.h>
 #include <pb_encode.h>
+
+#include <constexpr_tools/type_helpers.h>
 
 namespace vrpc {
 
@@ -30,6 +33,43 @@ ProtoEncode(const Msg& src, std::span<std::byte> dst) noexcept {
   return {true, dst.subspan(0, ostream.bytes_written)};
 }
 
-[[nodiscard]] bool WriteProtoString(std::string_view src, std::span<char> dst) noexcept;
+[[nodiscard]] bool WriteProtoString(std::string_view src,
+                                    std::span<char>  dst) noexcept;
+
+template <typename Msg, typename F>
+static std::optional<pb_field_iter_t>
+FindFieldByPointer(const Msg& msg, ct::FieldPointer<Msg, F> auto field_ptr) {
+  pb_field_iter_t iter{};
+  pb_field_iter_begin_const(&iter, nanopb::MessageDescriptor<Msg>::fields(),
+                            &msg);
+
+  do {
+    if (iter.pField == &(msg.*field_ptr)) {
+      return {iter};
+    }
+  } while (pb_field_iter_next(&iter));
+
+  return {};
+}
+
+template <typename Msg, typename El>
+std::optional<std::span<const El>>
+GetRepeatedFieldFromPtr(const Msg&                      msg,
+                        ct::FieldPointer<Msg, El*> auto field_ptr) {
+  const auto iter_opt = FindFieldByPointer<Msg, El*>(msg, field_ptr);
+  if (iter_opt.has_value()) {
+    const auto iter = *iter_opt;
+    if (iter.pSize == nullptr) {
+      return {};
+    }
+
+    const auto count = static_cast<std::size_t>(
+        *reinterpret_cast<const pb_size_t*>(iter.pSize));
+
+    return std::span{reinterpret_cast<const El*>(iter.pData), count};
+  }
+
+  return {};
+}
 
 }   // namespace vrpc

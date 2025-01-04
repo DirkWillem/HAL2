@@ -1,0 +1,54 @@
+{% import "macros" as macros -%}
+#pragma once
+
+#include <vrpc/parameters.h>
+
+#ifdef __cplusplus
+
+#include <type_traits>
+#include <string_view>
+
+#include <{{ name }}.pb.h>
+
+namespace {{ package | package_to_namespace }} {
+
+{% for _, enum in enums -%}
+enum class {{ enum.name }} : std::underlying_type_t<{{ macros::nanopb_enum(enum=enum) }}> {
+{% for member in enum.members -%}
+{# #}  {{ member.parsed_name | upper_snake_case_to_pascal_case }} = ::{{ macros::nanopb_enum_member(enum=enum, member=member) }},
+{% endfor -%}
+};
+{% endfor %}
+
+{% for _, msg in messages -%}
+using {{ msg.name }} = ::{{ macros::nanopb_msg(msg=msg) }};
+{% endfor %}
+
+{% for _, svc in services -%}
+inline constexpr uint32_t         {{ svc.name }}Id          = {{svc.id}};
+inline constexpr std::string_view {{ svc.name }}Identifier  = "{{svc.identifier}}";
+inline constexpr std::string_view {{ svc.name }}DisplayName = "{{svc.display_name}}";
+
+{% for _, method in svc.methods -%}
+template<typename Impl>
+concept {{svc.name}}{{method.name}}Sync = requires(Impl& impl) {
+  impl.{{method.name}}(
+      std::declval<const {{ macros::msg_ref_class(msg=method.input_type) }}&>(),
+      std::declval<{{ macros::msg_ref_class(msg=method.output_type) }}&>());
+};
+{% endfor %}
+
+template<typename Impl>
+concept {{svc.name}} = {% for _, method in svc.methods -%}
+    {%- if not loop.first -%}&& {% endif -%}
+    {{- svc.name}}{{method.name}}Sync<Impl>
+{%- endfor %};
+
+{% include "service_parameter_bases" %}
+
+{% endfor %}
+
+
+}
+
+#endif

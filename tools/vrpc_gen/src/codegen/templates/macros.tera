@@ -1,0 +1,27 @@
+{%- macro nanopb_msg(msg) -%}
+    {%- if msg.package == '' -%}
+        {{- msg.name }}
+    {%- else -%}
+        {{- msg.package | package_to_nanopb_prefix }}_{{ msg.name }}
+    {%- endif -%}
+{% endmacro -%}
+
+{%- macro nanopb_enum(enum) -%}
+    {%- if enum.package == '' -%}
+        {{- enum.name }}
+    {%- else -%}
+        {{- enum.package | package_to_nanopb_prefix }}_{{ enum.name }}
+    {%- endif -%}
+{%- endmacro -%}
+
+{%- macro nanopb_enum_member(enum, member) -%}
+    {%- if enum.package == '' -%}
+        {{- enum.name }}_{{ member.name }}
+    {%- else -%}
+        {{- enum.package | package_to_nanopb_prefix }}_{{ enum.name }}_{{ member.name }}
+    {%- endif -%}
+{%- endmacro -%}
+
+{%- macro msg_ref_class(msg) -%}
+    ::{{msg.package | package_to_namespace}}::{{msg.name}}
+{%- endmacro -%}
