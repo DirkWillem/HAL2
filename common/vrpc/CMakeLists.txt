@@ -57,8 +57,10 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
             list(APPEND GEN_SRCS "${PROTO_HDR_ABS_PATH}" "${PROTO_SRC_ABS_PATH}")
 
             # Set up protobuf generation command
-            set(GEN_CMD
-                    "${HAL_PYTHON}"
+            #                    -I${CMAKE_CURRENT_FUNCTION_LIST_DIR}/vendor/nanopb/generator/proto
+            #                    -I./${PROTO_REL_DIR}
+            message("HAL Python: ${HAL_PYTHON}")
+            set(GEN_CMD "${HAL_PYTHON}"
                     "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/vendor/nanopb/generator/nanopb_generator.py"
                     "${PROTO_REL_PATH}"
                     -D "${DSTDIR_ABS}"
@@ -82,6 +84,7 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
     endforeach ()
 
     # Command for generating service headers
+    #            --common-dir "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/vendor/nanopb/generator/proto"
     add_custom_command(
             DEPENDS ${PROTOS}
             OUTPUT ${SVC_HDRS}
@@ -101,6 +104,7 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
                 vrpc_gen
                 --gen uart-service
                 --common-dir "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/proto/common"
+#                --common-dir "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/vendor/nanopb/generator/proto"
                 "${SRCDIR_ABS}"
                 "${DSTDIR_ABS}")
     endif()
@@ -132,9 +136,10 @@ generate_vrpc(vrpc_common_protos proto/common generated/common NO_DEPEND_COMMON)
 generate_vrpc(vrpc_system_protos proto/services generated/services GEN_TYPES uart)
 
 add_library(vrpc STATIC
-        vrpc.h
+        parameters.h
         proto_helpers.h
-        proto_helpers.cpp)
+        proto_helpers.cpp
+        vrpc.h)
 target_include_directories(vrpc PUBLIC "${CMAKE_CURRENT_LIST_DIR}/..")
 target_link_libraries(vrpc PUBLIC nanopb)
 

@@ -7,6 +7,11 @@
 
 namespace ct {
 
+template <typename T, typename StructType, typename FieldType>
+concept FieldPointer = requires(T ptr, StructType s) {
+  { s.*ptr } -> std::convertible_to<FieldType>;
+};
+
 template <std::equality_comparable auto V, typename T>
 struct ValToType {
   static constexpr auto Value = V;

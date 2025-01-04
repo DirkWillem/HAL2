@@ -194,6 +194,11 @@ class Dma : public hal::UnusedPeripheral<Dma<M>> {
     std::unreachable();
     return false;
   }
+
+  template <unsigned DmaInst, unsigned Chan>
+  constexpr void HandleInterrupt() noexcept {
+    std::unreachable();
+  }
 };
 
 }   // namespace stm32g0

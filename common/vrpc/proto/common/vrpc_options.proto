@@ -4,6 +4,26 @@ import "google/protobuf/descriptor.proto";
 
 import "vrpc.proto";
 
+option csharp_namespace = "Vrpc.Generated.Options";
+
+
+enum VrpcMessageType {
+  VRPC_MESSAGE_TYPE_DEFAULT = 0;
+  VRPC_MESSAGE_TYPE_PARAMETERS = 20;
+}
+
+message VrpcMessageOptions {
+  VrpcMessageType type = 1;
+  uint32 id = 2;
+
+  string param_group_identifier = 20;
+  string param_group_display_name = 21;
+}
+
+extend google.protobuf.MessageOptions {
+  VrpcMessageOptions vrpc_msgopt = 1020;
+}
+
 message VrpcFieldOptions {
   // Field descriptor
   string description = 1;
@@ -17,11 +37,19 @@ extend google.protobuf.FieldOptions {
   VrpcFieldOptions vrpc_fieldopt = 1020;
 }
 
+enum VrpcServiceType {
+  VRPC_SERVICE_TYPE_DEFAULT = 0;
+  VRPC_SERVICE_TYPE_PARAMETERS = 10;
+}
 
 message VrpcServiceOptions {
   uint32 id = 1;
   string identifier = 2;
+  VrpcServiceType type = 3;
   string display_name = 10;
+
+  vrpc.VrpcParameterPersistence param_persistence = 30;
+  vrpc.VrpcParameterLatching param_latching = 31;
 }
 
 extend google.protobuf.ServiceOptions {
@@ -34,4 +62,13 @@ message VrpcMethodOptions {
 
 extend google.protobuf.MethodOptions {
   VrpcServiceOptions vrpc_methodopt = 1020;
+}
+
+message VrpcEnumValueOptions {
+  string display_name = 10;
+  string description = 11;
+}
+
+extend google.protobuf.EnumValueOptions {
+  VrpcEnumValueOptions vrpc_enumvalopt = 1020;
 }
