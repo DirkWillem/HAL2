@@ -18,6 +18,11 @@ add_library(constexpr_tools INTERFACE
 target_include_directories(constexpr_tools INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
 
+add_library(halstd INTERFACE
+        halstd/atomic.h)
+target_include_directories(halstd INTERFACE
+        ${CMAKE_CURRENT_LIST_DIR})
+
 
 # Proxy library for CMSIS-DSP which allows disabling it under certain build conditions
 add_library(cmsis_dsp INTERFACE)

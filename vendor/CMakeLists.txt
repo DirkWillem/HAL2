@@ -25,7 +25,7 @@ function(add_stm32g0_vendor_hal VARIANT)
             project_settings)
 
     target_compile_definitions("${VARIANT}_device" INTERFACE
-            "STM32G0" "${VARIANT_UPPER}" "${VARIANT_UPPER}xx")
+            "CORE_CM0P" "STM32G0" "${VARIANT_UPPER}" "${VARIANT_UPPER}xx")
 
     # stm32g0xx_hal library
     file(GLOB HAL_HEADERS "stm32g0xx_hal/Inc/stm32g0xx_*.h")
