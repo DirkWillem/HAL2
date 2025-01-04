@@ -1,0 +1,18 @@
+[package]
+name = "vrpc_gen"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.83"
+clap = { version = "4.5.4", features = ["derive"] }
+protobuf = "3.4.0"
+protobuf-parse = "3.4.0"
+regex = "1.10.4"
+serde = {  version ="1.0.202", features=["derive"] }
+tempfile = "3.10.1"
+tera = "1.19.1"
+vrpc_reflection = { path = "../vrpc_reflection" }
+which = "7.0.0"

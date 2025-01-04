@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+import "vrpc.proto";
+import "vrpc_options.proto";
+import "nanopb.proto";
+
+package radiation_test_setup;
+
+message MeasureRequest {
+
+}
+
+message TemperatureMeasurements {
+  uint32 t_source = 1 [(nanopb).int_size = IS_16, (vrpc_fieldopt) = {
+    description: "Source temperature"
+    unit: "C"
+    fp: {ufix: {w: 16 f: 2}}
+  }];
+
+
+  uint32 t_sink = 2 [(nanopb).int_size = IS_16, (vrpc_fieldopt) = {
+    description: "Sink temperature"
+    unit: "C"
+    fp: {ufix: {w: 16 f: 2}}
+  }];
+}
+
+service RadiationTestSetup {
+  option (vrpc_svcopt) = {
+    id: 0x100
+  };
+
+  rpc MeasureTemperatures (MeasureRequest) returns (TemperatureMeasurements) {
+    option (vrpc_methodopt).id = 0x0001;
+  }
+}

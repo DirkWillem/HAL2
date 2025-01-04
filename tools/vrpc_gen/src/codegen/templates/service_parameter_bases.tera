@@ -1,0 +1,41 @@
+{% import "macros" as macros -%}
+
+
+{% if svc.svc_type is containing("Parameters") -%}
+{% set parameters = svc.svc_type["Parameters"] -%}
+
+class {{svc.name}}Base {
+  {% for param_group in parameters.param_groups -%}
+  {%- set group_msg = param_group.read_method.output_type -%}
+  using {{ group_msg.name}}Mapping = ::vrpc::ParameterMapping<
+    {{ macros::msg_ref_class(msg=group_msg) }},
+    {{ macros::msg_ref_class(msg=param_group.write_method.input_type) }},
+    &{{ macros::msg_ref_class(msg=param_group.write_method.input_type) }}::{{ param_group.write_msg_written_fields.name }},
+    &{{ macros::msg_ref_class(msg=param_group.write_method.input_type) }}::{{ param_group.write_msg_body.name }}>;
+  {%- endfor %}
+
+ public:
+  {%- for param_group in parameters.param_groups -%}
+  {%- set group_msg = param_group.read_method.output_type -%}
+  {%- set read_method = param_group.read_method %}
+  void {{ read_method.name }}(
+      [[maybe_unused]] const {{ macros::msg_ref_class(msg=read_method.input_type) }}& req,
+      {{ macros::msg_ref_class(msg=read_method.output_type) }}& res) const noexcept {
+    std::memcpy(&res, &{{ read_method.output_type.name | pascal_case_to_lower_snake_case }}, sizeof({{ read_method.output_type.name }}));
+  }
+
+  {% set write_method = param_group.write_method -%}
+  void {{ write_method.name }}(
+      const {{ macros::msg_ref_class(msg=write_method.input_type) }}& req,
+      {{ macros::msg_ref_class(msg=write_method.output_type) }}& res) noexcept {
+    {{ group_msg.name}}Mapping::ApplyWriteMessage(req, {{ read_method.output_type.name | pascal_case_to_lower_snake_case }});
+  }
+  {%- endfor %}
+
+ protected:
+  {% for param_group in parameters.param_groups -%}
+  {% set group_msg = param_group.read_method.output_type -%}
+    {{ macros::msg_ref_class(msg=group_msg) }} {{ group_msg.name | pascal_case_to_lower_snake_case }}{};
+  {%- endfor %}
+};
+{% endif %}
