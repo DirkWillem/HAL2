@@ -1,14 +1,14 @@
 syntax = "proto3";
 
-import "vrpc.proto";
-import "vrpc_options.proto";
-import "nanopb.proto";
-
 package radiation_test_setup;
 
-message MeasureRequest {
+import "nanopb.proto";
 
-}
+import "vrpc.proto";
+import "vrpc_options.proto";
+
+
+message MeasureRequest {}
 
 message TemperatureMeasurements {
   uint32 t_source = 1 [(nanopb).int_size = IS_16, (vrpc_fieldopt) = {
@@ -28,9 +28,54 @@ message TemperatureMeasurements {
 service RadiationTestSetup {
   option (vrpc_svcopt) = {
     id: 0x100
+    identifier: "rad_test_setup"
+    display_name: "Radiation Test Setup"
   };
 
   rpc MeasureTemperatures (MeasureRequest) returns (TemperatureMeasurements) {
     option (vrpc_methodopt).id = 0x0001;
+  }
+}
+
+message TemperatureSensorCalibration {
+  option (vrpc_msgopt) = {
+    type: VRPC_MESSAGE_TYPE_PARAMETERS
+    id: 20
+    param_group_identifier: "temp_sensor_calibration"
+    param_group_display_name: "Temperature Sensor Calibration"
+  };
+
+  uint32 source_offset = 1 [(vrpc_fieldopt) = {
+    description: "Source temperature offset"
+    unit: "C"
+    fp: {ufix: {w: 16 f: 2}}
+  }];
+
+  uint32 sink_offset = 2 [(vrpc_fieldopt) = {
+    description: "Sink temperature offset"
+    unit: "C"
+    fp: {ufix: {w: 16 f: 2}}
+  }];
+}
+
+message WriteTemperatureSensorCalibrationRequest {
+  option (nanopb_msgopt).msgid = 2201;
+  repeated uint32 fields = 1 [(nanopb).max_count = 5];
+  TemperatureSensorCalibration parameters = 2;
+}
+
+service RadationTestSetupParameters {
+  option (vrpc_svcopt) = {
+    id: 0x200
+    identifier: "rad_test_setup_params"
+    display_name: "Radiation Test Setup Parameters"
+    type: VRPC_SERVICE_TYPE_PARAMETERS
+  };
+
+  rpc ReadTemperatureSensorCalibration (vrpc.ReadParameterGroupRequest) returns (TemperatureSensorCalibration) {
+    option (vrpc_methodopt).id = 20;
+  }
+  rpc WriteTemperatureSensorCalibration (WriteTemperatureSensorCalibrationRequest) returns (vrpc.WriteParametersResponse) {
+    option (vrpc_methodopt).id = 21;
   }
 }

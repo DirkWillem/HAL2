@@ -19,9 +19,9 @@ message GetServiceInfoRequest {
 }
 
 enum GetServiceInfoError {
-  GET_SERVICE_INFO_ERROR_NONE = 0;
-  GET_SERVICE_INFO_ERROR_INDEX_OUT_OF_BOUNDS = 1;
-  GET_SERVICE_INFO_ERROR_INTERNAL = 500;
+  GET_SERVICE_INFO_ERROR_NONE = 0 [(vrpc_enumvalopt).display_name = "None"];
+  GET_SERVICE_INFO_ERROR_INDEX_OUT_OF_BOUNDS = 1 [(vrpc_enumvalopt).display_name = "Index out of bounds"];
+  GET_SERVICE_INFO_ERROR_INTERNAL = 500 [(vrpc_enumvalopt).display_name = "Internal"];
 }
 
 message GetServiceInfoResponse {

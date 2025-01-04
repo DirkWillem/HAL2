@@ -1,3 +1,6 @@
+generate_vrpc(rad_svcs proto generated
+        GEN_TYPES uart)
+
 if (NOT TARGET GTest::gtest)
     include(FetchContent)
     FetchContent_Declare(
@@ -63,5 +66,5 @@ target_include_directories(hal2_tests PUBLIC "${CMAKE_CURRENT_LIST_DIR}")
 
 
 add_executable(playground main.cpp)
-target_link_libraries(playground math)
+target_link_libraries(playground PUBLIC math rad_svcs)
 target_compile_options(playground PUBLIC -g3)

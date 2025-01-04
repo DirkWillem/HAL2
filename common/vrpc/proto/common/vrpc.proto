@@ -2,6 +2,8 @@ syntax = "proto3";
 
 import "nanopb.proto";
 
+option csharp_namespace = "Vrpc.Generated";
+
 package vrpc;
 
 message UFix {
@@ -47,4 +49,26 @@ message ServerInfo {
   uint32 index_service_id = 12;
 
   string server_name = 20 [(nanopb).max_length = 32];
+}
+
+message ReadParameterGroupRequest {}
+
+
+enum WriteParametersError {
+  WRITE_PARAMETER_ERROR_NONE = 0;
+}
+
+message WriteParametersResponse {
+  WriteParametersError error = 1;
+}
+
+enum VrpcParameterPersistence {
+  VRPC_PARAMETER_PERSISTENCE_NONE = 0;
+  VRPC_PARAMETER_PERSISTENCE_ON_LATCH = 1;
+  VRPC_PARAMETER_PERSISTENCE_EXPLICIT = 2;
+}
+
+enum VrpcParameterLatching {
+  VRPC_PARAMETER_LATCHING_IMMEDIATE = 0;
+  VRPC_PARAMETER_LATCHING_SERVER_CONTROLLED = 1;
 }
