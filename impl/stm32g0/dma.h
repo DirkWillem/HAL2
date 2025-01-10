@@ -24,12 +24,19 @@ enum class UartDmaRequest { Tx, Rx };
 /** Possible DMA requests for SPI */
 enum class SpiDmaRequest { Tx, Rx };
 
+/** Possible DMA requests for TIM */
+enum class TimDmaRequest { PeriodElapsed, Ch1, Ch2, Ch3, Ch4 };
+
+
+
 namespace detail {
 
 [[nodiscard]] uint32_t GetDmaRequestId(UartId         id,
                                        UartDmaRequest request) noexcept;
 [[nodiscard]] uint32_t GetDmaRequestId(SpiId         id,
                                        SpiDmaRequest request) noexcept;
+[[nodiscard]] uint32_t GetDmaRequestId(TimId         id,
+                                       TimDmaRequest request) noexcept;
 
 [[nodiscard]] uint32_t ToHalDmaDirection(hal::DmaDirection dir) noexcept;
 [[nodiscard]] uint32_t ToHalDmaMode(hal::DmaMode mode) noexcept;

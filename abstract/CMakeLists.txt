@@ -8,6 +8,7 @@ add_library(abstract_hal INTERFACE
         hal/pin.h
         hal/spi.h
         hal/system.h
+        hal/tim.h
         hal/uart.h)
 
 target_include_directories(abstract_hal INTERFACE

@@ -3,9 +3,59 @@
 #include <string_view>
 #include <utility>
 
+#include <constexpr_tools/static_mapping.h>
+
 #include <stm32g0xx_hal.h>
 
 namespace stm32g0 {
+
+enum class TimId {
+  Tim1,
+  Tim2,
+  Tim3,
+  Tim4,
+  Tim6,
+  Tim7,
+  Tim14,
+  Tim15,
+  Tim16,
+  Tim17
+};
+
+[[nodiscard]] consteval TimId TimIdFromName(std::string_view name) noexcept {
+  return ct::StaticMap<std::string_view, TimId, 10>(
+      name, {
+                {
+                    {"TIM1", TimId::Tim1},
+                    {"TIM2", TimId::Tim2},
+                    {"TIM3", TimId::Tim3},
+                    {"TIM4", TimId::Tim4},
+                    {"TIM6", TimId::Tim6},
+                    {"TIM7", TimId::Tim7},
+                    {"TIM14", TimId::Tim14},
+                    {"TIM15", TimId::Tim15},
+                    {"TIM16", TimId::Tim16},
+                    {"TIM17", TimId::Tim17},
+                },
+            });
+}
+
+[[nodiscard]] constexpr TIM_TypeDef* GetTimPointer(TimId id) noexcept {
+  switch (id) {
+  case TimId::Tim1: return TIM1;
+  case TimId::Tim2: return TIM2;
+  case TimId::Tim3: return TIM3;
+  case TimId::Tim4: return TIM4;
+  case TimId::Tim6: return TIM6;
+  case TimId::Tim7: return TIM7;
+  case TimId::Tim14: return TIM14;
+  case TimId::Tim15: return TIM15;
+  case TimId::Tim16: return TIM16;
+  case TimId::Tim17: return TIM17;
+  }
+
+  std::unreachable();
+}
 
 enum class UartId {
   Usart1,

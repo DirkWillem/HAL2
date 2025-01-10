@@ -1,0 +1,7 @@
+{%- macro pin_mappings(var_name, pins) -%}
+inline constexpr std::array<TimPinMapping, {{pins | length}}> {{var_name}} {% raw %}{{{% endraw %}
+{% for pin in pins -%}
+{# #}    { .pin=PIN({{pin.pin[0]}}, {{pin.pin[1]}}), .tim = TimIdFromName("{{ pin.tim }}"), .ch = {{ pin.ch }}, .af={{pin.af}}U },
+{% endfor -%}
+{%- raw %}}};{% endraw -%}
+{% endmacro -%}

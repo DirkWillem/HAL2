@@ -24,10 +24,18 @@ function(add_stm32g0_hal VARIANT XMLFILE)
             "${XMLFILE}"
             "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/spi_i2s_pin_mapping.h")
 
+    add_generated_file(
+            stm32g0
+            "${VARIANT}"
+            "tim-pin-mapping"
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.h")
+
     # Add library
     add_library("${VARIANT}_hal"
             "stm32g0/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.h"
             "stm32g0/generated/${VARIANT}/stm32g0/mappings/spi_i2s_pin_mapping.h"
+            "stm32g0/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.h"
 
             stm32g0/clocks.h
             stm32g0/dma.h
@@ -35,10 +43,13 @@ function(add_stm32g0_hal VARIANT XMLFILE)
             stm32g0/i2s.cpp
             stm32g0/i2s.h
             stm32g0/interrupts.h
+            stm32g0/peripheral_ids.h
             stm32g0/pin.cpp
             stm32g0/pin.h
             stm32g0/spi.cpp
             stm32g0/spi.h
+            stm32g0/tim.cpp
+            stm32g0/tim.h
             stm32g0/uart.cpp
             stm32g0/uart.h)
 

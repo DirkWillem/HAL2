@@ -105,6 +105,20 @@ struct Values {
     return {};
   }
 
+  [[nodiscard]] static consteval bool Contains(T value) noexcept
+    requires(std::equality_comparable<T>)
+  {
+    constexpr auto arr = ToArray();
+
+    for (std::size_t i = 0; i < Count; i++) {
+      if (arr[i] == value) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   [[nodiscard]] static consteval std::size_t GetIndex(T value) noexcept
     requires(std::equality_comparable<T>)
   {
@@ -114,6 +128,16 @@ struct Values {
       if (arr[i] == value) {
         return i;
       }
+    }
+
+    std::unreachable();
+  }
+
+  [[nodiscard]] static consteval T GetByIndex(std::size_t idx) noexcept {
+    constexpr auto arr = ToArray();
+
+    if (idx < arr.size()) {
+      return arr[idx];
     }
 
     std::unreachable();

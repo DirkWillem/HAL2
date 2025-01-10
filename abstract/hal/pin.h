@@ -107,4 +107,30 @@ concept ConstructibleGpo = PinId<Pin> && Gpo<Impl> && requires(Impl gpo) {
        std::declval<hal::PinMode>()};
 };
 
+template <PinId PId, std::equality_comparable Tim>
+/**
+ * Timer alternate function mapping
+ * @tparam PId Pin ID type
+ * @tparam Tim Timer ID type
+ */
+struct TimAFMapping {
+  PId      pin;
+  Tim      tim;
+  unsigned ch;
+  unsigned af;
+};
+
+template <PinId PId, std::equality_comparable Tim, std::size_t N>
+[[nodiscard]] constexpr std::optional<TimAFMapping<PId, Tim>>
+FindTimAFMapping(const std::array<TimAFMapping<PId, Tim>, N>& mappings, Tim tim,
+                 unsigned ch, PId pin) noexcept {
+  for (const auto& mapping : mappings) {
+    if (mapping.pin == pin && mapping.tim == tim && mapping.ch == ch) {
+      return mapping;
+    }
+  }
+
+  return {};
+}
+
 }   // namespace hal

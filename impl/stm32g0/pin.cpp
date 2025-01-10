@@ -67,7 +67,7 @@ void Pin::Initialize(stm32g0::PinId id, hal::PinDirection dir,
       .Pin       = id.hal_pin(),
       .Mode      = ToHalMode(dir, mode),
       .Pull      = ToHalPull(pull),
-      .Speed     = GPIO_SPEED_FREQ_HIGH,
+      .Speed     = GPIO_SPEED_FREQ_LOW,
       .Alternate = 0,
   };
   HAL_GPIO_Init(id.hal_port(), &init);

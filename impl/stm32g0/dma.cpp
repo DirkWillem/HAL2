@@ -54,6 +54,69 @@ namespace stm32g0::detail {
   std::unreachable();
 }
 
+[[nodiscard]] uint32_t GetDmaRequestId(TimId         id,
+                                       TimDmaRequest request) noexcept {
+  switch (id) {
+  case TimId::Tim1:
+    switch (request) {
+    case TimDmaRequest::PeriodElapsed: return DMA_REQUEST_TIM1_UP;
+    case TimDmaRequest::Ch1: return DMA_REQUEST_TIM1_CH1;
+    case TimDmaRequest::Ch2: return DMA_REQUEST_TIM1_CH2;
+    case TimDmaRequest::Ch3: return DMA_REQUEST_TIM1_CH3;
+    case TimDmaRequest::Ch4: return DMA_REQUEST_TIM1_CH4;
+    default: std::unreachable();
+    }
+  case TimId::Tim2:
+    switch (request) {
+    case TimDmaRequest::PeriodElapsed: return DMA_REQUEST_TIM2_UP;
+    case TimDmaRequest::Ch1: return DMA_REQUEST_TIM2_CH1;
+    case TimDmaRequest::Ch2: return DMA_REQUEST_TIM2_CH2;
+    case TimDmaRequest::Ch3: return DMA_REQUEST_TIM2_CH3;
+    case TimDmaRequest::Ch4: return DMA_REQUEST_TIM2_CH4;
+    default: std::unreachable();
+    }
+  case TimId::Tim3:
+    switch (request) {
+    case TimDmaRequest::PeriodElapsed: return DMA_REQUEST_TIM3_UP;
+    case TimDmaRequest::Ch1: return DMA_REQUEST_TIM3_CH1;
+    case TimDmaRequest::Ch2: return DMA_REQUEST_TIM3_CH2;
+    case TimDmaRequest::Ch3: return DMA_REQUEST_TIM3_CH3;
+    case TimDmaRequest::Ch4: return DMA_REQUEST_TIM3_CH4;
+    default: std::unreachable();
+    }
+  case TimId::Tim4:
+    switch (request) {
+    case TimDmaRequest::PeriodElapsed: return DMA_REQUEST_TIM4_UP;
+    case TimDmaRequest::Ch1: return DMA_REQUEST_TIM4_CH1;
+    case TimDmaRequest::Ch2: return DMA_REQUEST_TIM4_CH2;
+    case TimDmaRequest::Ch3: return DMA_REQUEST_TIM4_CH3;
+    case TimDmaRequest::Ch4: return DMA_REQUEST_TIM4_CH4;
+    default: std::unreachable();
+    }
+  case TimId::Tim15:
+    switch (request) {
+    case TimDmaRequest::PeriodElapsed: return DMA_REQUEST_TIM15_UP;
+    case TimDmaRequest::Ch1: return DMA_REQUEST_TIM15_CH1;
+    case TimDmaRequest::Ch2: return DMA_REQUEST_TIM15_CH2;
+    default: std::unreachable();
+    }
+  case TimId::Tim16:
+    switch (request) {
+    case TimDmaRequest::PeriodElapsed: return DMA_REQUEST_TIM16_UP;
+    case TimDmaRequest::Ch1: return DMA_REQUEST_TIM16_CH1;
+    default: std::unreachable();
+    }
+  case TimId::Tim17:
+    switch (request) {
+    case TimDmaRequest::PeriodElapsed: return DMA_REQUEST_TIM17_UP;
+    case TimDmaRequest::Ch1: return DMA_REQUEST_TIM17_CH1;
+    default: std::unreachable();
+    }
+  }
+
+  std::unreachable();
+}
+
 [[nodiscard]] uint32_t ToHalDmaDirection(hal::DmaDirection dir) noexcept {
   switch (dir) {
   case hal::DmaDirection::MemToPeriph: return DMA_MEMORY_TO_PERIPH;

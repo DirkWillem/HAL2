@@ -136,9 +136,9 @@ struct SystemClockSettings {
   [[nodiscard]] consteval ct::Frequency auto
   ApbTimersClockFrequency(ct::Frequency auto sysclk) const noexcept {
     if (apb_prescaler == 1) {
-      return Apb1PeripheralsClockFrequency(sysclk);
+      return ApbPeripheralsClockFrequency(sysclk).template As<ct::Hz>();
     } else {
-      return Apb1PeripheralsClockFrequency(sysclk) * 2;
+      return (ApbPeripheralsClockFrequency(sysclk) * 2).template As<ct::Hz>();
     }
   }
 };

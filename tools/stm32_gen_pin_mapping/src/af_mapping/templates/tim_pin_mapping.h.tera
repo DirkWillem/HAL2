@@ -1,0 +1,20 @@
+{% import "tim_macros" as tim -%}
+#pragma once
+
+#include <hal/pin.h>
+
+#include <{{family}}/pin.h>
+#include <{{family}}/peripheral_ids.h>
+
+namespace {{ family }} {
+
+using TimPinMapping = hal::TimAFMapping<PinId, TimId>;
+
+/** Ch pin mappings */
+{{ tim::pin_mappings(var_name="TimChPinMappings", pins=tim_pins.ch) }}
+
+/** ChN pin mappings */
+{{ tim::pin_mappings(var_name="TimChNPinMappings", pins=tim_pins.chn) }}
+
+}
+

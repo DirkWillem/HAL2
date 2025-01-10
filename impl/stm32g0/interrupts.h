@@ -6,6 +6,8 @@
 #include <stm32g0/i2s.h>
 #include <stm32g0/uart.h>
 
+// ReSharper disable CppNonInlineFunctionDefinitionInHeaderFile
+
 extern "C" {
 
 [[maybe_unused]] void SysTick_Handler() {
@@ -107,5 +109,66 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef* hspi) {
   HANDLE_SPI_RECEIVE_CALLBACK(Spi1);
   HANDLE_SPI_RECEIVE_CALLBACK(Spi2);
   HANDLE_SPI_RECEIVE_CALLBACK(Spi3);
+}
+
+[[maybe_unused]] void TIM1_BRK_UP_TRG_COM_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim1)
+}
+
+[[maybe_unused]] void TIM1_CC_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim1)
+}
+
+[[maybe_unused]] void TIM2_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim2)
+}
+
+[[maybe_unused]] void TIM3_TIM4_IRQHandle() {
+  HANDLE_PERIPHERAL_IRQ(Tim3)
+  HANDLE_PERIPHERAL_IRQ(Tim4)
+}
+
+[[maybe_unused]] void TIM6_DAC_LPTIM1_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim6)
+}
+
+[[maybe_unused]] void TIM7_LPTIM2_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim7)
+}
+
+[[maybe_unused]] void TIM14_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim14)
+}
+
+[[maybe_unused]] void TIM15_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim15)
+}
+
+[[maybe_unused]] void TIM16_FDCAN_IT0_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim16)
+}
+
+[[maybe_unused]] void TIM17_FDCAN_IT1_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim17)
+}
+
+#define HANDLE_TIM_PERIOD_ELAPSED_CB(Inst)                 \
+  if constexpr (hal::IsPeripheralInUse<stm32g0::Inst>()) { \
+    if (htim == &stm32g0::Inst::instance().htim) {         \
+      stm32g0::Inst::instance().PeriodElapsed();           \
+    }                                                      \
+  }
+
+[[maybe_unused]] void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim1)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim2)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim3)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim4)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim6)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim7)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim14)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim15)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim16)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim17)
 }
 }
