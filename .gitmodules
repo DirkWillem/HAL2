@@ -37,3 +37,6 @@
 [submodule "vendor/stm32_mw_usb_device"]
 	path = vendor/stm32_mw_usb_device
 	url = git@github.com:STMicroelectronics/stm32-mw-usb-device.git
+[submodule "common/vrpc/protos"]
+	path = common/vrpc/protos
+	url = git@github.com:DirkWillem/vRPC-Common-Protocol.git

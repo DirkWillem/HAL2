@@ -1,9 +1,0 @@
-syntax = "proto3";
-
-import "vrpc.proto";
-
-message GetProtocolVersionReq {}
-
-message GetProtocolVersionRes {
-  uint32 version = 1;
-}

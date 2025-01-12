@@ -56,19 +56,15 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
             set(PROTO_SRC_ABS_PATH "${DSTDIR_ABS}/${PROTO_SRC_REL_PATH}")
             list(APPEND GEN_SRCS "${PROTO_HDR_ABS_PATH}" "${PROTO_SRC_ABS_PATH}")
 
-            # Set up protobuf generation command
-            #                    -I${CMAKE_CURRENT_FUNCTION_LIST_DIR}/vendor/nanopb/generator/proto
-            #                    -I./${PROTO_REL_DIR}
-            message("HAL Python: ${HAL_PYTHON}")
             set(GEN_CMD "${HAL_PYTHON}"
                     "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/vendor/nanopb/generator/nanopb_generator.py"
                     "${PROTO_REL_PATH}"
                     -D "${DSTDIR_ABS}"
-                    --cpp-descriptors)
+                    --quiet --cpp-descriptors)
         endif ()
 
         if (NOT ${GENERATE_VRPC_NO_DEPEND_COMMON})
-            list(APPEND GEN_CMD "--protoc-opt='--proto_path=${CMAKE_CURRENT_FUNCTION_LIST_DIR}/proto/common'")
+            list(APPEND GEN_CMD "--protoc-opt='--proto_path=${CMAKE_CURRENT_FUNCTION_LIST_DIR}/protos/common'")
         endif ()
 
         # Add UART headers if required
@@ -91,7 +87,7 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
             COMMAND
             vrpc_gen
             --gen service
-            --common-dir "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/proto/common"
+            --common-dir "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/protos/common"
             "${SRCDIR_ABS}"
             "${DSTDIR_ABS}")
 
@@ -103,8 +99,7 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
                 COMMAND
                 vrpc_gen
                 --gen uart-service
-                --common-dir "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/proto/common"
-#                --common-dir "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/vendor/nanopb/generator/proto"
+                --common-dir "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/protos/common"
                 "${SRCDIR_ABS}"
                 "${DSTDIR_ABS}")
     endif()
@@ -117,7 +112,6 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
 
     # "Bare" library
     add_library(${TARGET}_bare STATIC ${GEN_SRCS})
-    message("${TARGET}" "${GEN_SRCS}")
     target_include_directories(${TARGET}_bare PUBLIC "${DSTDIR_ABS}")
     target_link_libraries(${TARGET}_bare
             PUBLIC nanopb_headers)
@@ -132,8 +126,8 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
     endif ()
 endfunction()
 
-generate_vrpc(vrpc_common_protos proto/common generated/common NO_DEPEND_COMMON)
-generate_vrpc(vrpc_system_protos proto/services generated/services GEN_TYPES uart)
+generate_vrpc(vrpc_common_protos protos/common generated/common NO_DEPEND_COMMON)
+generate_vrpc(vrpc_system_protos protos/services generated/services GEN_TYPES uart)
 
 add_library(vrpc STATIC
         parameters.h

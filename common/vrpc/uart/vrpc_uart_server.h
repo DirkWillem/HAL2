@@ -19,8 +19,8 @@ struct DefaultVrpcUartServerOptions {
   static constexpr std::string_view           Name             = "vRPC App";
 };
 
-template <hal::AsyncUart Uart, hal::CriticalSectionInterface CSI,
-          VrpcUartServerOptions O, ServiceImpl... Services>
+template <hal::AsyncUart Uart, hal::System Sys, VrpcUartServerOptions O,
+          ServiceImpl... Services>
   requires(sizeof...(Services) > 0)
 class VrpcUartServer
     : private UartService<server_index::ServerIndexImpl,
@@ -108,7 +108,8 @@ class VrpcUartServer
     for (auto& request : request_slots) {
       // Check if the request should be handled, otherwise continue
       {
-        hal::CriticalSection<CSI> critical_section{};
+        hal::CriticalSection<typename Sys::CriticalSectionInterface>
+            critical_section{};
         if (request.state == SlotState::Empty
             || request.state == SlotState::ReadyToTransmit
             || request.state == SlotState::Transmitting) {
@@ -186,7 +187,8 @@ class VrpcUartServer
 
     bool restart_receive = false;
     {
-      hal::CriticalSection<CSI> critical_section{};
+      hal::CriticalSection<typename Sys::CriticalSectionInterface>
+          critical_section{};
       restart_receive = !receiving.test_and_set();
       receiving.clear();
     }
