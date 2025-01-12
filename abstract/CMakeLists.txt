@@ -14,4 +14,4 @@ add_library(abstract_hal INTERFACE
 target_include_directories(abstract_hal INTERFACE
         "${CMAKE_CURRENT_LIST_DIR}")
 target_link_libraries(abstract_hal INTERFACE
-        constexpr_tools)
+        constexpr_tools halstd)

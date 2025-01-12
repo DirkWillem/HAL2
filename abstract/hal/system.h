@@ -1,11 +1,21 @@
 #pragma once
 
+#include <halstd/atomic.h>
+
 namespace hal {
 
 template <typename Impl>
 concept CriticalSectionInterface = requires {
   Impl::Enter();
   Impl::Exit();
+};
+
+template <typename S>
+concept System = requires {
+  typename S::CriticalSectionInterface;
+  requires CriticalSectionInterface<typename S::CriticalSectionInterface>;
+
+  requires halstd::Atomic<typename S::template Atomic<int>>;
 };
 
 template <CriticalSectionInterface CSF>

@@ -5,6 +5,7 @@
 #include <constexpr_tools/logic.h>
 
 #include "callback.h"
+#include "peripheral.h"
 
 namespace hal {
 
@@ -17,7 +18,7 @@ enum class UartParity { Even, Odd, None };
 enum class UartStopBits { Half, One, OneAndHalf, Two };
 
 template <typename Impl>
-concept UartBase = requires {
+concept UartBase = Peripheral<Impl> && IsPeripheralInUse<Impl>() && requires {
   { Impl::OperatingMode } -> std::convertible_to<UartOperatingMode>;
   { Impl::FlowControl } -> std::convertible_to<UartFlowControl>;
 };

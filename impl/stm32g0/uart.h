@@ -77,6 +77,7 @@ template <typename Impl, UartId Id,
 class UartImpl : public hal::UsedPeripheral {
   friend void ::HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart,
                                            uint16_t            size);
+  friend void ::HAL_UART_TxCpltCallback(UART_HandleTypeDef*);
 
  public:
   static constexpr auto OperatingMode = OM;
@@ -177,6 +178,12 @@ class UartImpl : public hal::UsedPeripheral {
     }
   }
 
+  void TransmitComplete() noexcept {
+    if constexpr (hal::AsyncUart<Impl>) {
+      static_cast<Impl*>(this)->UartTransmitCallback();
+    }
+  }
+
   /**
    * Constructor for UART without flow control in DMA mode
    * @param pinout UART pinout
@@ -232,12 +239,14 @@ template <UartId Id>
 class Uart : public hal::UnusedPeripheral<Uart<Id>> {
   friend void ::HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart,
                                            uint16_t            size);
+  friend void ::HAL_UART_TxCpltCallback(UART_HandleTypeDef*);
 
  public:
   constexpr void HandleInterrupt() noexcept {}
 
  protected:
   void ReceiveComplete(std::size_t n_bytes) noexcept {}
+  void TransmitComplete() noexcept {}
 
   UART_HandleTypeDef huart{};
 };

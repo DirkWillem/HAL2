@@ -48,6 +48,8 @@ function(add_stm32g0_hal VARIANT XMLFILE)
             stm32g0/pin.h
             stm32g0/spi.cpp
             stm32g0/spi.h
+            stm32g0/system.cpp
+            stm32g0/system.h
             stm32g0/tim.cpp
             stm32g0/tim.h
             stm32g0/uart.cpp
