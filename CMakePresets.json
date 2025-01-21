@@ -1,0 +1,129 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 30,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "desktop-base",
+      "hidden": true,
+      "generator": "Ninja"
+    },
+    {
+      "name": "desktop-debug",
+      "inherits": "desktop-base",
+      "displayName": "Desktop (Debug)",
+      "binaryDir": "${sourceDir}/build/debug"
+    },
+
+    {
+      "name": "cortex-m0plus-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${fileDir}/cmake/toolchains/arm-cortex-m0p-gcc.cmake"
+      }
+    },
+    {
+      "name": "cortex-m0plus-debug",
+      "inherits": "cortex-m0plus-base",
+      "displayName": "Cortex-M0+ (Debug)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m0plus-debug"
+    },
+    {
+      "name": "cortex-m0plus-release",
+      "inherits": "cortex-m0plus-base",
+      "displayName": "Cortex-M0+ (Release)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m0plus-release"
+    },
+
+    {
+      "name": "cortex-m4f-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${fileDir}/cmake/toolchains/arm-cortex-m4f-gcc.cmake"
+      }
+    },
+    {
+      "name": "cortex-m4f-debug",
+      "inherits": "cortex-m4f-base",
+      "displayName": "Cortex-M4F (Debug)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m4f-debug"
+    },
+    {
+      "name": "cortex-m4f-release",
+      "inherits": "cortex-m4f-base",
+      "displayName": "Cortex-M4F (Release)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m4f-release"
+    },
+
+    {
+      "name": "cortex-m7f-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${fileDir}/cmake/toolchains/arm-cortex-m7f-gcc.cmake"
+      }
+    },
+    {
+      "name": "cortex-m7f-debug",
+      "inherits": "cortex-m7f-base",
+      "displayName": "Cortex-M7F (Debug)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m7f-debug"
+    },
+    {
+      "name": "cortex-m7f-release",
+      "inherits": "cortex-m7f-base",
+      "displayName": "Cortex-M7F (Release)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m7f-release"
+    },
+
+    {
+      "name": "cortex-m33f-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${fileDir}/cmake/toolchains/arm-cortex-m33f-gcc.cmake"
+      }
+    },
+    {
+      "name": "cortex-m33f-debug",
+      "inherits": "cortex-m33f-base",
+      "displayName": "Cortex-M33F (Debug)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m33f-debug"
+    },
+    {
+      "name": "cortex-m33f-release",
+      "inherits": "cortex-m33f-base",
+      "displayName": "Cortex-M33F (Release)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m33f-release"
+    }
+  ]
+}
