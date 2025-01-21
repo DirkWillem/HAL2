@@ -4,6 +4,7 @@
 
 #include <vrpc/builtins/server_index.h>
 #include <vrpc/generated/services/server_index_uart.h>
+#include <vrpc/vrpc.h>
 
 namespace vrpc::uart {
 
@@ -11,32 +12,82 @@ template <typename O>
 concept VrpcUartServerOptions = requires {
   { O::RequestSlotCount } -> std::convertible_to<std::optional<std::size_t>>;
   { O::Name } -> std::convertible_to<std::string_view>;
+  { O::MultiDrop } -> std::convertible_to<bool>;
   requires O::Name.length() <= 32;
 };
 
 struct DefaultVrpcUartServerOptions {
   static constexpr std::optional<std::size_t> RequestSlotCount = std::nullopt;
   static constexpr std::string_view           Name             = "vRPC App";
+  static constexpr bool                       MultiDrop        = false;
 };
 
-template <hal::AsyncUart Uart, hal::System Sys, VrpcUartServerOptions O,
-          ServiceImpl... Services>
+namespace detail {
+
+template <VrpcUartServerOptions O>
+class VrpcUartServerExtensions {};
+
+template <VrpcUartServerOptions O>
+  requires O::MultiDrop
+class VrpcUartServerExtensions<O> {
+ protected:
+  constexpr void ChangeAddress(uint32_t new_address) noexcept {
+    address = new_address;
+  }
+
+ protected:
+  explicit VrpcUartServerExtensions(uint32_t address) noexcept
+      : address{address} {}
+
+  uint32_t address;
+};
+
+}   // namespace detail
+
+template <hal::AsyncUart Uart, hal::System Sys, VrpcNetworkConfig NC,
+          VrpcUartServerOptions O, ServiceImpl... Services>
   requires(sizeof...(Services) > 0)
+/**
+ * vRPC UART server implementation. Can operate in both a single sever, single
+ * client mode, and a multi-drop config
+ * @tparam Uart UART implementation
+ * @tparam Sys System implementation
+ * @tparam NC Network Configuration
+ * @tparam O Server options
+ * @tparam Services Services to be implemented by the server
+ */
 class VrpcUartServer
     : private UartService<server_index::ServerIndexImpl,
                           server_index::uart::UartServerIndex>
     , private detail::ServiceRef<
           server_index::uart::UartServerIndex<server_index::ServerIndexImpl>>
-    , private detail::ServiceRef<Services>... {
+    , private detail::ServiceRef<Services>...
+    , public detail::VrpcUartServerExtensions<O> {
   using IndexService =
       server_index::uart::UartServerIndex<server_index::ServerIndexImpl>;
 
+  static_assert(ct::Implies(O::MultiDrop,
+                            NC.topology
+                                == NetworkTopology::SingleClientMultipleServer),
+                "Multidrop UART servers are only supported for multiple-server "
+                "topologies");
+  static_assert(ct::Implies(NC.topology
+                                == NetworkTopology::SingleClientMultipleServer,
+                            O::MultiDrop),
+                "Multiple-server topology requires an addressing mechanism "
+                "such as mutlidrop");
+
+  static constexpr auto        HasAddress = O::MultiDrop;
+  static constexpr FrameFormat FrameFmt{.has_server_addr_word = HasAddress};
+  using Decoder = UartDecoder<FrameFmt>;
+
  public:
+  /** UART buffer size */
   static constexpr auto BufSize =
       std::max({static_cast<std::size_t>(
                     nanopb::MessageDescriptor<vrpc::ServerInfo>::size),
                 Services::MinBufferSize()...})
-      + UartDecoder::CmdFrameHeaderLength + UartDecoder::CmdFrameTailLength;
+      + Decoder::CmdFrameHeaderLength + Decoder::CmdFrameTailLength;
 
   static constexpr std::size_t NBuiltinServices = 1;
 
@@ -57,19 +108,21 @@ class VrpcUartServer
 
   struct RequestSlot {
     SlotState                      state{SlotState::Empty};
-    CommandRequestFrame            frame{};
+    CommandRequestFrame<FrameFmt>  frame{};
     std::array<std::byte, BufSize> buffer;
     std::span<const std::byte>     tx_data;
   };
 
  public:
   explicit VrpcUartServer(Uart& uart, Services&... services)
+    requires(!HasAddress)
       : UartService<server_index::ServerIndexImpl,
                     server_index::uart::UartServerIndex>{}
       , detail::ServiceRef<IndexService>{UartService<
             server_index::ServerIndexImpl,
             server_index::uart::UartServerIndex>::svc_uart}
       , detail::ServiceRef<Services>{services}...
+      , detail::VrpcUartServerExtensions<O>{}
       , service_infos{{{.id         = IndexService::ServiceId,
                         .identifier = IndexService::Identifier},
                        {
@@ -91,6 +144,43 @@ class VrpcUartServer
         .InitializeIds(service_infos);
 
     StartReceiveToCurrentBuffer();
+  }
+
+  explicit VrpcUartServer(Uart& uart, uint32_t addr, Services&... services)
+    requires HasAddress
+      : UartService<server_index::ServerIndexImpl,
+                    server_index::uart::UartServerIndex>{}
+      , detail::ServiceRef<IndexService>{UartService<
+            server_index::ServerIndexImpl,
+            server_index::uart::UartServerIndex>::svc_uart}
+      , detail::ServiceRef<Services>{services}...
+      , detail::VrpcUartServerExtensions<O>{addr}
+      , service_infos{{{.id         = IndexService::ServiceId,
+                        .identifier = IndexService::Identifier},
+                       {
+                           .id         = Services::ServiceId,
+                           .identifier = Services::Identifier,
+                       }...}}
+      , uart{uart}
+      , decoder{request_slots[0].buffer}
+      , rx_callback{this, &VrpcUartServer::ReceiveCallback}
+      , tx_callback{this, &VrpcUartServer::TransmitCallback}
+      , async_cmd_callbacks{
+            {{this, &VrpcUartServer::AsyncCommandCallback<IndexService>},
+             {this, &VrpcUartServer::AsyncCommandCallback<Services>}...}} {
+    uart.RegisterUartReceiveCallback(rx_callback);
+    uart.RegisterUartTransmitCallback(tx_callback);
+
+    UartService<server_index::ServerIndexImpl,
+                server_index::uart::UartServerIndex>::svc
+        .InitializeIds(service_infos);
+
+    StartReceiveToCurrentBuffer();
+  }
+
+  ~VrpcUartServer() {
+    uart.ClearUartReceiveCallback();
+    uart.ClearUartTransmitCallback();
   }
 
   /**
@@ -137,8 +227,15 @@ class VrpcUartServer
     auto result          = decoder.ConsumeBytes(data.size());
 
     while (!std::holds_alternative<std::monostate>(result)) {
-      if (std::holds_alternative<CommandRequestFrameRef>(result)) {
-        auto request = std::get<CommandRequestFrameRef>(result).get();
+      if (std::holds_alternative<CommandRequestFrameRef<FrameFmt>>(result)) {
+        auto request = std::get<CommandRequestFrameRef<FrameFmt>>(result).get();
+
+        if constexpr (HasAddress) {
+          if (request.server_address != this->address) {
+            decoder.ResetBuffer(current_slot->buffer);
+            break;
+          }
+        }
 
         if (!HasService(request.service_id)) {
           // TODO: Handle unknown service
@@ -158,16 +255,26 @@ class VrpcUartServer
             }
           }
         }
-      } else if (std::holds_alternative<ServerInfoRequestRef>(result)) {
+      } else if (std::holds_alternative<ServerInfoRequestRef<FrameFmt>>(
+                     result)) {
+        const auto& req =
+            std::get<ServerInfoRequestRef<FrameFmt>>(result).get();
+
+        if constexpr (HasAddress) {
+          if (req.server_address != this->address) {
+            decoder.ResetBuffer(current_slot->buffer);
+            break;
+          }
+        }
+
         if (current_slot != nullptr) {
-          const auto& req     = std::get<ServerInfoRequestRef>(result).get();
-          current_slot->state = SlotState::PendingGetServerInfo;
+          current_slot->state            = SlotState::PendingGetServerInfo;
           current_slot->frame.request_id = req.request_id;
           if (!NextSlot()) {
             restart_receive = false;
           }
         }
-      } else if (std::holds_alternative<UartDecoder::Error>(result)) {
+      } else if (std::holds_alternative<typename Decoder::Error>(result)) {
         decoder.ResetBuffer(current_slot->buffer);
       }
 
@@ -276,7 +383,7 @@ class VrpcUartServer
             async_cmd_callbacks[ServiceIndex<Service>()]);
     switch (handle_result.state) {
     case HandleState::Handled:
-      request.tx_data = EncodeCommandFrame(
+      request.tx_data = EncodeCmdFrame(
           request.buffer, request.frame.service_id, request.frame.command_id,
           request.frame.request_id, handle_result.response_payload);
       request.state = SlotState::ReadyToTransmit;
@@ -303,7 +410,7 @@ class VrpcUartServer
         ProtoEncode(info, payload_buffer);
 
     if (encode_success) {
-      request.tx_data = EncodeServerInfoResponseFrame(
+      request.tx_data = EncodeInfoFrame(
           request.buffer, request.frame.request_id, encoded_payload);
       request.state = SlotState::ReadyToTransmit;
     } else {
@@ -313,18 +420,17 @@ class VrpcUartServer
 
   [[nodiscard]] static constexpr std::span<std::byte>
   GetCommandResponsePayloadbuffer(std::span<std::byte> full_buffer) noexcept {
-    auto result = full_buffer.subspan(UartDecoder::CmdFrameHeaderLength);
-    return result.subspan(0, result.size() - UartDecoder::CmdFrameTailLength);
+    auto result = full_buffer.subspan(Decoder::CmdFrameHeaderLength);
+    return result.subspan(0, result.size() - Decoder::CmdFrameTailLength);
   }
 
   [[nodiscard]] static constexpr std::span<std::byte>
   GetServerInfoResponsePayloadBuffer(
       std::span<std::byte> full_buffer) noexcept {
-    return full_buffer.subspan(
-        UartDecoder::ServerInfoFrameHeaderLength,
-        full_buffer.size()
-            - (UartDecoder::ServerInfoFrameHeaderLength
-               + UartDecoder::ServerInfoFrameTailLength));
+    return full_buffer.subspan(Decoder::ServerInfoFrameHeaderLength,
+                               full_buffer.size()
+                                   - (Decoder::ServerInfoFrameHeaderLength
+                                      + Decoder::ServerInfoFrameTailLength));
   }
 
   template <ServiceImpl Service>
@@ -341,6 +447,30 @@ class VrpcUartServer
 
     std::unreachable();
     return 0;
+  }
+
+  constexpr std::span<const std::byte>
+  EncodeCmdFrame(std::span<std::byte> dst, uint32_t service_id, uint32_t cmd_id,
+                 uint32_t req_id, std::span<const std::byte> payload) noexcept {
+    if constexpr (HasAddress) {
+      return EncodeCommandFrame<FrameFmt>(
+          dst, detail::VrpcUartServerExtensions<O>::address, service_id, cmd_id,
+          req_id, payload);
+    } else {
+      return EncodeCommandFrame<FrameFmt>(dst, service_id, cmd_id, req_id,
+                                          payload);
+    }
+  }
+
+  constexpr std::span<const std::byte>
+  EncodeInfoFrame(std::span<std::byte> dst, uint32_t req_id,
+                  std::span<const std::byte> payload) noexcept {
+    if constexpr (HasAddress) {
+      return EncodeServerInfoResponseFrame<FrameFmt>(
+          dst, detail::VrpcUartServerExtensions<O>::address, req_id, payload);
+    } else {
+      return EncodeServerInfoResponseFrame<FrameFmt>(dst, req_id, payload);
+    }
   }
 
   std::array<server_index::ServiceInfo, sizeof...(Services) + NBuiltinServices>
@@ -360,7 +490,7 @@ class VrpcUartServer
              sizeof...(Services) + NBuiltinServices>
       async_cmd_callbacks;
 
-  UartDecoder decoder;
+  Decoder decoder;
 
   std::atomic_flag transmitting{};
   std::atomic_flag receiving{};
