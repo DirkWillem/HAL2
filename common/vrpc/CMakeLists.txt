@@ -68,8 +68,12 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
         endif ()
 
         # Add UART headers if required
-        if ("uart" IN_LIST GENERATE_VRPC_GEN_TYPES)
-            list(APPEND UART_HDRS "${DSTDIR_ABS}/${PROTO_BASE_PATH}_uart.h")
+        if ("uart_server" IN_LIST GENERATE_VRPC_GEN_TYPES)
+            list(APPEND UART_SERVER_HDRS "${DSTDIR_ABS}/${PROTO_BASE_PATH}_uart_server_service.h")
+        endif()
+
+        if ("uart_client" IN_LIST GENERATE_VRPC_GEN_TYPES)
+            list(APPEND UART_CLIENT_HDRS "${DSTDIR_ABS}/${PROTO_BASE_PATH}_uart_service_client.h")
         endif()
 
         add_custom_command(
@@ -92,20 +96,32 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
             "${DSTDIR_ABS}")
 
     # Command for generating UART headers
-    if ("uart" IN_LIST GENERATE_VRPC_GEN_TYPES)
+    if ("uart_server" IN_LIST GENERATE_VRPC_GEN_TYPES)
         add_custom_command(
                 DEPENDS ${PROTOS}
-                OUTPUT ${UART_HDRS}
+                OUTPUT ${UART_SERVER_HDRS}
                 COMMAND
                 vrpc_gen
-                --gen uart-service
+                --gen uart-server-service
+                --common-dir "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/protos/common"
+                "${SRCDIR_ABS}"
+                "${DSTDIR_ABS}")
+    endif()
+
+    if ("uart_client" IN_LIST GENERATE_VRPC_GEN_TYPES)
+        add_custom_command(
+                DEPENDS ${PROTOS}
+                OUTPUT ${UART_CLIENT_HDRS}
+                COMMAND
+                vrpc_gen
+                --gen uart-service-client
                 --common-dir "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/protos/common"
                 "${SRCDIR_ABS}"
                 "${DSTDIR_ABS}")
     endif()
 
     # Regular library
-    add_library(${TARGET} STATIC ${GEN_SRCS} ${SVC_HDRS} ${UART_HDRS})
+    add_library(${TARGET} STATIC ${GEN_SRCS} ${SVC_HDRS} ${UART_SERVER_HDRS} ${UART_CLIENT_HDRS})
     target_include_directories(${TARGET} PUBLIC "${DSTDIR_ABS}")
     target_link_libraries(${TARGET}
             PUBLIC nanopb)
@@ -120,8 +136,12 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
         target_link_libraries(${TARGET} PUBLIC vrpc_common_protos)
         target_link_libraries(${TARGET}_bare PUBLIC vrpc_common_protos_bare)
 
-        if ("uart" IN_LIST GENERATE_VRPC_GEN_TYPES)
-            target_link_libraries(${TARGET} PUBLIC vrpc_uart)
+        if ("uart_server" IN_LIST GENERATE_VRPC_GEN_TYPES)
+            target_link_libraries(${TARGET} PUBLIC vrpc_uart_server)
+        endif()
+
+        if ("uart_client" IN_LIST GENERATE_VRPC_GEN_TYPES)
+            target_link_libraries(${TARGET} PUBLIC vrpc_uart_client)
         endif()
     endif ()
 endfunction()
@@ -143,12 +163,23 @@ add_library(vrpc_builtins INTERFACE
 target_link_libraries(vrpc_builtins INTERFACE vrpc)
 
 
-add_library(vrpc_uart STATIC
+# vRPC UART
+add_library(vrpc_uart_common STATIC
         uart/vrpc_uart_decoder.h
         uart/vrpc_uart_encode.cpp
         uart/vrpc_uart_encode.h
         uart/vrpc_uart.h
-        uart/vrpc_uart_frames.h
-        uart/vrpc_uart_server.h)
-target_link_libraries(vrpc_uart PUBLIC
+        uart/vrpc_uart_frames.h)
+target_link_libraries(vrpc_uart_common PUBLIC
         vrpc abstract_hal constexpr_tools vrpc_system_protos vrpc_builtins)
+
+add_library(vrpc_uart_server INTERFACE
+        uart/vrpc_uart_server.h)
+target_link_libraries(vrpc_uart_server INTERFACE
+        vrpc_uart_common)
+
+add_library(vrpc_uart_client INTERFACE
+        uart/vrpc_uart_client.h
+        uart/vrpc_uart_service_client.h)
+target_link_libraries(vrpc_uart_client INTERFACE
+        vrpc_uart_common)

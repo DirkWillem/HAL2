@@ -1,10 +1,12 @@
 #pragma once
 
-#include "vrpc_uart.h"
+#include <halstd/logic.h>
 
 #include <vrpc/builtins/server_index.h>
 #include <vrpc/generated/services/server_index_uart.h>
 #include <vrpc/vrpc.h>
+
+#include "vrpc_uart.h"
 
 namespace vrpc::uart {
 
@@ -66,16 +68,16 @@ class VrpcUartServer
   using IndexService =
       server_index::uart::UartServerIndex<server_index::ServerIndexImpl>;
 
-  static_assert(ct::Implies(O::MultiDrop,
-                            NC.topology
-                                == NetworkTopology::SingleClientMultipleServer),
-                "Multidrop UART servers are only supported for multiple-server "
-                "topologies");
-  static_assert(ct::Implies(NC.topology
-                                == NetworkTopology::SingleClientMultipleServer,
-                            O::MultiDrop),
+  static_assert(halstd::Implies(
+                    O::MultiDrop,
+                    NC.topology == NetworkTopology::SingleClientMultipleServer),
+                "Multi-drop UART servers are only supported for "
+                "multiple-server topologies");
+  static_assert(halstd::Implies(
+                    NC.topology == NetworkTopology::SingleClientMultipleServer,
+                    O::MultiDrop),
                 "Multiple-server topology requires an addressing mechanism "
-                "such as mutlidrop");
+                "such as multi-drop");
 
   static constexpr auto        HasAddress = O::MultiDrop;
   static constexpr FrameFormat FrameFmt{.has_server_addr_word = HasAddress};
@@ -370,33 +372,32 @@ class VrpcUartServer
   }
 
   template <ServiceImpl Service>
-  void HandleRequest(RequestSlot& request) {
-    if (request.frame.service_id != Service::ServiceId) {
+  void HandleRequest(RequestSlot& slot) {
+    if (slot.frame.service_id != Service::ServiceId) {
       return;
     }
 
-    request.state = SlotState::Handling;
+    slot.state = SlotState::Handling;
     const auto handle_result =
         detail::ServiceRef<Service>::service.HandleCommand(
-            request.frame.command_id, request.frame.payload,
-            GetCommandResponsePayloadbuffer(request.buffer),
+            slot.frame.command_id, slot.frame.payload,
+            GetCommandResponsePayloadbuffer(slot.buffer),
             async_cmd_callbacks[ServiceIndex<Service>()]);
+
     switch (handle_result.state) {
     case HandleState::Handled:
-      request.tx_data = EncodeCmdFrame(
-          request.buffer, request.frame.service_id, request.frame.command_id,
-          request.frame.request_id, handle_result.response_payload);
-      request.state = SlotState::ReadyToTransmit;
+      slot.tx_data = EncodeCmdFrame(slot, handle_result.response_payload);
+      slot.state   = SlotState::ReadyToTransmit;
       break;
-    case HandleState::HandlingAsync: request.state = SlotState::Handling; break;
+    case HandleState::HandlingAsync: slot.state = SlotState::Handling; break;
     default: std::unreachable();
     }
   }
 
-  void HandleGetServerInfo(RequestSlot& request) {
-    auto payload_buffer = GetServerInfoResponsePayloadBuffer(request.buffer);
+  void HandleGetServerInfo(RequestSlot& slot) {
+    auto payload_buffer = GetServerInfoResponsePayloadBuffer(slot.buffer);
 
-    vrpc::ServerInfo info{
+    ServerInfo info{
         .info_version = 1,
         .service_type = static_cast<vrpc_ServerServiceType>(
             vrpc::ServerServiceType::MultiService),
@@ -410,11 +411,10 @@ class VrpcUartServer
         ProtoEncode(info, payload_buffer);
 
     if (encode_success) {
-      request.tx_data = EncodeInfoFrame(
-          request.buffer, request.frame.request_id, encoded_payload);
-      request.state = SlotState::ReadyToTransmit;
+      slot.tx_data = EncodeInfoFrame(slot, encoded_payload);
+      slot.state   = SlotState::ReadyToTransmit;
     } else {
-      request.state = SlotState::Empty;
+      slot.state = SlotState::Empty;
     }
   }
 
@@ -450,26 +450,29 @@ class VrpcUartServer
   }
 
   constexpr std::span<const std::byte>
-  EncodeCmdFrame(std::span<std::byte> dst, uint32_t service_id, uint32_t cmd_id,
-                 uint32_t req_id, std::span<const std::byte> payload) noexcept {
+  EncodeCmdFrame(RequestSlot&               slot,
+                 std::span<const std::byte> payload) noexcept {
     if constexpr (HasAddress) {
       return EncodeCommandFrame<FrameFmt>(
-          dst, detail::VrpcUartServerExtensions<O>::address, service_id, cmd_id,
-          req_id, payload);
+          slot.buffer, this->address, slot.frame.service_id,
+          slot.frame.command_id, slot.frame.request_id, payload);
     } else {
-      return EncodeCommandFrame<FrameFmt>(dst, service_id, cmd_id, req_id,
-                                          payload);
+      return EncodeCommandFrame<FrameFmt>(slot.buffer, slot.frame.service_id,
+                                          slot.frame.command_id,
+                                          slot.frame.request_id, payload);
     }
   }
 
   constexpr std::span<const std::byte>
-  EncodeInfoFrame(std::span<std::byte> dst, uint32_t req_id,
+  EncodeInfoFrame(RequestSlot&               slot,
                   std::span<const std::byte> payload) noexcept {
     if constexpr (HasAddress) {
       return EncodeServerInfoResponseFrame<FrameFmt>(
-          dst, detail::VrpcUartServerExtensions<O>::address, req_id, payload);
+          slot.buffer, detail::VrpcUartServerExtensions<O>::address,
+          slot.frame.request_id, payload);
     } else {
-      return EncodeServerInfoResponseFrame<FrameFmt>(dst, req_id, payload);
+      return EncodeServerInfoResponseFrame<FrameFmt>(
+          slot.buffer, slot.frame.request_id, payload);
     }
   }
 
@@ -484,9 +487,9 @@ class VrpcUartServer
   RequestSlot* current_slot{&request_slots[0]};
   RequestSlot* transmitting_slot{nullptr};
 
-  hal::MethodCallback<VrpcUartServer, std::span<std::byte>> rx_callback;
-  hal::MethodCallback<VrpcUartServer>                       tx_callback;
-  std::array<hal::MethodCallback<VrpcUartServer>,
+  halstd::MethodCallback<VrpcUartServer, std::span<std::byte>> rx_callback;
+  halstd::MethodCallback<VrpcUartServer>                       tx_callback;
+  std::array<halstd::MethodCallback<VrpcUartServer>,
              sizeof...(Services) + NBuiltinServices>
       async_cmd_callbacks;
 

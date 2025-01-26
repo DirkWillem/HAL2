@@ -1,4 +1,7 @@
-use crate::codegen::{format_generated_file, gen_service_header, gen_uart_service_header};
+use crate::codegen::{
+    format_generated_file, gen_service_header, gen_uart_service_client_header,
+    gen_uart_service_header,
+};
 use anyhow::Context;
 use clap::{Parser, ValueEnum};
 use protobuf::Message;
@@ -13,7 +16,8 @@ mod codegen;
 #[derive(ValueEnum, Clone, Serialize, Debug)]
 enum GenType {
     Service,
-    UartService,
+    UartServerService,
+    UartServiceClient,
 }
 
 #[derive(Parser, Debug)]
@@ -62,7 +66,7 @@ fn main() -> anyhow::Result<()> {
                 format_generated_file(&out_file_path);
             }
         }
-        GenType::UartService => {
+        GenType::UartServerService => {
             for proto_file in &descriptor_set.proto_files {
                 let hdr_str = gen_uart_service_header(&descriptor_set, &proto_file.relative_path)?;
                 let out_dir_path = if proto_file.relative_path.is_empty() {
@@ -73,7 +77,30 @@ fn main() -> anyhow::Result<()> {
                 create_dir_all(out_dir_path)?;
 
                 let out_file_path = format!(
-                    "{}/{}_uart.h",
+                    "{}/{}_uart_server_service.h",
+                    &cli.dst_dir,
+                    proto_file.relative_path.strip_suffix(".proto").unwrap()
+                );
+
+                let mut out_file = File::create(out_file_path.clone())?;
+                out_file.write_all(&hdr_str.as_bytes())?;
+
+                format_generated_file(&out_file_path);
+            }
+        }
+        GenType::UartServiceClient => {
+            for proto_file in &descriptor_set.proto_files {
+                let hdr_str =
+                    gen_uart_service_client_header(&descriptor_set, &proto_file.relative_path)?;
+                let out_dir_path = if proto_file.relative_path.is_empty() {
+                    cli.dst_dir.clone()
+                } else {
+                    format!("{}/{}", &cli.dst_dir, proto_file.relative_dir)
+                };
+                create_dir_all(out_dir_path)?;
+
+                let out_file_path = format!(
+                    "{}/{}_uart_service_client.h",
                     &cli.dst_dir,
                     proto_file.relative_path.strip_suffix(".proto").unwrap()
                 );

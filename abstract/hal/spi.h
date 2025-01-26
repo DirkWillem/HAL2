@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <span>
 
-#include "callback.h"
+#include <halstd/callback.h>
 
 namespace hal {
 
@@ -66,7 +66,7 @@ concept RegisterableSpiRxCallback = requires(Impl& impl) {
                || std::is_unsigned_v<typename Impl::RxData>;
 
   impl.RegisterSpiRxCallback(
-      std::declval<hal::Callback<std::span<typename Impl::RxData>>&>());
+      std::declval<halstd::Callback<std::span<typename Impl::RxData>>&>());
 };
 
 template <typename D>
@@ -75,7 +75,7 @@ class SpiRxCallback {
   using RxData = D;
 
   constexpr void RegisterSpiRxCallback(
-      hal::Callback<std::span<RxData>>& new_callback) noexcept {
+      halstd::Callback<std::span<RxData>>& new_callback) noexcept {
     rx_callback = &new_callback;
   }
 
@@ -86,7 +86,7 @@ class SpiRxCallback {
   }
 
  private:
-  hal::Callback<std::span<RxData>>* rx_callback{nullptr};
+  halstd::Callback<std::span<RxData>>* rx_callback{nullptr};
 };
 
 static_assert(RegisterableSpiRxCallback<SpiRxCallback<uint8_t>>);
@@ -105,12 +105,13 @@ concept AsyncTxSpiMaster = SpiMaster<Impl> && requires(Impl& impl) {
 
 template <typename Impl>
 concept RegisterableSpiTxCallback = requires(Impl& impl) {
-  impl.RegisterSpiTxCallback(std::declval<hal::Callback<>&>());
+  impl.RegisterSpiTxCallback(std::declval<halstd::Callback<>&>());
 };
 
 class SpiTxCallback {
  public:
-  constexpr void RegisterSpiTxCallback(hal::Callback<>& new_callback) noexcept {
+  constexpr void
+  RegisterSpiTxCallback(halstd::Callback<>& new_callback) noexcept {
     tx_callback = &new_callback;
   }
 
@@ -121,7 +122,7 @@ class SpiTxCallback {
   }
 
  private:
-  hal::Callback<>* tx_callback{nullptr};
+  halstd::Callback<>* tx_callback{nullptr};
 };
 
 static_assert(RegisterableSpiTxCallback<SpiTxCallback>);

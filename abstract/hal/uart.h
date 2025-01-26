@@ -2,9 +2,10 @@
 
 #include <string_view>
 
-#include <constexpr_tools/logic.h>
+#include <halstd/logic.h>
 
-#include "callback.h"
+#include <halstd/callback.h>
+
 #include "peripheral.h"
 
 namespace hal {
@@ -33,10 +34,10 @@ concept AsyncUart = UartBase<Impl> && requires(Impl& impl) {
   impl.Receive(std::declval<std::span<std::byte>>());
 
   impl.RegisterUartReceiveCallback(
-      std::declval<hal::Callback<std::span<std::byte>>&>());
+      std::declval<halstd::Callback<std::span<std::byte>>&>());
   impl.ClearUartReceiveCallback();
 
-  impl.RegisterUartTransmitCallback(std::declval<hal::Callback<>&>());
+  impl.RegisterUartTransmitCallback(std::declval<halstd::Callback<>&>());
   impl.ClearUartTransmitCallback();
 };
 
@@ -53,9 +54,9 @@ template <typename Impl>
  */
 concept Uart =
     UartBase<Impl>
-    && (ct::Implies(Impl::OperatingMode == UartOperatingMode::Interrupt
-                        || Impl::OperatingMode == UartOperatingMode::Dma,
-                    AsyncUart<Impl>));
+    && (halstd::Implies(Impl::OperatingMode == UartOperatingMode::Interrupt
+                            || Impl::OperatingMode == UartOperatingMode::Dma,
+                        AsyncUart<Impl>));
 
 /**
  * Helper class for adding registration of UART receive callbacks to an UART
@@ -78,14 +79,14 @@ class RegisterableUartReceiveCallback {
    * @param new_callback New receive callback to register
    */
   constexpr void RegisterUartReceiveCallback(
-      hal::Callback<std::span<std::byte>>& new_callback) noexcept {
+      halstd::Callback<std::span<std::byte>>& new_callback) noexcept {
     callback = &new_callback;
   }
 
   constexpr void ClearUartReceiveCallback() { callback = nullptr; }
 
  private:
-  hal::Callback<std::span<std::byte>>* callback{nullptr};
+  halstd::Callback<std::span<std::byte>>* callback{nullptr};
 };
 
 class RegisterableUartTransmitCallback {
@@ -97,14 +98,14 @@ class RegisterableUartTransmitCallback {
   }
 
   constexpr void
-  RegisterUartTransmitCallback(hal::Callback<>& new_callback) noexcept {
+  RegisterUartTransmitCallback(halstd::Callback<>& new_callback) noexcept {
     callback = &new_callback;
   }
 
   constexpr void ClearUartTransmitCallback() noexcept { callback = nullptr; }
 
  private:
-  hal::Callback<>* callback{nullptr};
+  halstd::Callback<>* callback{nullptr};
 };
 
 }   // namespace hal

@@ -65,6 +65,36 @@ pub fn gen_uart_service_header(
     Ok(tera.render("service_header", &context)?)
 }
 
+pub fn gen_uart_service_client_header(
+    processor: &DescriptorSet,
+    proto_file_name: &str,
+) -> anyhow::Result<String> {
+    let mut tera = Tera::default();
+    add_macros(&mut tera)?;
+    tera.add_raw_template(
+        "service_client_macros",
+        include_str!("codegen/templates/uart_service_client_macros.tera"),
+    )?;
+    tera.add_raw_template(
+        "service_client_header",
+        include_str!("codegen/templates/uart_service_client.h.tera"),
+    )?;
+
+
+    add_vrpc_filters(&mut tera);
+
+    let proto_base_name = proto_file_name.strip_suffix(".proto").unwrap();
+
+    let mut context = tera::Context::new();
+    context.insert("name", &proto_base_name);
+    context.insert("package", &processor.packages[proto_file_name]);
+    context.insert("messages", &processor.messages_by_file[proto_file_name]);
+    context.insert("services", &processor.services_by_file[proto_file_name]);
+    context.insert("enums", &processor.enums_by_file[proto_file_name]);
+
+    Ok(tera.render("service_client_header", &context)?)
+}
+
 pub fn format_generated_file(path: impl AsRef<str>) {
     if let Ok(clang_format_path) = which::which("clang-format") {
         let mut dir = PathBuf::from(String::from(path.as_ref()));

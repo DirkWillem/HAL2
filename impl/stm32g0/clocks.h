@@ -3,8 +3,9 @@
 #include <cassert>
 
 #include <constexpr_tools/chrono_ex.h>
-#include <constexpr_tools/logic.h>
 #include <constexpr_tools/static_mapping.h>
+
+#include <halstd/logic.h>
 
 #include <stm32g0xx_hal.h>
 
@@ -106,11 +107,11 @@ struct SystemClockSettings {
   Validate(ct::Frequency auto sysclk) const noexcept {
     // Validate prescaler values
     assert(("AHB Prescaler must have a valid value",
-            ct::IsOneOf<1, 2, 4, 8, 16, 64, 128, 256, 512>(ahb_prescaler)));
+            halstd::IsOneOf<1, 2, 4, 8, 16, 64, 128, 256, 512>(ahb_prescaler)));
     assert(("APB Prescaler must have a valid value",
-            ct::IsOneOf<1, 2, 4, 8, 16>(apb_prescaler)));
+            halstd::IsOneOf<1, 2, 4, 8, 16>(apb_prescaler)));
     assert(("Cortex prescaler must have a valid value",
-            ct::IsOneOf<1, 8>(cortex_prescaler)));
+            halstd::IsOneOf<1, 8>(cortex_prescaler)));
 
     // Validate maximum frequencies
     assert(("AHB Frequency (HCLK) may not exceed 64 MHz",
@@ -191,7 +192,7 @@ struct ClockSettings {
 
   [[nodiscard]] consteval bool Validate() const noexcept {
     assert(("HSI Prescaler must have a valid value",
-            ct::IsOneOf<1, 2, 4, 8, 16, 64, 128>(hsi_prescaler)));
+            halstd::IsOneOf<1, 2, 4, 8, 16, 64, 128>(hsi_prescaler)));
     return system_clock_settings.Validate(SysClkSourceClockFrequency());
   }
 };

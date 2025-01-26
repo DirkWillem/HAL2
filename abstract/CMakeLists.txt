@@ -1,5 +1,4 @@
 add_library(abstract_hal INTERFACE
-        hal/callback.h
         hal/clocks.h
         hal/dma.h
         hal/i2c.h

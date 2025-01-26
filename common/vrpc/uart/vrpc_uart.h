@@ -41,9 +41,10 @@ concept ServiceImpl = requires(Impl& impl) {
   { Impl::MinBufferSize() } -> std::convertible_to<std::size_t>;
 
   {
-    impl.HandleCommand(
-        std::declval<uint32_t>(), std::declval<std::span<const std::byte>>(),
-        std::declval<std::span<std::byte>>(), std::declval<hal::Callback<>&>())
+    impl.HandleCommand(std::declval<uint32_t>(),
+                       std::declval<std::span<const std::byte>>(),
+                       std::declval<std::span<std::byte>>(),
+                       std::declval<halstd::Callback<>&>())
   } -> std::convertible_to<HandleResult>;
 };
 

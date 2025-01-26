@@ -3,7 +3,7 @@
 #include <concepts>
 #include <utility>
 
-namespace hal {
+namespace halstd {
 
 template <typename... Args>
 class Callback {
@@ -75,4 +75,22 @@ class DynamicMethodCallback final : public Callback<Args...> {
   MethodPtr ptr;
 };
 
-}   // namespace hal
+template <typename... Args>
+struct LambdaCallback {
+  template <typename T>
+  class Cb final
+      : public T
+      , public Callback<Args...> {
+  public:
+    explicit Cb(T t)
+        : Callback<Args...>{} {}
+
+    ~Cb() final = default;
+
+    void operator()(Args... args) const noexcept final {
+      T::operator()(std::forward<Args>(args)...);
+    }
+  };
+};
+
+}   // namespace halstd

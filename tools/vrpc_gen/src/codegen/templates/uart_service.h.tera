@@ -7,7 +7,7 @@
 #include <vrpc/proto_helpers.h>
 #include <vrpc/uart/vrpc_uart.h>
 
-#include <hal/callback.h>
+#include <halstd/callback.h>
 
 #include "{{ name }}.h"
 
@@ -37,7 +37,7 @@ class Uart{{svc.name}} {
   vrpc::uart::HandleResult
   HandleCommand(uint32_t id, std::span<const std::byte> request_buf,
                 std::span<std::byte> response_buf,
-                hal::Callback<>&     async_complete_callback) {
+                halstd::Callback<>&     async_complete_callback) {
     switch (id) {
     {%- for _, method in svc.methods %}
     case {{ method.id }}: {

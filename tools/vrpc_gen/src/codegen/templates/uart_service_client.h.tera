@@ -1,0 +1,49 @@
+{% import "macros" as macros -%}
+{% import "service_client_macros" as client_macros -%}
+
+#pragma once
+
+#include <vrpc/uart/vrpc_uart_client.h>
+#include <vrpc/uart/vrpc_uart_service_client.h>
+
+#include "{{ name }}.h"
+
+namespace {{ package | package_to_namespace }}::uart {
+
+{% for _, svc in services %}
+
+template<hal::AsyncUart Uart, hal::System Sys, vrpc::VrpcNetworkConfig NC,
+                                                         vrpc::uart::VrpcUartClientOptions O>
+class {{svc.name}}Client
+    : public vrpc::uart::VrpcUartServiceClient<Uart, Sys, NC, O, {{ client_macros::service_response_msgs(svc=svc) }}> {
+    static constexpr auto UsesAddressing = vrpc::uart::VrpcUartServiceClient<Uart, Sys, NC, O, {{ client_macros::service_response_msgs(svc=svc) }}>::UsesAddressing;
+  public:
+   explicit {{svc.name}}Client(
+       vrpc::uart::VrpcUartClient<Uart, Sys, NC, O>& uart_client)
+       : vrpc::uart::VrpcUartServiceClient<Uart, Sys, NC, O, {{ client_macros::service_response_msgs(svc=svc) }}>{uart_client} {}
+
+   {% for _, method in svc.methods %}
+   auto {{ method.name }}(
+       const {{ macros::msg_ref_class(msg=method.input_type) }}& request,
+       halstd::Callback<const {{ macros::msg_ref_class(msg=method.output_type) }}&>& callback,
+       std::optional<std::reference_wrapper<halstd::Callback<vrpc::uart::RequestError>>>
+                     err_callback = {}
+       ) noexcept requires (!UsesAddressing){
+     return this->Request({{ svc.id }}, {{ method.id }}, request, callback, err_callback);
+   }
+
+   auto {{ method.name }}(
+       uint32_t server_address,
+       const {{ macros::msg_ref_class(msg=method.input_type) }}& request,
+       halstd::Callback<const {{ macros::msg_ref_class(msg=method.output_type) }}&>& callback,
+       std::optional<std::reference_wrapper<halstd::Callback<vrpc::uart::RequestError>>>
+                     err_callback = {}) noexcept requires (UsesAddressing){
+     return this->Request(server_address, {{ svc.id }}, {{ method.id }}, request, callback, err_callback);
+   }
+   {% endfor %}
+};
+
+{% endfor %}
+
+}
+

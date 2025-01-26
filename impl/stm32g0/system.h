@@ -17,6 +17,8 @@ struct BareMetalSystem {
 
   template <typename T>
   using Atomic = std::atomic<T>;
+
+  using AtomicFlag = std::atomic_flag;
 };
 
 static_assert(hal::System<BareMetalSystem>);

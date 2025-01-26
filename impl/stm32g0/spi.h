@@ -2,7 +2,7 @@
 
 #include <span>
 
-#include <constexpr_tools/logic.h>
+#include <halstd/logic.h>
 
 #include <hal/spi.h>
 
@@ -270,12 +270,12 @@ class SpiImpl : public hal::UsedPeripheral {
     requires(OM == SpiOperatingMode::Dma)
   {
     // Validate DMA instance
-    static_assert(ct::Implies(hal::SpiTransmitEnabled(TT),
-                              dma.template ChannelEnabled<TxDmaChannel>()),
+    static_assert(halstd::Implies(hal::SpiTransmitEnabled(TT),
+                                  dma.template ChannelEnabled<TxDmaChannel>()),
                   "If the transmission mode allows transmission, the TX DMA "
                   "channel must be enabled");
-    static_assert(ct::Implies(hal::SpiReceiveEnabled(TT),
-                              dma.template ChannelEnabled<RxDmaChannel>()),
+    static_assert(halstd::Implies(hal::SpiReceiveEnabled(TT),
+                                  dma.template ChannelEnabled<RxDmaChannel>()),
                   "If the transmission mode allows transmission, the RX DMA "
                   "channel must be enabled");
 

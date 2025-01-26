@@ -33,4 +33,10 @@ concept Atomic = requires(Impl t) {
 
 static_assert(Atomic<std::atomic<int>>);
 
+template <typename Impl>
+concept AtomicFlag = requires(Impl t) {
+  { t.test_and_set() } -> std::convertible_to<bool>;
+  t.clear();
+};
+
 }   // namespace halstd

@@ -5,7 +5,7 @@
 #include <optional>
 #include <type_traits>
 
-namespace ct {
+namespace halstd {
 
 template <typename T, typename StructType, typename FieldType>
 concept FieldPointer = requires(T ptr, StructType s) {
@@ -35,7 +35,7 @@ struct MapValToTypeHelper<V, ValToType<Vc, Tc>, Rest...> {
 }   // namespace detail
 
 template <std::equality_comparable auto V, typename... Ms>
-using MapValToType = detail::MapValToTypeHelper<V, Ms...>::Type;
+using MapValToType = typename detail::MapValToTypeHelper<V, Ms...>::Type;
 
 template <std::size_t V>
 using Size = std::integral_constant<std::size_t, V>;
@@ -75,8 +75,8 @@ struct TypePartitionHelper<Predicate, List, List<MatchedTypes...>,
                                    TRest...>;
 
  public:
-  using Matched   = Next::Matched;
-  using Unmatched = Next::Unmatched;
+  using Matched   = typename Next::Matched;
+  using Unmatched = typename Next::Unmatched;
 };
 
 template <template <typename> typename Predicate,
@@ -95,4 +95,10 @@ template <template <typename> typename Predicate,
 using PartitionTypes =
     detail::TypePartitionHelper<Predicate, List, List<>, List<>, Ts...>;
 
-}   // namespace ct
+template <typename T>
+struct Marker {};
+
+template <typename... Ts>
+struct Markers {};
+
+}   // namespace halstd

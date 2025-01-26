@@ -16,6 +16,7 @@ concept System = requires {
   requires CriticalSectionInterface<typename S::CriticalSectionInterface>;
 
   requires halstd::Atomic<typename S::template Atomic<int>>;
+  typename S::AtomicFlag;
 };
 
 template <CriticalSectionInterface CSF>

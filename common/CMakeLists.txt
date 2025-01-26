@@ -4,7 +4,6 @@ add_library(constexpr_tools INTERFACE
         constexpr_tools/crc.h
         constexpr_tools/helpers.h
         constexpr_tools/integer.h
-        constexpr_tools/logic.h
         constexpr_tools/math.h
         constexpr_tools/memory_size.h
         constexpr_tools/spans.h
@@ -12,14 +11,18 @@ add_library(constexpr_tools INTERFACE
         constexpr_tools/static_string.h
         constexpr_tools/std_ex.h
         constexpr_tools/strings.h
-        constexpr_tools/type_helpers.h
-        constexpr_tools/types.h
         constexpr_tools/values.h)
 target_include_directories(constexpr_tools INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
 
 add_library(halstd INTERFACE
-        halstd/atomic.h)
+        halstd/mp/type_helpers.h
+        halstd/mp/types.h
+
+        halstd/atomic.h
+        halstd/atomic_helpers.h
+        halstd/callback.h
+        halstd/logic.h)
 target_include_directories(halstd INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
 
@@ -53,6 +56,12 @@ add_library(math INTERFACE
         math/concepts.h
         math/functions.h
         math/math_config.h)
+
+# Statechart library
+add_library(statechart INTERFACE
+        sc/statechart.h)
+target_include_directories(statechart INTERFACE ${CMAKE_CURRENT_LIST_DIR})
+target_link_libraries(statechart INTERFACE halstd)
 
 target_link_libraries(math INTERFACE cmsis_dsp fp)
 target_compile_definitions(math INTERFACE HAL2_CMSIS_DSP_ENABLED)

@@ -1,0 +1,8 @@
+{% import "macros" as macros %}
+
+{%- macro service_response_msgs(svc) -%}
+    {%- for _, method in svc.methods -%}
+        {{- macros::msg_ref_class(msg=method.output_type) -}}
+        {%- if not loop.last -%},{%- endif -%}
+    {%- endfor -%}
+{% endmacro -%}

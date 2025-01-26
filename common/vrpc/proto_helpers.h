@@ -9,7 +9,7 @@
 #include <pb_decode.h>
 #include <pb_encode.h>
 
-#include <constexpr_tools/type_helpers.h>
+#include <halstd/mp/type_helpers.h>
 
 namespace vrpc {
 
@@ -38,7 +38,8 @@ ProtoEncode(const Msg& src, std::span<std::byte> dst) noexcept {
 
 template <typename Msg, typename F>
 static std::optional<pb_field_iter_t>
-FindFieldByPointer(const Msg& msg, ct::FieldPointer<Msg, F> auto field_ptr) {
+FindFieldByPointer(const Msg&                        msg,
+                   halstd::FieldPointer<Msg, F> auto field_ptr) {
   pb_field_iter_t iter{};
   pb_field_iter_begin_const(&iter, nanopb::MessageDescriptor<Msg>::fields(),
                             &msg);
@@ -54,8 +55,8 @@ FindFieldByPointer(const Msg& msg, ct::FieldPointer<Msg, F> auto field_ptr) {
 
 template <typename Msg, typename El>
 std::optional<std::span<const El>>
-GetRepeatedFieldFromPtr(const Msg&                      msg,
-                        ct::FieldPointer<Msg, El*> auto field_ptr) {
+GetRepeatedFieldFromPtr(const Msg&                          msg,
+                        halstd::FieldPointer<Msg, El*> auto field_ptr) {
   const auto iter_opt = FindFieldByPointer<Msg, El*>(msg, field_ptr);
   if (iter_opt.has_value()) {
     const auto iter = *iter_opt;
