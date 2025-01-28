@@ -243,6 +243,15 @@ class SpiImpl : public hal::UsedPeripheral {
            == HAL_OK;
   }
 
+  [[nodiscard]] bool TransmitBlocking(std::span<Data> data,
+                                      uint32_t        timeout) noexcept
+    requires(hal::SpiTransmitEnabled(TT))
+  {
+    return HAL_SPI_Transmit(&hspi, reinterpret_cast<uint8_t*>(data.data()),
+                            data.size(), timeout)
+           == HAL_OK;
+  }
+
   [[nodiscard]] bool Transmit(std::span<Data> data) noexcept
     requires(OM == SpiOperatingMode::Dma && hal::SpiTransmitEnabled(TT))
   {
@@ -297,7 +306,7 @@ class SpiImpl : public hal::UsedPeripheral {
     if constexpr (hal::SpiReceiveEnabled(TT)) {
       auto& hrxdma = dma.template SetupChannel<RxDmaChannel>(
           hal::DmaDirection::PeriphToMem, hal::DmaMode::Normal,
-          hal::DmaDataWidth::Byte, hal::DmaDataWidth::Byte, true);
+          hal::DmaDataWidth::Byte, false, hal::DmaDataWidth::Byte, true);
       __HAL_LINKDMA(&hspi, hdmarx, hrxdma);
     }
   }
