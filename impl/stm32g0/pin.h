@@ -94,6 +94,15 @@ struct PinId {
 };
 
 /**
+ * Possible edges that can be used to initialize a pin interrupt
+ */
+enum class Edge : uint32_t {
+  Rising  = GPIO_MODE_IT_RISING,
+  Falling = GPIO_MODE_IT_FALLING,
+  Both    = GPIO_MODE_IT_RISING_FALLING,
+};
+
+/**
  * Pin ID helper macro
  */
 #define PIN(PORT, NUM)         \
@@ -127,6 +136,16 @@ struct Pin {
   InitializeAlternate(PinId id, unsigned af,
                       hal::PinPull pull = hal::PinPull::NoPull,
                       hal::PinMode mode = hal::PinMode::PushPull) noexcept;
+
+  /**
+   * Initializes a pin as an interrupt (EXTI) pin
+   * @param id Pin ID
+   * @param edge Edge to detect
+   * @param pull Pin pull-up / pull-down
+   */
+  static void
+  InitializeInterrupt(PinId id, Edge edge,
+                      hal::PinPull pull = hal::PinPull::NoPull) noexcept;
 };
 
 /**
@@ -184,7 +203,7 @@ class Gpo {
 
 // Validate concepts are implemented
 static_assert(hal::Pin<Pin, PinId>);
-static_assert(hal::Gpi<Gpi, PinId>);
+static_assert(hal::Gpi<Gpi>);
 static_assert(hal::ConstructibleGpo<Gpo, PinId>);
 
 }   // namespace stm32g0

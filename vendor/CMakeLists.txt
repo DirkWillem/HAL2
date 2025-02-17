@@ -45,7 +45,7 @@ function(add_stm32g0_vendor_hal VARIANT)
     add_library("${VARIANT}_vendor" STATIC
             "stm32g0xx_device/Source/Templates/gcc/startup_${VARIANT}xx.s"
             "stm32g0xx_device/Source/Templates/system_stm32g0xx.c")
-    target_link_libraries("${VARIANT}_vendor" PUBLIC "${VARIANT}_st_hal" "${VARIANT}_linkopts")
+    target_link_libraries("${VARIANT}_vendor" PUBLIC "${VARIANT}_st_hal")
 endfunction()
 
 function(add_stm32g4_vendor_hal VARIANT)

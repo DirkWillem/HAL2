@@ -46,6 +46,8 @@ function(add_stm32g0_hal VARIANT XMLFILE)
             stm32g0/peripheral_ids.h
             stm32g0/pin.cpp
             stm32g0/pin.h
+            stm32g0/pin_interrupt.cpp
+            stm32g0/pin_interrupt.h
             stm32g0/spi.cpp
             stm32g0/spi.h
             stm32g0/system.cpp

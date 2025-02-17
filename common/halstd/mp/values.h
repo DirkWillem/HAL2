@@ -5,7 +5,7 @@
 #include <optional>
 #include <type_traits>
 
-namespace ct {
+namespace halstd {
 
 template <typename T, typename V>
 concept ValueMapping = requires {
@@ -103,6 +103,19 @@ struct Values {
     }
 
     return {};
+  }
+
+  [[nodiscard]] static constexpr std::size_t
+  GetIndexBy(std::predicate<const T&> auto predicate) noexcept {
+    constexpr auto arr = ToArray();
+
+    for (std::size_t i = 0; i < Count; i++) {
+      if (predicate(arr[i])) {
+        return i;
+      }
+    }
+
+    std::unreachable();
   }
 
   [[nodiscard]] static consteval bool Contains(T value) noexcept

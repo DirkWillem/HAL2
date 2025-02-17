@@ -11,7 +11,10 @@ concept ClockFrequencies = requires {
 
 template <typename C>
 concept Clock = requires {
-  { C::TimeSinceBoot() } -> ct::Duration;
+  requires ct::Duration<typename C::DurationType>;
+
+  { C::TimeSinceBoot() } -> std::convertible_to<typename C::DurationType>;
+  { C::BlockFor(std::declval<typename C::DurationType>()) };
 };
 
 }   // namespace hal

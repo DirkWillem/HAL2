@@ -6,7 +6,7 @@ use crate::naming;
 use crate::protos::generated::vrpc::fix::Fix;
 use crate::protos::generated::vrpc::{UFix, UFixQ};
 use crate::protos::generated::vrpc_options::{
-    VrpcFieldOptions, VrpcMethodOptions, VrpcServiceOptions, VrpcServiceType,
+    VrpcFieldOptions, VrpcMessageOptions, VrpcMethodOptions, VrpcServiceOptions, VrpcServiceType,
 };
 use anyhow::{anyhow, Context};
 use protobuf::descriptor::field_descriptor_proto::{Label, Type};
@@ -314,9 +314,12 @@ impl DescriptorSet {
             let mr = read_methods.get(&msg).unwrap();
             let mw = write_methods.get(&msg).unwrap();
 
-            if let (Some(r_opts), Some(w_opts)) = (
+            if let (Some(r_opts), Some(w_opts), Some(pm_opts)) = (
                 Self::find_vrpc_options::<VrpcMethodOptions>(mr.method.options.special_fields())?,
                 Self::find_vrpc_options::<VrpcMethodOptions>(mw.method.options.special_fields())?,
+                Self::find_vrpc_options::<VrpcMessageOptions>(
+                    mr.output_type.descriptor.options.special_fields(),
+                )?,
             ) {
                 let read_method =
                     Self::make_method_info(&mr.method, &mr.input_type, &mr.output_type, r_opts);
@@ -324,6 +327,7 @@ impl DescriptorSet {
                     Self::make_method_info(&mw.method, &mw.input_type, &mw.output_type, w_opts);
 
                 param_groups.push(ParameterGroup {
+                    id: pm_opts.id,
                     read_method,
                     write_method,
                     write_msg_written_fields: mw.written_fields_field.clone(),
@@ -338,9 +342,7 @@ impl DescriptorSet {
             }
         }
 
-        Ok(ParameterService{
-            param_groups,
-        })
+        Ok(ParameterService { param_groups })
     }
 
     fn process_method(

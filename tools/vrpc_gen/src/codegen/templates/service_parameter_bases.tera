@@ -4,6 +4,7 @@
 {% if svc.svc_type is containing("Parameters") -%}
 {% set parameters = svc.svc_type["Parameters"] -%}
 
+template<::vrpc::ParameterStorage Storage>
 class {{svc.name}}Base {
   {% for param_group in parameters.param_groups -%}
   {%- set group_msg = param_group.read_method.output_type -%}
@@ -15,27 +16,52 @@ class {{svc.name}}Base {
   {%- endfor %}
 
  public:
-  {%- for param_group in parameters.param_groups -%}
+  explicit {{svc.name}}Base(Storage& storage) : storage{storage} {}
+
+  void InitializeParameters() noexcept {
+    {% for param_group in parameters.param_groups -%}
+    {%- set group_msg = param_group.read_method.output_type -%}
+    {{ group_msg.name | pascal_case_to_lower_snake_case }}.Write([this](auto& v) {
+      if (storage.Contains({{ param_group.id }})) {
+        storage.Read({{ param_group.id }}, v);
+      } else {
+        Initialize(v);
+      }
+    });
+    {%- endfor %}
+  }
+
+  virtual ~{{svc.name}}Base() = default;
+
+  {% for param_group in parameters.param_groups -%}
   {%- set group_msg = param_group.read_method.output_type -%}
   {%- set read_method = param_group.read_method %}
+  virtual void Initialize({{ macros::msg_ref_class(msg=group_msg) }}&) const noexcept = 0;
+
   void {{ read_method.name }}(
       [[maybe_unused]] const {{ macros::msg_ref_class(msg=read_method.input_type) }}& req,
-      {{ macros::msg_ref_class(msg=read_method.output_type) }}& res) const noexcept {
-    std::memcpy(&res, &{{ read_method.output_type.name | pascal_case_to_lower_snake_case }}, sizeof({{ read_method.output_type.name }}));
+      {{ macros::msg_ref_class(msg=read_method.output_type) }}& res) noexcept {
+    {{ read_method.output_type.name | pascal_case_to_lower_snake_case }}.Read([&res](const auto& value) noexcept {
+      std::memcpy(&res, &value, sizeof({{ read_method.output_type.name }}));
+    });
   }
 
   {% set write_method = param_group.write_method -%}
   void {{ write_method.name }}(
       const {{ macros::msg_ref_class(msg=write_method.input_type) }}& req,
       {{ macros::msg_ref_class(msg=write_method.output_type) }}& res) noexcept {
-    {{ group_msg.name}}Mapping::ApplyWriteMessage(req, {{ read_method.output_type.name | pascal_case_to_lower_snake_case }});
+    {{ read_method.output_type.name | pascal_case_to_lower_snake_case }}.Write([this, &req](auto& value) noexcept {
+      {{ group_msg.name}}Mapping::ApplyWriteMessage(req, value);
+    });
   }
   {%- endfor %}
 
- protected:
+ private:
+  Storage& storage;
+
   {% for param_group in parameters.param_groups -%}
   {% set group_msg = param_group.read_method.output_type -%}
-    {{ macros::msg_ref_class(msg=group_msg) }} {{ group_msg.name | pascal_case_to_lower_snake_case }}{};
+    ::vrpc::ParameterSlot<{{ macros::msg_ref_class(msg=group_msg) }}> {{ group_msg.name | pascal_case_to_lower_snake_case }}{};
   {%- endfor %}
 };
 {% endif %}

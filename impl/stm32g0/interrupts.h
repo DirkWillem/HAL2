@@ -4,7 +4,31 @@
 
 #include <stm32g0/dma.h>
 #include <stm32g0/i2s.h>
+#include <stm32g0/pin_interrupt.h>
+#include <stm32g0/tim.h>
 #include <stm32g0/uart.h>
+
+template <unsigned P>
+void HandlePinInterrupt() noexcept {
+  using namespace stm32g0;
+  using PinInt = PinInterrupt<PinInterruptImplMarker>;
+
+  if constexpr (hal::IsPeripheralInUse<PinInt>()) {
+    if constexpr (PinInt::PinInterruptActive(P, Edge::Rising)) {
+      if (__HAL_GPIO_EXTI_GET_RISING_IT(GetHalPin(P))) {
+        __HAL_GPIO_EXTI_CLEAR_RISING_IT(GetHalPin(P));
+        PinInt::instance().HandleInterrupt<P, Edge::Rising>();
+      }
+    }
+
+    if constexpr (PinInt::PinInterruptActive(P, Edge::Falling)) {
+      if (__HAL_GPIO_EXTI_GET_FALLING_IT(GetHalPin(P))) {
+        __HAL_GPIO_EXTI_CLEAR_FALLING_IT(GetHalPin(P));
+        PinInt::instance().HandleInterrupt<P, Edge::Falling>();
+      }
+    }
+  }
+}
 
 // ReSharper disable CppNonInlineFunctionDefinitionInHeaderFile
 
@@ -188,5 +212,30 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef* hspi) {
   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim15)
   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim16)
   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim17)
+}
+
+[[maybe_unused]] void EXTI0_1_IRQHandler() {
+  HandlePinInterrupt<0>();
+  HandlePinInterrupt<1>();
+}
+
+[[maybe_unused]] void EXTI2_3_IRQHandler() {
+  HandlePinInterrupt<2>();
+  HandlePinInterrupt<3>();
+}
+
+[[maybe_unused]] void EXTI4_15_IRQHandler() {
+  HandlePinInterrupt<4>();
+  HandlePinInterrupt<5>();
+  HandlePinInterrupt<6>();
+  HandlePinInterrupt<7>();
+  HandlePinInterrupt<8>();
+  HandlePinInterrupt<9>();
+  HandlePinInterrupt<10>();
+  HandlePinInterrupt<11>();
+  HandlePinInterrupt<12>();
+  HandlePinInterrupt<13>();
+  HandlePinInterrupt<14>();
+  HandlePinInterrupt<15>();
 }
 }

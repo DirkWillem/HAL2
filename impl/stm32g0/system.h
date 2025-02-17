@@ -4,6 +4,8 @@
 
 #include <hal/system.h>
 
+#include "clocks.h"
+
 namespace stm32g0 {
 
 class CriticalSectionInterface {
@@ -14,6 +16,7 @@ class CriticalSectionInterface {
 
 struct BareMetalSystem {
   using CriticalSectionInterface = CriticalSectionInterface;
+  using Clock                    = SysTickClock;
 
   template <typename T>
   using Atomic = std::atomic<T>;

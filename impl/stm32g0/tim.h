@@ -5,8 +5,8 @@
 
 #include <stm32g0xx_hal.h>
 
+#include <../../common/halstd/mp/values.h>
 #include <constexpr_tools/chrono_ex.h>
-#include <constexpr_tools/values.h>
 
 #include <stm32g0/clocks.h>
 #include <stm32g0/dma.h>
@@ -317,7 +317,8 @@ class TimPwmOutputChannel {
 static_assert(TimChannel<TimPwmOutputChannel<2, PIN(A, 7)>>);
 static_assert(PeriodElapsedCallback<TimPwmOutputChannel<2, PIN(A, 7)>>);
 
-template <unsigned Ch0, ct::IsValues<PinId> Pins, ct::IsValues<PwmMode> PMs>
+template <unsigned Ch0, halstd::IsValues<PinId> Pins,
+          halstd::IsValues<PwmMode> PMs>
 class TimMultiplePwmOutputChannel {
  public:
   static_assert(Pins::Count == PMs::Count);
@@ -458,17 +459,17 @@ class TimMultiplePwmOutputChannel {
 };
 
 static_assert(TimChannel<TimMultiplePwmOutputChannel<
-                  1, ct::Values<PinId, PIN(A, 6), PIN(A, 7)>,
-                  ct::Values<PwmMode, PwmMode::Pwm2, PwmMode::Pwm1>>>);
+                  1, halstd::Values<PinId, PIN(A, 6), PIN(A, 7)>,
+                  halstd::Values<PwmMode, PwmMode::Pwm2, PwmMode::Pwm1>>>);
 static_assert(PeriodElapsedCallback<TimMultiplePwmOutputChannel<
-                  1, ct::Values<PinId, PIN(A, 6), PIN(A, 7)>,
-                  ct::Values<PwmMode, PwmMode::Pwm2, PwmMode::Pwm1>>>);
+                  1, halstd::Values<PinId, PIN(A, 6), PIN(A, 7)>,
+                  halstd::Values<PwmMode, PwmMode::Pwm2, PwmMode::Pwm1>>>);
 
 template <typename Impl, TimId Id, ClockSettings CS, TimChannel... Chs>
 class TimImpl
     : public hal::UsedPeripheral
     , private Chs... {
-  using ChannelNumbers = ct::Values<unsigned, Chs::Channel...>;
+  using ChannelNumbers = halstd::Values<unsigned, Chs::Channel...>;
   using ChList         = detail::ChannelList<Chs...>;
 
   friend void ::HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef*);

@@ -7,6 +7,8 @@
 
 #include <halstd/logic.h>
 
+#include <hal/clocks.h>
+
 #include <stm32g0xx_hal.h>
 
 namespace stm32g0 {
@@ -366,5 +368,22 @@ bool ConfigurePowerAndClocks() noexcept {
 
   return true;
 }
+
+class SysTickClock {
+ public:
+  constexpr static ct::Duration auto TimeSinceBoot() noexcept {
+    return std::chrono::milliseconds{HAL_GetTick()};
+  }
+
+  static void BlockFor(ct::Duration auto duration) noexcept {
+    const auto ms =
+        std::chrono::duration_cast<std::chrono::milliseconds>(duration);
+    HAL_Delay(ms.count);
+  }
+
+  using DurationType = std::chrono::milliseconds;
+};
+
+static_assert(hal::Clock<SysTickClock>);
 
 }   // namespace stm32g0

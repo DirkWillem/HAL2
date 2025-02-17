@@ -9,66 +9,192 @@
 
 #include "proto_helpers.h"
 
+#include <sc/statechart.h>
+#include <sc/statechart_callback.h>
+
 namespace vrpc {
 
-enum class ReaderState : uint8_t {
-  Idle,
-  ReadingA,
-  ReadingB,
-};
+struct IdleA {};
+struct ReadA {};
+struct WriteB {};
+struct ReadAWriteB {};
+struct ReadANewB {};
+struct IdleB {};
+struct ReadB {};
+struct WriteA {};
+struct ReadBWriteA {};
+struct ReadBNewA {};
 
-enum class WriterState : uint8_t {
-  Clean,
-  WritingA,
-  WritingB,
-  Dirty,
-};
+struct StartRead {};
+struct EndRead {};
+struct StartWrite {};
+struct EndWrite {};
 
-enum class WritingSlot : uint8_t { A, B };
+template <typename T>
+class ParameterSlot {
+  using States = sc::States<IdleA, ReadA, WriteB, ReadAWriteB, ReadANewB, IdleB,
+                            ReadB, WriteA, ReadBWriteA, ReadBNewA>;
+  using Events = sc::Events<StartRead, EndRead, StartWrite, EndWrite>;
 
-struct SlotState {
-  //   ReaderState reader{ReaderState::Idle};
-  //   WriterState writer{WriterState::Clean};
-  //   WritingSlot writing_slot{WritingSlot::A};
-  //
-  //   [[nodiscard]] constexpr uint32_t Raw() const noexcept {
-  //     return static_cast<uint32_t>(reader) | (static_cast<uint32_t>(writer)
-  //     << 8)
-  //            | (static_cast<uint32_t>(writing_slot) << 16);
-  //   }
-  //
-  //   static constexpr SlotState FromRaw(uint32_t raw) noexcept {
-  //     return {
-  //         .reader       = static_cast<ReaderState>(raw & 0xFF),
-  //         .writer       = static_cast<WriterState>((raw >> 8) & 0xFF),
-  //         .writing_slot = static_cast<WritingSlot>((raw >> 16) & 0xFF),
-  //     };
-  //   }
-  //
-  //   template <ReaderState R, WriterState W, WritingSlot WS>
-  //   static constexpr SlotState Create() noexcept {
-  //     static_assert(
-  //         ct::Implies(R == ReaderState::ReadingB, WS == WritingSlot::A));
-  //     static_assert(
-  //         ct::Implies(R == ReaderState::ReadingA, WS == WritingSlot::B));
-  //     static_assert(
-  //         ct::Implies(W == WriterState::WritingA, WS == WritingSlot::A));
-  //     static_assert(
-  //         ct::Implies(W == WriterState::WritingB, WS == WritingSlot::B));
-  //
-  //     return {.reader = R, .writer = W, .writing_slot = WS};
-  //   }
-  // };
-  //
-  // template <typename T>
-  // class ParameterSlot {
-  //  public:
-  //   T Read() {}
-  //
-  //  private:
-  //   std::atomic<uint32_t> state{SlotState{}.Raw()};
-  //   T                     a;
-  //   T                     b;
+  static constexpr auto CreateStateChart() {
+    return sc::StateChartRunner{sc::StateChart<States, Events>::Chart{
+        IdleA{},
+        sc::Transitions{
+            sc::MakeTransition<IdleA, StartRead, ReadA>(),
+            sc::MakeTransition<IdleA, StartWrite, WriteB>(),
+
+            sc::MakeTransition<ReadA, EndRead, IdleA>(),
+            sc::MakeTransition<ReadA, StartWrite, ReadAWriteB>(),
+
+            sc::MakeTransition<WriteB, StartRead, ReadAWriteB>(),
+            sc::MakeTransition<WriteB, EndWrite, IdleB>(),
+
+            sc::MakeTransition<ReadAWriteB, EndRead, WriteB>(),
+            sc::MakeTransition<ReadAWriteB, EndWrite, ReadANewB>(),
+
+            sc::MakeTransition<ReadANewB, EndRead, IdleB>(),
+
+            sc::MakeTransition<IdleB, StartRead, ReadB>(),
+            sc::MakeTransition<IdleB, StartWrite, WriteA>(),
+
+            sc::MakeTransition<ReadB, EndRead, IdleB>(),
+            sc::MakeTransition<ReadB, StartWrite, ReadBWriteA>(),
+
+            sc::MakeTransition<WriteA, StartRead, ReadBWriteA>(),
+            sc::MakeTransition<WriteA, EndWrite, IdleA>(),
+
+            sc::MakeTransition<ReadBWriteA, EndRead, WriteA>(),
+            sc::MakeTransition<ReadBWriteA, EndWrite, ReadBNewA>(),
+
+            sc::MakeTransition<ReadBNewA, EndRead, IdleA>(),
+        },
+    }};
+  }
+
+  using StateChart = std::decay_t<decltype(CreateStateChart())>;
+
+ public:
+  template <std::invocable<const T&> RA>
+    requires(!std::is_same_v<
+             decltype(std::declval<RA>()(std::declval<const T&>())), void>)
+  std::optional<decltype(std::declval<RA>()(std::declval<const T&>()))>
+  Read(RA read_action) noexcept {
+    if (state_chart.ApplyEvent(StartRead{})) {
+      const auto* read_ptr = GetReadPtr();
+      if (read_ptr == nullptr) {
+        return {};
+      }
+
+      const auto& read_val = *read_ptr;
+      const auto  result   = read_action(read_val);
+      if (!state_chart.ApplyEvent(EndRead{})) {
+        return {};
+      }
+
+      return result;
+    }
+
+    return {};
+  }
+
+  template <std::invocable<const T&> RA>
+    requires(std::is_same_v<
+             decltype(std::declval<RA>()(std::declval<const T&>())), void>)
+  bool Read(RA read_action) noexcept {
+    if (state_chart.ApplyEvent(StartRead{})) {
+      const auto* read_ptr = GetReadPtr();
+      if (read_ptr == nullptr) {
+        return false;
+      }
+
+      const auto& read_val = *read_ptr;
+      read_action(read_val);
+      if (!state_chart.ApplyEvent(EndRead{})) {
+        return false;
+      }
+
+      return true;
+    }
+
+    return false;
+  }
+
+  template <std::invocable<T&> WA>
+  bool Write(WA write_action) noexcept {
+    if (state_chart.ApplyEvent(StartWrite{})) {
+      auto* write_ptr = GetWritePtr();
+      if (write_ptr == nullptr) {
+        return false;
+      }
+
+      if (!Read([write_ptr](const auto& val) {
+            std::memcpy(write_ptr, &val, sizeof(T));
+          })) {
+        return false;
+      }
+
+      write_action(*write_ptr);
+      return state_chart.ApplyEvent(EndWrite{});
+    }
+
+    return {};
+  }
+
+  template <std::invocable<T&, const halstd::Callback<>> WA>
+  bool WriteAsync(WA write_action) noexcept {
+    if (state_chart.ApplyEvent(StartWrite{})) {
+      const auto* cur_val   = GetReadPtr();
+      auto*       write_ptr = GetWritePtr();
+
+      if (cur_val == nullptr || write_ptr == nullptr) {
+        return false;
+      }
+
+      std::memcpy(write_ptr, cur_val, sizeof(T));
+
+      write_action(*write_ptr, end_write_callback);
+      return true;
+    }
+
+    return false;
+  }
+
+ private:
+  const T* GetReadPtr() const noexcept {
+    if (state_chart.Visit(sc::IsInState<ReadA>())
+        || state_chart.Visit(sc::IsInState<ReadAWriteB>())
+        || state_chart.Visit(sc::IsInState<ReadANewB>())) {
+      return &value_a;
+    }
+
+    if (state_chart.Visit(sc::IsInState<ReadB>())
+        || state_chart.Visit(sc::IsInState<ReadBWriteA>())
+        || state_chart.Visit(sc::IsInState<ReadBNewA>())) {
+      return &value_b;
+    }
+
+    return nullptr;
+  }
+
+  T* GetWritePtr() noexcept {
+    if (state_chart.Visit(sc::IsInState<WriteA>())
+        || state_chart.Visit(sc::IsInState<ReadBWriteA>())) {
+      return &value_a;
+    }
+
+    if (state_chart.Visit(sc::IsInState<WriteB>())
+        || state_chart.Visit(sc::IsInState<ReadAWriteB>())) {
+      return &value_b;
+    }
+
+    return nullptr;
+  }
+
+  StateChart state_chart{CreateStateChart()};
+  T          value_a{};
+  T          value_b{};
+
+  sc::ApplyEventCallback<StateChart, EndWrite> end_write_callback{state_chart};
 };
 
 template <typename PMsg, typename WMsg,
@@ -100,5 +226,30 @@ struct ParameterMapping {
     }
   }
 };
+
+template <typename Impl>
+concept ParameterStorage = requires(Impl& impl, const Impl& cimpl) {
+  impl.template Write<halstd::Empty>(std::declval<uint32_t>(),
+                                     std::declval<const halstd::Empty&>());
+  impl.template Read<halstd::Empty>(std::declval<uint32_t>(),
+                                    std::declval<halstd::Empty&>());
+
+  { cimpl.Contains(std::declval<uint32_t>()) } -> std::convertible_to<bool>;
+};
+
+class InMemoryStorage {
+ public:
+  template <typename T>
+  void Write(uint32_t, const T&) noexcept {}
+
+  template <typename T>
+  void Read(uint32_t, T&) noexcept {}
+
+  [[nodiscard]] constexpr bool Contains(uint32_t) const noexcept {
+    return false;
+  }
+};
+
+static_assert(ParameterStorage<InMemoryStorage>);
 
 }   // namespace vrpc

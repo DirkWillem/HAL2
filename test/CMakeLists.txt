@@ -17,6 +17,17 @@ generate_vrpc(
         test_protos common/vrpc/protos common/vrpc/generated
         GEN_TYPES uart)
 
+add_library(hal_test_helpers STATIC
+        helpers/event_loop.h
+
+        doubles/hal/fake_clock.h
+        doubles/hal/fake_pin.h
+        doubles/hal/mock_clock.cpp
+        doubles/hal/mock_clock.h)
+target_link_libraries(hal_test_helpers PUBLIC
+        abstract_hal
+        GTest::gmock)
+
 # Test source files
 set(HAL2_TEST_SRCS
         doubles/hal/fake_uart.h
@@ -49,7 +60,7 @@ set(HAL2_TEST_SRCS
 add_library(hal2_tests_lib STATIC ${HAL2_TEST_SRCS})
 link_library_hdronly(hal2_tests_lib PUBLIC GTest::gtest)
 link_library_hdronly(hal2_tests_lib PUBLIC GTest::gmock)
-target_link_libraries(hal2_tests_lib PUBLIC abstract_hal fp test_protos)
+target_link_libraries(hal2_tests_lib PUBLIC abstract_hal fp test_protos hal_test_helpers)
 target_include_directories(hal2_tests_lib PUBLIC "${CMAKE_CURRENT_LIST_DIR}")
 
 add_executable(hal2_tests ${HAL2_TEST_SRCS})

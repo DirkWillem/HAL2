@@ -155,7 +155,7 @@ add_library(vrpc STATIC
         proto_helpers.cpp
         vrpc.h)
 target_include_directories(vrpc PUBLIC "${CMAKE_CURRENT_LIST_DIR}/..")
-target_link_libraries(vrpc PUBLIC nanopb)
+target_link_libraries(vrpc PUBLIC nanopb halstd statechart)
 
 
 add_library(vrpc_builtins INTERFACE
@@ -171,7 +171,9 @@ add_library(vrpc_uart_common STATIC
         uart/vrpc_uart.h
         uart/vrpc_uart_frames.h)
 target_link_libraries(vrpc_uart_common PUBLIC
-        vrpc abstract_hal constexpr_tools vrpc_system_protos vrpc_builtins)
+        vrpc abstract_hal
+        constexpr_tools
+        vrpc_system_protos vrpc_builtins)
 
 add_library(vrpc_uart_server INTERFACE
         uart/vrpc_uart_server.h)

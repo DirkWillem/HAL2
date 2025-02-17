@@ -2,6 +2,8 @@
 
 #include <halstd/atomic.h>
 
+#include "clocks.h"
+
 namespace hal {
 
 template <typename Impl>
@@ -17,6 +19,9 @@ concept System = requires {
 
   requires halstd::Atomic<typename S::template Atomic<int>>;
   typename S::AtomicFlag;
+
+  typename S::Clock;
+  requires Clock<typename S::Clock>;
 };
 
 template <CriticalSectionInterface CSF>

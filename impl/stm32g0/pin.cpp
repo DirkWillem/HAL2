@@ -87,6 +87,18 @@ void Pin::InitializeAlternate(PinId id, unsigned int af, hal::PinPull pull,
   HAL_GPIO_Init(id.hal_port(), &init);
 }
 
+void Pin::InitializeInterrupt(PinId id, Edge edge, hal::PinPull pull) noexcept {
+  EnablePortClk(id.port);
+
+  GPIO_InitTypeDef init{
+      .Pin   = id.hal_pin(),
+      .Mode  = static_cast<uint32_t>(edge),
+      .Pull  = ToHalPull(pull),
+      .Speed = GPIO_SPEED_FREQ_VERY_HIGH,
+  };
+  HAL_GPIO_Init(id.hal_port(), &init);
+}
+
 Gpo::Gpo(stm32g0::PinId pin, hal::PinPull pull, hal::PinMode mode) noexcept
     : pin{pin} {
   Pin::Initialize(pin, hal::PinDirection::Output, pull, mode);

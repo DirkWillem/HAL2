@@ -77,6 +77,7 @@ pub struct MethodInfo {
 
 #[derive(Serialize, Clone, Debug)]
 pub struct ParameterGroup {
+    pub id: u32,
     pub read_method: MethodInfo,
     pub write_method: MethodInfo,
     pub write_msg_written_fields: FieldInfo,

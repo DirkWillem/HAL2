@@ -8,6 +8,8 @@ function(add_application NAME)
 
     add_executable("${NAME}_${ADD_APPLICATION_TARGET}" ${ADD_APPLICATION_SRCS})
     target_link_libraries("${NAME}_${ADD_APPLICATION_TARGET}" PRIVATE
+            ${ADD_APPLICATION_MCU}_linkopts
+
             ${ADD_APPLICATION_LIBS}
             -Wl,--whole-archive
             stm32_system

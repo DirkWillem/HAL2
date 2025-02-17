@@ -283,9 +283,27 @@ class StateChartRunner {
   std::atomic_flag processing_event{};
 };
 
+namespace detail {
+
+template <typename T>
+struct IsStateChartRunnerHelper : std::false_type {};
+
+template <typename T>
+struct IsStateChartRunnerHelper<StateChartRunner<T>> : std::true_type {};
+
+}   // namespace detail
+
+template <typename T>
+concept IsStateChartRunner = (detail::IsStateChartRunnerHelper<T>::value);
+
 template <typename T>
 constexpr auto IsInState() {
   return detail::IsInState<T>{};
+}
+
+template <typename Src, typename Event, typename Dst>
+constexpr auto MakeTransition() noexcept {
+  return [](Src, Event) { return Dst{}; };
 }
 
 }   // namespace sc

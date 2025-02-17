@@ -81,9 +81,9 @@ struct LambdaCallback {
   class Cb final
       : public T
       , public Callback<Args...> {
-  public:
-    explicit Cb(T t)
-        : Callback<Args...>{} {}
+   public:
+    explicit Cb(T&& t)
+        : Callback<Args...>{}, T{t} {}
 
     ~Cb() final = default;
 
@@ -91,6 +91,9 @@ struct LambdaCallback {
       T::operator()(std::forward<Args>(args)...);
     }
   };
+
+  template <typename T>
+  Cb(T) -> Cb<T>;
 };
 
 }   // namespace halstd

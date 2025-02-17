@@ -69,17 +69,16 @@ GetPinAFMapping(const std::array<AFMapping<PId, Periph>, N>& mappings,
   return *opt;
 }
 
-template <typename Impl, typename Pin>
+template <typename Impl>
 /**
  * Concept for implementation types of General-Purpose Inputs
- * @tparam Pin Pin type
  * @tparam Impl Implementation type
  */
-concept Gpi = PinId<Pin> && requires(const Impl& cgpi) {
-  Impl{std::declval<Pin>()};
-  Impl{std::declval<Pin>(), std::declval<hal::PinPull>()};
-  Impl{std::declval<Pin>(), std::declval<hal::PinPull>(),
-       std::declval<hal::PinMode>()};
+concept Gpi = requires(const Impl& cgpi) {
+  // Impl{std::declval<Pin>()};
+  // Impl{std::declval<Pin>(), std::declval<hal::PinPull>()};
+  // Impl{std::declval<Pin>(), std::declval<hal::PinPull>(),
+  //      std::declval<hal::PinMode>()};
 
   { cgpi.Read() } -> std::convertible_to<bool>;
 };

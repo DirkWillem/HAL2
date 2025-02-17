@@ -10,14 +10,14 @@ add_library(constexpr_tools INTERFACE
         constexpr_tools/static_mapping.h
         constexpr_tools/static_string.h
         constexpr_tools/std_ex.h
-        constexpr_tools/strings.h
-        constexpr_tools/values.h)
+        constexpr_tools/strings.h)
 target_include_directories(constexpr_tools INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
 
 add_library(halstd INTERFACE
         halstd/mp/type_helpers.h
         halstd/mp/types.h
+        halstd/mp/values.h
 
         halstd/atomic.h
         halstd/atomic_helpers.h
@@ -59,7 +59,8 @@ add_library(math INTERFACE
 
 # Statechart library
 add_library(statechart INTERFACE
-        sc/statechart.h)
+        sc/statechart.h
+        sc/statechart_callback.h)
 target_include_directories(statechart INTERFACE ${CMAKE_CURRENT_LIST_DIR})
 target_link_libraries(statechart INTERFACE halstd)
 

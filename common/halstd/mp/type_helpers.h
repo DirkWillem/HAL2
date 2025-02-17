@@ -101,4 +101,6 @@ struct Marker {};
 template <typename... Ts>
 struct Markers {};
 
+struct Empty {};
+
 }   // namespace halstd
