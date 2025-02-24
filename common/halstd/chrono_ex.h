@@ -1,18 +1,24 @@
 #pragma once
 
+#include <chrono>
 #include <utility>
 
-#include "std_ex.h"
+#include "ratio_ex.h"
 
-namespace ct {
+namespace halstd {
 
 template <typename T>
-/** Concept for std::ratio */
-concept Ratio = stdex::is_ratio_v<T>;
+struct is_duration : std::false_type {};
+
+template <typename Rep, typename Period>
+struct is_duration<std::chrono::duration<Rep, Period>> : std::true_type {};
+
+template <typename T>
+inline constexpr bool is_duration_v = is_duration<T>::value;
 
 template <typename T>
 /** Concept for std::chrono::duration */
-concept Duration = stdex::chrono::is_duration_v<T>;
+concept Duration = halstd::is_duration_v<T>;
 
 template <typename T>
 struct is_frequency : public std::false_type {};
@@ -35,8 +41,7 @@ class Freq {
   using Rep  = R;
   using Base = B;
 
-  using DefaultPeriodType =
-      std::chrono::duration<Rep, stdex::ratio_reciprocal<Base>>;
+  using DefaultPeriodType = std::chrono::duration<Rep, ratio_reciprocal<Base>>;
 
   constexpr explicit Freq(R count) noexcept
       : count{count} {}
@@ -60,11 +65,7 @@ class Freq {
   }
 
   template <Frequency F>
-  /**
-   * Casts the frequency to a different representation
-   * @tparam F Frequency representation
-   * @return Cast representation
-   */
+  /**/
   [[nodiscard]] constexpr auto As() const noexcept {
     using mul = std::ratio_divide<B, typename F::Base>;
 
@@ -140,6 +141,52 @@ class Freq {
   R count{};
 };
 
+/**
+ * Helper class for passing duration literals as template arguments
+ * @tparam Rep Duration representation
+ * @tparam R Duration unit ratio
+ */
+template <std::unsigned_integral Rep, Ratio R>
+struct DurationFactory {
+  [[nodiscard]] constexpr Duration auto MakeDuration() const noexcept {
+    return std::chrono::duration<Rep, R>{count};
+  }
+
+  Rep count;
+};
+
+namespace detail {
+
+template <typename T>
+inline constexpr bool IsDurationFactory = false;
+
+template <typename Rep, typename R>
+inline constexpr bool IsDurationFactory<DurationFactory<Rep, R>> = true;
+
+}   // namespace detail
+
+/**
+ * Concept for values that either are a std::chrono::duration, or can create
+ * one without additional input (i.e. DurationFactory)
+ */
+template <typename T>
+concept ToDuration = Duration<T> || detail::IsDurationFactory<T>;
+
+/**
+ * Creates a std::chrono::duration from a ToDuration value
+ * @tparam T Value that can be converted into a duration
+ * @param src Duration source
+ * @return Instantiated duration
+ */
+template <ToDuration T>
+[[nodiscard]] constexpr Duration auto MakeDuration(T src) noexcept {
+  if constexpr (Duration<T>) {
+    return src;
+  } else {
+    return src.MakeDuration();
+  }
+}
+
 template <typename R, typename B>
 struct is_frequency<Freq<R, B>> : std::true_type {};
 
@@ -176,6 +223,42 @@ constexpr auto operator""_MHz(unsigned long long int v) {
   return FreqLit<megahertz>(v);
 }
 
+template <Ratio R>
+constexpr auto DurationFactoryLit(unsigned long long int v) {
+  if (v > std::numeric_limits<typename kHz::Rep>::max()) {
+    std::unreachable();
+  }
+
+  return DurationFactory<uint32_t, R>{static_cast<uint32_t>(v)};
+}
+
+constexpr auto operator""_s(unsigned long long int v) {
+  return DurationFactory<uint32_t, std::ratio<1, 1>>(v);
+}
+
+constexpr auto operator""_ms(unsigned long long int v) {
+  return DurationFactory<uint32_t, std::milli>(v);
+}
+
+constexpr auto operator""_us(unsigned long long int v) {
+  return DurationFactory<uint32_t, std::micro>(v);
+}
+
 }   // namespace literals
 
-}   // namespace ct
+/**
+ * Concept that wraps the std::chrono::is_clock condition
+ */
+template <typename C>
+concept Clock = std::chrono::is_clock_v<C>;
+
+/**
+ * Concept that describes a system clock that can block the current thread
+ * of execution
+ */
+template <typename C>
+concept SystemClock = Clock<C> && requires(C clk) {
+  { clk.BlockFor(std::declval<typename C::duration>()) };
+};
+
+}   // namespace halstd

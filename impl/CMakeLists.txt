@@ -37,6 +37,10 @@ function(add_stm32g0_hal VARIANT XMLFILE)
             "stm32g0/generated/${VARIANT}/stm32g0/mappings/spi_i2s_pin_mapping.h"
             "stm32g0/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.h"
 
+            stm32g0/tim/channel.h
+            stm32g0/tim/common.cpp
+            stm32g0/tim/common.h
+
             stm32g0/clocks.h
             stm32g0/dma.h
             stm32g0/dma.cpp
@@ -52,7 +56,6 @@ function(add_stm32g0_hal VARIANT XMLFILE)
             stm32g0/spi.h
             stm32g0/system.cpp
             stm32g0/system.h
-            stm32g0/tim.cpp
             stm32g0/tim.h
             stm32g0/uart.cpp
             stm32g0/uart.h)

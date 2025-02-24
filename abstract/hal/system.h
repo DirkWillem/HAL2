@@ -1,8 +1,7 @@
 #pragma once
 
 #include <halstd/atomic.h>
-
-#include "clocks.h"
+#include <halstd/chrono_ex.h>
 
 namespace hal {
 
@@ -21,7 +20,7 @@ concept System = requires {
   typename S::AtomicFlag;
 
   typename S::Clock;
-  requires Clock<typename S::Clock>;
+  requires halstd::SystemClock<typename S::Clock>;
 };
 
 template <CriticalSectionInterface CSF>

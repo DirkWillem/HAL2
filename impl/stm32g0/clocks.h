@@ -2,8 +2,8 @@
 
 #include <cassert>
 
-#include <constexpr_tools/chrono_ex.h>
 #include <constexpr_tools/static_mapping.h>
+#include <halstd/chrono_ex.h>
 
 #include <halstd/logic.h>
 
@@ -13,7 +13,7 @@
 
 namespace stm32g0 {
 
-using namespace ct::literals;
+using namespace halstd::literals;
 
 inline constexpr auto HsiFrequency        = 16_MHz;
 inline constexpr auto Hsi48Frequency      = 48_MHz;
@@ -42,9 +42,9 @@ struct PllSettings {
    * @param src Source clock frequency
    * @return refx_ck
    */
-  [[nodiscard]] consteval ct::Frequency auto
-  PllInputFrequency(ct::Frequency auto src) const noexcept {
-    ct::hertz result = src.template As<ct::Hz>();
+  [[nodiscard]] consteval halstd::Frequency auto
+  PllInputFrequency(halstd::Frequency auto src) const noexcept {
+    halstd::hertz result = src.template As<halstd::Hz>();
     result /= m;
     return result;
   }
@@ -54,33 +54,33 @@ struct PllSettings {
    * @param src Source clock frequency
    * @return vcox_ck
    */
-  [[nodiscard]] consteval ct::Frequency auto
-  PllOutputFrequency(ct::Frequency auto src) const noexcept {
-    ct::hertz result = src.template As<ct::Hz>();
+  [[nodiscard]] consteval halstd::Frequency auto
+  PllOutputFrequency(halstd::Frequency auto src) const noexcept {
+    halstd::hertz result = src.template As<halstd::Hz>();
     result /= m;
     result *= n;
     return result;
   }
 
-  [[nodiscard]] consteval ct::Frequency auto
-  OutputP(ct::Frequency auto src) const noexcept {
+  [[nodiscard]] consteval halstd::Frequency auto
+  OutputP(halstd::Frequency auto src) const noexcept {
     return Output(src, p);
   }
 
-  [[nodiscard]] consteval ct::Frequency auto
-  OutputQ(ct::Frequency auto src) const noexcept {
+  [[nodiscard]] consteval halstd::Frequency auto
+  OutputQ(halstd::Frequency auto src) const noexcept {
     return Output(src, q);
   }
 
-  [[nodiscard]] consteval ct::Frequency auto
-  OutputR(ct::Frequency auto src) const noexcept {
+  [[nodiscard]] consteval halstd::Frequency auto
+  OutputR(halstd::Frequency auto src) const noexcept {
     return Output(src, r);
   }
 
  private:
-  [[nodiscard]] constexpr ct::Frequency auto
-  Output(ct::Frequency auto src, uint32_t div_pqr) const noexcept {
-    ct::hertz result = src.template As<ct::Hz>();
+  [[nodiscard]] constexpr halstd::Frequency auto
+  Output(halstd::Frequency auto src, uint32_t div_pqr) const noexcept {
+    halstd::hertz result = src.template As<halstd::Hz>();
     result /= m;
     result *= n;
     result /= div_pqr;
@@ -106,7 +106,7 @@ struct SystemClockSettings {
   uint32_t cortex_prescaler;
 
   [[nodiscard]] consteval bool
-  Validate(ct::Frequency auto sysclk) const noexcept {
+  Validate(halstd::Frequency auto sysclk) const noexcept {
     // Validate prescaler values
     assert(("AHB Prescaler must have a valid value",
             halstd::IsOneOf<1, 2, 4, 8, 16, 64, 128, 256, 512>(ahb_prescaler)));
@@ -117,31 +117,32 @@ struct SystemClockSettings {
 
     // Validate maximum frequencies
     assert(("AHB Frequency (HCLK) may not exceed 64 MHz",
-            AhbClockFrequency(sysclk).template As<ct::Hz>()
-                <= (64_MHz).As<ct::Hz>()));
+            AhbClockFrequency(sysclk).template As<halstd::Hz>()
+                <= (64_MHz).As<halstd::Hz>()));
     assert(("APB peripherals clock (PCLK1) frequency may not exceed 64 MHz",
-            ApbPeripheralsClockFrequency(sysclk).template As<ct::Hz>()
-                <= (64_MHz).As<ct::Hz>()));
+            ApbPeripheralsClockFrequency(sysclk).template As<halstd::Hz>()
+                <= (64_MHz).As<halstd::Hz>()));
 
     return true;
   }
 
-  [[nodiscard]] consteval ct::Frequency auto
-  AhbClockFrequency(ct::Frequency auto sysclk) const noexcept {
+  [[nodiscard]] consteval halstd::Frequency auto
+  AhbClockFrequency(halstd::Frequency auto sysclk) const noexcept {
     return sysclk / ahb_prescaler;
   }
 
-  [[nodiscard]] consteval ct::Frequency auto
-  ApbPeripheralsClockFrequency(ct::Frequency auto sysclk) const noexcept {
+  [[nodiscard]] consteval halstd::Frequency auto
+  ApbPeripheralsClockFrequency(halstd::Frequency auto sysclk) const noexcept {
     return AhbClockFrequency(sysclk) / apb_prescaler;
   }
 
-  [[nodiscard]] consteval ct::Frequency auto
-  ApbTimersClockFrequency(ct::Frequency auto sysclk) const noexcept {
+  [[nodiscard]] consteval halstd::Frequency auto
+  ApbTimersClockFrequency(halstd::Frequency auto sysclk) const noexcept {
     if (apb_prescaler == 1) {
-      return ApbPeripheralsClockFrequency(sysclk).template As<ct::Hz>();
+      return ApbPeripheralsClockFrequency(sysclk).template As<halstd::Hz>();
     } else {
-      return (ApbPeripheralsClockFrequency(sysclk) * 2).template As<ct::Hz>();
+      return (ApbPeripheralsClockFrequency(sysclk) * 2)
+          .template As<halstd::Hz>();
     }
   }
 };
@@ -152,41 +153,41 @@ inline constexpr SystemClockSettings DefaultSystemClockSettings = {
 inline constexpr auto DefaultHsiPrescaler = 1;
 
 struct ClockSettings {
-  ct::hertz           f_hse                 = DefaultHseFrequency.As<ct::Hz>();
-  PllSource           pll_source            = DefaultPllSource;
-  PllSettings         pll                   = DefaultPllSettings;
-  uint32_t            hsi_prescaler         = DefaultHsiPrescaler;
-  SysClkSource        sysclk_source         = DefaultSysClkSource;
+  halstd::hertz       f_hse         = DefaultHseFrequency.As<halstd::Hz>();
+  PllSource           pll_source    = DefaultPllSource;
+  PllSettings         pll           = DefaultPllSettings;
+  uint32_t            hsi_prescaler = DefaultHsiPrescaler;
+  SysClkSource        sysclk_source = DefaultSysClkSource;
   SystemClockSettings system_clock_settings = DefaultSystemClockSettings;
 
   /**
    * Returns the frequency of the HSI clock after applying the HSI prescaler
    * @returns Prescaled HSI frequency
    */
-  [[nodiscard]] consteval ct::Frequency auto
+  [[nodiscard]] consteval halstd::Frequency auto
   ScaledHsiFrequency() const noexcept {
     return HsiFrequency / hsi_prescaler;
   }
 
-  [[nodiscard]] consteval ct::Frequency auto
+  [[nodiscard]] consteval halstd::Frequency auto
   PllSourceClockFrequency() const noexcept {
     switch (pll_source) {
-    case PllSource::Hsi: return HsiFrequency.As<ct::Hz>();
-    case PllSource::Hse: return f_hse.As<ct::Hz>();
+    case PllSource::Hsi: return HsiFrequency.As<halstd::Hz>();
+    case PllSource::Hse: return f_hse.As<halstd::Hz>();
     }
 
     std::unreachable();
   }
 
-  [[nodiscard]] consteval ct::Frequency auto
+  [[nodiscard]] consteval halstd::Frequency auto
   SysClkSourceClockFrequency() const noexcept {
     switch (sysclk_source) {
-    case SysClkSource::Hsi: return ScaledHsiFrequency().As<ct::Hz>();
+    case SysClkSource::Hsi: return ScaledHsiFrequency().As<halstd::Hz>();
     case SysClkSource::Hse: return f_hse;
-    case SysClkSource::Lsi: return LsiFrequency.As<ct::Hz>();
-    case SysClkSource::Lse: return LseFrequency.As<ct::Hz>();
+    case SysClkSource::Lsi: return LsiFrequency.As<halstd::Hz>();
+    case SysClkSource::Lse: return LseFrequency.As<halstd::Hz>();
     case SysClkSource::Pll:
-      return pll.OutputR(PllSourceClockFrequency()).As<ct::Hz>();
+      return pll.OutputR(PllSourceClockFrequency()).As<halstd::Hz>();
     }
 
     std::unreachable();
@@ -272,8 +273,8 @@ namespace detail {
 }
 
 [[nodiscard]] consteval FlashLatency
-GetFlashLatency(ct::Frequency auto f_hclk, CoreVoltageRange vos_range) {
-  const auto f_hz = f_hclk.template As<ct::Hz>();
+GetFlashLatency(halstd::Frequency auto f_hclk, CoreVoltageRange vos_range) {
+  const auto f_hz = f_hclk.template As<halstd::Hz>();
 
   switch (vos_range) {
   case CoreVoltageRange::Range1:
@@ -371,19 +372,24 @@ bool ConfigurePowerAndClocks() noexcept {
 
 class SysTickClock {
  public:
-  constexpr static ct::Duration auto TimeSinceBoot() noexcept {
-    return std::chrono::milliseconds{HAL_GetTick()};
+  using rep        = uint32_t;
+  using period     = std::milli;
+  using duration   = std::chrono::duration<rep, period>;
+  using time_point = std::chrono::time_point<SysTickClock, duration>;
+
+  static constexpr auto is_steady = false;
+
+  [[nodiscard]] static time_point now() noexcept {
+    return time_point{duration{HAL_GetTick()}};
   }
 
-  static void BlockFor(ct::Duration auto duration) noexcept {
+  static void BlockFor(halstd::Duration auto duration) noexcept {
     const auto ms =
         std::chrono::duration_cast<std::chrono::milliseconds>(duration);
     HAL_Delay(ms.count);
   }
-
-  using DurationType = std::chrono::milliseconds;
 };
 
-static_assert(hal::Clock<SysTickClock>);
+static_assert(halstd::Clock<SysTickClock>);
 
 }   // namespace stm32g0

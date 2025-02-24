@@ -1,6 +1,5 @@
 add_library(constexpr_tools INTERFACE
         constexpr_tools/buffer_io.h
-        constexpr_tools/chrono_ex.h
         constexpr_tools/crc.h
         constexpr_tools/helpers.h
         constexpr_tools/integer.h
@@ -9,12 +8,12 @@ add_library(constexpr_tools INTERFACE
         constexpr_tools/spans.h
         constexpr_tools/static_mapping.h
         constexpr_tools/static_string.h
-        constexpr_tools/std_ex.h
         constexpr_tools/strings.h)
 target_include_directories(constexpr_tools INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
 
 add_library(halstd INTERFACE
+        halstd/mp/helpers.h
         halstd/mp/type_helpers.h
         halstd/mp/types.h
         halstd/mp/values.h
@@ -22,7 +21,9 @@ add_library(halstd INTERFACE
         halstd/atomic.h
         halstd/atomic_helpers.h
         halstd/callback.h
-        halstd/logic.h)
+        halstd/chrono_ex.h
+        halstd/logic.h
+        halstd/ratio_ex.h)
 target_include_directories(halstd INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
 

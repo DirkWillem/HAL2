@@ -1,4 +1,4 @@
-#include "tim.h"
+#include "common.h"
 
 namespace stm32g0::detail {
 
@@ -47,7 +47,7 @@ void EnableTimClock(TimId tim) {
   }
 }
 
-void EnableTimInterrupt(TimId id, uint32_t prio) {
+void EnableTimInterrupt(TimId id, uint32_t prio) noexcept {
   switch (id) {
   case TimId::Tim1:
     NVIC_SetPriority(TIM1_BRK_UP_TRG_COM_IRQn, prio);
@@ -87,6 +87,41 @@ void EnableTimInterrupt(TimId id, uint32_t prio) {
   case TimId::Tim17:
     NVIC_SetPriority(TIM17_FDCAN_IT1_IRQn, prio);
     NVIC_EnableIRQ(TIM17_FDCAN_IT1_IRQn);
+    break;
+  }
+}
+
+
+void DisableTimInterrupt(TimId id) noexcept {
+  switch (id) {
+  case TimId::Tim1:
+    NVIC_DisableIRQ(TIM1_BRK_UP_TRG_COM_IRQn);
+    NVIC_DisableIRQ(TIM1_CC_IRQn);
+    break;
+  case TimId::Tim2:
+    NVIC_DisableIRQ(TIM2_IRQn);
+    break;
+  case TimId::Tim3: [[fallthrough]];
+  case TimId::Tim4:
+    NVIC_DisableIRQ(TIM3_TIM4_IRQn);
+    break;
+  case TimId::Tim6:
+    NVIC_DisableIRQ(TIM6_DAC_LPTIM1_IRQn);
+    break;
+  case TimId::Tim7:
+    NVIC_DisableIRQ(TIM7_LPTIM2_IRQn);
+    break;
+  case TimId::Tim14:
+    NVIC_DisableIRQ(TIM14_IRQn);
+    break;
+  case TimId::Tim15:
+    NVIC_DisableIRQ(TIM15_IRQn);
+    break;
+  case TimId::Tim16:
+    NVIC_DisableIRQ(TIM16_FDCAN_IT0_IRQn);
+    break;
+  case TimId::Tim17:
+    NVIC_DisableIRQ(TIM17_FDCAN_IT1_IRQn);
     break;
   }
 }

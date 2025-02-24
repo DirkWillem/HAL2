@@ -5,6 +5,7 @@ add_library(abstract_hal INTERFACE
         hal/i2s.h
         hal/peripheral.h
         hal/pin.h
+        hal/pin_interrupts.h
         hal/spi.h
         hal/system.h
         hal/tim.h

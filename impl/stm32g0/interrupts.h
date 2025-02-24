@@ -2,10 +2,10 @@
 
 #include <hal/peripheral.h>
 
+#include <stm32g0/tim.h>
 #include <stm32g0/dma.h>
 #include <stm32g0/i2s.h>
 #include <stm32g0/pin_interrupt.h>
-#include <stm32g0/tim.h>
 #include <stm32g0/uart.h>
 
 template <unsigned P>
@@ -14,17 +14,17 @@ void HandlePinInterrupt() noexcept {
   using PinInt = PinInterrupt<PinInterruptImplMarker>;
 
   if constexpr (hal::IsPeripheralInUse<PinInt>()) {
-    if constexpr (PinInt::PinInterruptActive(P, Edge::Rising)) {
+    if constexpr (PinInt::PinInterruptActive(P, hal::Edge::Rising)) {
       if (__HAL_GPIO_EXTI_GET_RISING_IT(GetHalPin(P))) {
         __HAL_GPIO_EXTI_CLEAR_RISING_IT(GetHalPin(P));
-        PinInt::instance().HandleInterrupt<P, Edge::Rising>();
+        PinInt::instance().HandleInterrupt<P, hal::Edge::Rising>();
       }
     }
 
-    if constexpr (PinInt::PinInterruptActive(P, Edge::Falling)) {
+    if constexpr (PinInt::PinInterruptActive(P, hal::Edge::Falling)) {
       if (__HAL_GPIO_EXTI_GET_FALLING_IT(GetHalPin(P))) {
         __HAL_GPIO_EXTI_CLEAR_FALLING_IT(GetHalPin(P));
-        PinInt::instance().HandleInterrupt<P, Edge::Falling>();
+        PinInt::instance().HandleInterrupt<P, hal::Edge::Falling>();
       }
     }
   }

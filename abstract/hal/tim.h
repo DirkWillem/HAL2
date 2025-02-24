@@ -5,14 +5,42 @@
 #include <cstdint>
 #include <span>
 
+#include <halstd/callback.h>
+#include <halstd/chrono_ex.h>
+#include <halstd/mp/helpers.h>
+
 namespace hal {
 
+/**
+ * Concept for timer
+ * @tparam Impl Implementation type
+ */
 template <typename Impl>
-concept Tim = requires(Impl& impl) {
+concept Tim = requires(Impl& impl, const Impl& cimpl) {
   impl.Start();
   impl.Stop();
+
+  { Impl::Frequency() } -> halstd::Frequency;
+  requires halstd::IsConstantExpression<Impl::Frequency()>();
+
+  impl.SetPeriod(std::declval<uint32_t>());
 };
 
+/**
+ * Concept for a registerable timer period elapsed callback
+ */
+template <typename Impl>
+concept RegisterableTimPeriodElapsedCallback = requires(Impl& impl) {
+  impl.RegisterPeriodElapsedCallback(std::declval<halstd::Callback<>&>());
+  impl.ClearPeriodElapsedCallback();
+  impl.InvokePeriodElapsedCallback();
+};
+
+/**
+ * Concept Burst DMA PWM channel
+ * @tparam Impl Implementation type
+ * @tparam N Number of channel compares to write over burst DMA
+ */
 template <typename Impl, std::size_t N>
 concept BurstDmaPwmChannel = requires(Impl& impl) {
   impl.SetCompares(std::declval<std::array<uint16_t, N>>());
@@ -22,6 +50,115 @@ concept BurstDmaPwmChannel = requires(Impl& impl) {
 
   impl.Enable();
   impl.Disable();
+};
+
+/**
+ * Implementation of std::chrono clock using a hardware timer
+ * @tparam T Timer typer
+ * @tparam FClock Clock Frequency
+ */
+template <Tim T, halstd::Frequency auto FClock>
+struct TimClock {
+  using duration   = typename std::decay_t<decltype(FClock)>::DefaultPeriodType;
+  using rep        = typename duration::rep;
+  using period     = typename duration::period;
+  using time_point = std::chrono::time_point<TimClock<T, FClock>, duration>;
+
+  static constexpr auto is_steady = false;
+
+  static time_point now() noexcept {
+    constexpr auto FTim = T::Frequency().template As<halstd::Hz>();
+    constexpr auto FClk = FClock.template As<halstd::Hz>();
+
+    static_assert(FTim <= FClk);
+
+    constexpr auto Ratio = FClk.count / FTim.count;
+    return time_point{duration{T::instance().GetCounter() * Ratio}};
+  }
+};
+
+template <typename Impl>
+concept AlarmTim = Tim<Impl> && RegisterableTimPeriodElapsedCallback<Impl>;
+
+/**
+ * Class that uses a timer to implemented an alarm, i.e. a callback that is
+ * invoked from an interrupt context after a fixed amount of time from starting
+ * the alarm
+ * @tparam T Timer instance
+ * @tparam TO Timeout value, see halstd::DurationFactory
+ */
+template <AlarmTim T, halstd::ToDuration auto TO>
+class Alarm {
+ public:
+  /**
+   * Constructor
+   * @param alarm_cb Alarm callback
+   */
+  explicit Alarm(halstd::Callback<>& alarm_cb) noexcept
+      : callback{this, &Alarm::PeriodElapsedCallback}
+      , inner_callback{alarm_cb} {
+    T::instance().RegisterPeriodElapsedCallback(callback);
+  }
+
+  ~Alarm() noexcept {
+    AlarmTim auto& tim = T::instance();
+    tim.DisableInterrupt();
+    tim.ClearPeriodElapsedCallback();
+  }
+
+  /**
+   * Starts the alarm
+   */
+  void Start() noexcept {
+    constexpr auto TimFreq   = T::Frequency();
+    constexpr auto TimPeriod = TimFreq.Period();
+    constexpr auto Timeout =
+        std::chrono::duration_cast<std::decay_t<decltype(TimPeriod)>>(
+            halstd::MakeDuration(TO));
+    constexpr auto Period = Timeout.count() / TimPeriod.count() - 1;
+
+    AlarmTim auto& tim = T::instance();
+
+    tim.StopWithInterrupt();
+    tim.SetPeriod(Period);
+    tim.ResetCounter();
+    tim.EnableInterrupt();
+    tim.StartWithInterrupt();
+  }
+
+ private:
+  void PeriodElapsedCallback() {
+    AlarmTim auto& tim = T::instance();
+    tim.Stop();
+
+    inner_callback();
+  }
+
+  halstd::MethodCallback<Alarm<T, TO>> callback;
+  halstd::Callback<>&                  inner_callback;
+};
+
+/**
+ * Base class that can be inherited from to automatically implement
+ * RegisterableTimPeriodElapsedCallback
+ */
+class TimPeriodElapsedCallback {
+ public:
+  constexpr void InvokePeriodElapsedCallback() noexcept {
+    if (callback != nullptr) {
+      (*callback)();
+    }
+  }
+
+  constexpr void
+  RegisterPeriodElapsedCallback(halstd::Callback<>& new_callback) noexcept {
+    callback = &new_callback;
+  }
+
+  constexpr void ClearPeriodElapsedCallback() noexcept { callback = nullptr; }
+
+ private:
+  halstd::Callback<>* callback{nullptr};
 };
 
 }   // namespace hal

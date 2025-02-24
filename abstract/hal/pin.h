@@ -17,6 +17,8 @@ enum class PinMode { PushPull, OpenDrain };
 
 enum class PinDirection { Input, Output, Analog };
 
+enum class Edge { Rising, Falling, Both };
+
 template <typename P>
 concept PinId = std::equality_comparable<P>;
 

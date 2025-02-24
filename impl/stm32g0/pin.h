@@ -94,13 +94,18 @@ struct PinId {
 };
 
 /**
- * Possible edges that can be used to initialize a pin interrupt
+ * Converts a HAL Edge to a STM32 HAL edge
+ * @param edge Edge to convert
+ * @return HAL edge value
  */
-enum class Edge : uint32_t {
-  Rising  = GPIO_MODE_IT_RISING,
-  Falling = GPIO_MODE_IT_FALLING,
-  Both    = GPIO_MODE_IT_RISING_FALLING,
-};
+static constexpr uint32_t ToHalEdge(hal::Edge edge) noexcept {
+  switch (edge) {
+  case hal::Edge::Rising: return GPIO_MODE_IT_RISING;
+  case hal::Edge::Falling: return GPIO_MODE_IT_FALLING;
+  case hal::Edge::Both: return GPIO_MODE_IT_RISING_FALLING;
+  default: std::unreachable();
+  }
+}
 
 /**
  * Pin ID helper macro
@@ -144,7 +149,7 @@ struct Pin {
    * @param pull Pin pull-up / pull-down
    */
   static void
-  InitializeInterrupt(PinId id, Edge edge,
+  InitializeInterrupt(PinId id, hal::Edge edge,
                       hal::PinPull pull = hal::PinPull::NoPull) noexcept;
 };
 

@@ -155,13 +155,13 @@ void SetupSpiMaster(SpiId id, SPI_HandleTypeDef& hspi,
 
 template <ClockSettings CS>
 [[nodiscard]] constexpr SpiBaudPrescaler
-FindPrescalerValue(ct::Frequency auto baud_rate) {
+FindPrescalerValue(halstd::Frequency auto baud_rate) {
   const auto f_src =
       CS.system_clock_settings
           .ApbPeripheralsClockFrequency(CS.SysClkSourceClockFrequency())
-          .As<ct::Hz>();
+          .As<halstd::Hz>();
 
-  std::array<std::tuple<SpiBaudPrescaler, ct::Hz>, 8> options{{
+  std::array<std::tuple<SpiBaudPrescaler, halstd::Hz>, 8> options{{
       {SpiBaudPrescaler::Prescale2, f_src / 2},
       {SpiBaudPrescaler::Prescale4, f_src / 4},
       {SpiBaudPrescaler::Prescale8, f_src / 8},
@@ -175,7 +175,7 @@ FindPrescalerValue(ct::Frequency auto baud_rate) {
   auto best_err      = std::numeric_limits<uint32_t>::max();
   auto best_prescale = SpiBaudPrescaler::Prescale2;
 
-  const auto desired = baud_rate.template As<ct::Hz>();
+  const auto desired = baud_rate.template As<halstd::Hz>();
 
   for (const auto [prescale, actual_baud] : options) {
     const auto err = (actual_baud > desired ? (actual_baud - desired)
@@ -275,7 +275,7 @@ class SpiImpl : public hal::UsedPeripheral {
     detail::SetupSpiMaster(Id, hspi, baud_prescaler, DS, TT);
   }
 
-  SpiImpl(hal::Dma auto& dma, Pinout pinout, ct::Frequency auto clock_frequency)
+  SpiImpl(hal::Dma auto& dma, Pinout pinout, halstd::Frequency auto clock_frequency)
     requires(OM == SpiOperatingMode::Dma)
   {
     // Validate DMA instance
