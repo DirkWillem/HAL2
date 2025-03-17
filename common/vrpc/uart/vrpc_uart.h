@@ -14,12 +14,12 @@
 
 #include <vrpc/generated/common/vrpc.h>
 #include <vrpc/proto_helpers.h>
+#include <vrpc/server.h>
 
 #include "vrpc_uart_decoder.h"
 #include "vrpc_uart_encode.h"
 
 namespace vrpc::uart {
-
 enum class HandleState {
   Handled,
   HandlingAsync,
@@ -44,7 +44,7 @@ concept ServiceImpl = requires(Impl& impl) {
     impl.HandleCommand(std::declval<uint32_t>(),
                        std::declval<std::span<const std::byte>>(),
                        std::declval<std::span<std::byte>>(),
-                       std::declval<halstd::Callback<>&>())
+                       std::declval<halstd::Callback<HandleResult>&>())
   } -> std::convertible_to<HandleResult>;
 };
 
@@ -70,6 +70,56 @@ struct UartService {
 
   Service           svc;
   UartImpl<Service> svc_uart;
+};
+
+template <bool Enable, typename Response>
+class AsyncCommandCallback;
+
+template <typename Response>
+class AsyncCommandCallback<false, Response> {};
+
+template <typename Response>
+class AsyncCommandCallback<true, Response> {
+ protected:
+  AsyncCommandCallback() noexcept
+      : callback{this, &AsyncCommandCallback::CommandCallback} {}
+
+  AsyncResult<Response> InitializeCallback(
+      std::span<std::byte>            new_response_buf,
+      halstd::Callback<HandleResult>& new_inner_callback) & noexcept {
+    response_buf   = new_response_buf;
+    inner_callback = &new_inner_callback;
+
+    return AsyncResult{response, callback};
+  }
+
+  void CommandCallback() noexcept {
+    if (inner_callback != nullptr) {
+      const auto [enc_success, enc_data] =
+          vrpc::ProtoEncode(response, *response_buf);
+      if (!enc_success) {
+        (*inner_callback)({
+            .state            = HandleState::ErrMalformedPayload,
+            .response_payload = {},
+        });
+      } else {
+        (*inner_callback)({
+            .state            = HandleState::Handled,
+            .response_payload = enc_data,
+        });
+      }
+
+      response_buf   = std::nullopt;
+      inner_callback = nullptr;
+    }
+  }
+
+ private:
+  Response                            response{};
+  std::optional<std::span<std::byte>> response_buf{};
+
+  halstd::MethodCallback<AsyncCommandCallback<true, Response>> callback;
+  halstd::Callback<HandleResult>* inner_callback{nullptr};
 };
 
 }   // namespace vrpc::uart

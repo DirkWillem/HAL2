@@ -55,6 +55,8 @@ struct Types {
   }
 
   using SingleType = std::conditional_t<AreEqual, NthType<0>, void>;
+
+  using Tuple = std::tuple<Ts...>;
 };
 
 }   // namespace halstd

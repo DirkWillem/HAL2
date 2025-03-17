@@ -163,25 +163,6 @@ class TimImpl
   void DisableInterrupt() noexcept { detail::DisableTimInterrupt(Id); }
 
  protected:
-  [[nodiscard]] static consteval std::intmax_t
-  GetFrequencyRatioNumerator() noexcept {
-    constexpr halstd::Frequency auto FSrc =
-        CS.system_clock_settings.ApbTimersClockFrequency(
-            CS.SysClkSourceClockFrequency());
-    constexpr auto Config = ConfigFn(Id, FSrc);
-
-    auto freq_in_current_unit =
-        (FSrc / ((Config.prescaler + 1))).template As<halstd::Hz>().count;
-    std::intmax_t numerator = 1;
-
-    while (freq_in_current_unit >= 1'000) {
-      numerator *= 1'000;
-      freq_in_current_unit /= 1'000;
-    }
-
-    return numerator;
-  }
-
   TimImpl()
     requires(!UsesDma)
       : Chs{htim}... {
@@ -226,6 +207,25 @@ class TimImpl
   TIM_HandleTypeDef htim{};
 
  private:
+  [[nodiscard]] static consteval std::intmax_t
+  GetFrequencyRatioNumerator() noexcept {
+    constexpr halstd::Frequency auto FSrc =
+        CS.system_clock_settings.ApbTimersClockFrequency(
+            CS.SysClkSourceClockFrequency());
+    constexpr auto Config = ConfigFn(Id, FSrc);
+
+    auto freq_in_current_unit =
+        (FSrc / ((Config.prescaler + 1))).template As<halstd::Hz>().count;
+    std::intmax_t numerator = 1;
+
+    while (freq_in_current_unit >= 1'000) {
+      numerator *= 1'000;
+      freq_in_current_unit /= 1'000;
+    }
+
+    return numerator;
+  }
+
   bool ConfigureTimer(const detail::TimConfig& cfg) {
     // Enable clock
     detail::EnableTimClock(Id);

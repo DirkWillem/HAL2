@@ -2,6 +2,7 @@
 #pragma once
 
 #include <vrpc/parameters.h>
+#include <vrpc/server.h>
 
 #ifdef __cplusplus
 
@@ -36,12 +37,19 @@ concept {{svc.name}}{{method.name}}Sync = requires(Impl& impl) {
       std::declval<const {{ macros::msg_ref_class(msg=method.input_type) }}&>(),
       std::declval<{{ macros::msg_ref_class(msg=method.output_type) }}&>());
 };
+
+template<typename Impl>
+concept {{svc.name}}{{method.name}}Async = requires(Impl& impl) {
+  impl.{{method.name}}Async(
+      std::declval<const {{ macros::msg_ref_class(msg=method.input_type) }}&>(),
+      std::declval<vrpc::AsyncResult<{{ macros::msg_ref_class(msg=method.output_type) }}>>());
+};
 {% endfor %}
 
 template<typename Impl>
 concept {{svc.name}} = {% for _, method in svc.methods -%}
     {%- if not loop.first -%}&& {% endif -%}
-    {{- svc.name}}{{method.name}}Sync<Impl>
+    ({{- svc.name}}{{method.name}}Sync<Impl> || {{- svc.name}}{{method.name}}Async<Impl>)
 {%- endfor %};
 
 {% include "service_parameter_bases" %}

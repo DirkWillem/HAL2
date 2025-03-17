@@ -16,7 +16,13 @@ namespace {{ package | package_to_namespace }}::uart {
 {% for _, svc in services %}
 
 template<{{svc.name}} Impl>
-class Uart{{svc.name}} {
+class Uart{{svc.name}} :
+{% for _, method in svc.methods %}
+    {%- if not loop.first -%},{% endif -%}
+    public vrpc::uart::AsyncCommandCallback<{{ svc.name }}{{ method.name }}Async<Impl>, {{ macros::msg_ref_class(msg=method.output_type) }}>
+{% endfor %}
+
+{
  public:
   static constexpr uint32_t ServiceId   = {{ svc.name }}Id;
   static constexpr auto     Identifier  = {{ svc.name }}Identifier;
@@ -37,7 +43,7 @@ class Uart{{svc.name}} {
   vrpc::uart::HandleResult
   HandleCommand(uint32_t id, std::span<const std::byte> request_buf,
                 std::span<std::byte> response_buf,
-                halstd::Callback<>&     async_complete_callback) {
+                halstd::Callback<vrpc::uart::HandleResult>&     async_complete_callback) {
     switch (id) {
     {%- for _, method in svc.methods %}
     case {{ method.id }}: {
@@ -66,6 +72,16 @@ class Uart{{svc.name}} {
         return {
             .state            = vrpc::uart::HandleState::Handled,
             .response_payload = enc_data,
+        };
+      } else if constexpr ({{ svc.name }}{{ method.name }}Async<Impl>) {
+        using AsyncCmd = vrpc::uart::AsyncCommandCallback<true, {{ macros::msg_ref_class(msg=method.output_type) }}>;
+
+        auto async_result = AsyncCmd::InitializeCallback(response_buf, async_complete_callback);
+        impl.{{method.name}}Async(request, std::move(async_result));
+
+        return {
+            .state = vrpc::uart::HandleState::HandlingAsync,
+            .response_payload = {},
         };
       }
     }

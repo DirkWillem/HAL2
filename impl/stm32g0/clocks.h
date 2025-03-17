@@ -386,7 +386,7 @@ class SysTickClock {
   static void BlockFor(halstd::Duration auto duration) noexcept {
     const auto ms =
         std::chrono::duration_cast<std::chrono::milliseconds>(duration);
-    HAL_Delay(ms.count);
+    HAL_Delay(ms.count());
   }
 };
 

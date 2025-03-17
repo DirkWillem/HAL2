@@ -18,12 +18,20 @@ namespace hal {
 template <typename Impl>
 concept Tim = requires(Impl& impl, const Impl& cimpl) {
   impl.Start();
+  impl.StartWithInterrupt();
   impl.Stop();
+  impl.StopWithInterrupt();
 
   { Impl::Frequency() } -> halstd::Frequency;
   requires halstd::IsConstantExpression<Impl::Frequency()>();
 
   impl.SetPeriod(std::declval<uint32_t>());
+
+  { cimpl.GetCounter() } -> std::convertible_to<uint32_t>;
+  impl.ResetCounter();
+
+  impl.EnableInterrupt();
+  impl.DisableInterrupt();
 };
 
 /**
@@ -96,14 +104,42 @@ class Alarm {
    */
   explicit Alarm(halstd::Callback<>& alarm_cb) noexcept
       : callback{this, &Alarm::PeriodElapsedCallback}
-      , inner_callback{alarm_cb} {
+      , inner_callback{&alarm_cb} {
     T::instance().RegisterPeriodElapsedCallback(callback);
   }
 
+  /**
+   * Move contructor
+   * @param rhs Moved value
+   */
+  Alarm(Alarm&& rhs) noexcept
+      : callback{this, &Alarm::PeriodElapsedCallback}
+      , inner_callback{rhs.inner_callback} {
+    rhs.inner_callback = nullptr;
+    T::instance().RegisterPeriodElapsedCallback(callback);
+  }
+
+  /**
+   * Move assignemnt operator
+   * @param rhs Assigned instance
+   * @return Current instance
+   */
+  Alarm& operator=(Alarm&& rhs) noexcept {
+    callback     = rhs.callback;
+    rhs.callback = nullptr;
+    T::instance().RegisterPeriodElapsedCallback(callback);
+    return *this;
+  }
+
+  Alarm(const Alarm&)            = delete;
+  Alarm& operator=(const Alarm&) = delete;
+
   ~Alarm() noexcept {
-    AlarmTim auto& tim = T::instance();
-    tim.DisableInterrupt();
-    tim.ClearPeriodElapsedCallback();
+    if (inner_callback != nullptr) {
+      AlarmTim auto& tim = T::instance();
+      tim.DisableInterrupt();
+      tim.ClearPeriodElapsedCallback();
+    }
   }
 
   /**
@@ -128,14 +164,16 @@ class Alarm {
 
  private:
   void PeriodElapsedCallback() {
-    AlarmTim auto& tim = T::instance();
-    tim.Stop();
+    if (inner_callback != nullptr) {
+      AlarmTim auto& tim = T::instance();
+      tim.Stop();
 
-    inner_callback();
+      (*inner_callback)();
+    }
   }
 
   halstd::MethodCallback<Alarm<T, TO>> callback;
-  halstd::Callback<>&                  inner_callback;
+  halstd::Callback<>*                  inner_callback;
 };
 
 /**

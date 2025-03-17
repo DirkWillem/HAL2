@@ -1,7 +1,11 @@
 #pragma once
 
 #include <concepts>
+#include <optional>
+#include <tuple>
 #include <utility>
+
+#include "mp/types.h"
 
 namespace halstd {
 
@@ -75,6 +79,42 @@ class DynamicMethodCallback final : public Callback<Args...> {
   MethodPtr ptr;
 };
 
+template <typename C, typename BA, typename CB>
+class BoundDynamicMethodCallback;
+
+template <typename T, typename... BoundArgs, typename... Args>
+class BoundDynamicMethodCallback<T, Types<BoundArgs...>, Callback<Args...>>
+    final : public Callback<Args...> {
+  using MethodPtr = void (T::*)(BoundArgs..., Args...);
+
+ public:
+  ~BoundDynamicMethodCallback() noexcept final = default;
+
+  explicit BoundDynamicMethodCallback(T* inst, MethodPtr ptr = nullptr)
+      : inst{inst}
+      , ptr{ptr} {}
+
+  void operator()(Args... args) const noexcept final {
+    if (inst != nullptr && bound_args.has_value()) {
+      [this, &args...]<std::size_t... Idxs>(std::index_sequence<Idxs...>) {
+        (inst->*ptr)(std::get<Idxs>(*bound_args)..., args...);
+      }(std::make_index_sequence<sizeof...(BoundArgs)>());
+    }
+  }
+
+  void RebindUnguarded(MethodPtr                new_method_ptr,
+                       std::tuple<BoundArgs...> new_bound_args) noexcept {
+    ptr        = new_method_ptr;
+    bound_args = new_bound_args;
+  }
+
+ private:
+  T*        inst;
+  MethodPtr ptr;
+
+  std::optional<std::tuple<BoundArgs...>> bound_args{};
+};
+
 template <typename... Args>
 struct LambdaCallback {
   template <typename T>
@@ -83,7 +123,8 @@ struct LambdaCallback {
       , public Callback<Args...> {
    public:
     explicit Cb(T&& t)
-        : Callback<Args...>{}, T{t} {}
+        : Callback<Args...>{}
+        , T{t} {}
 
     ~Cb() final = default;
 

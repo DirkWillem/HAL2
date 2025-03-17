@@ -147,12 +147,13 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
 endfunction()
 
 generate_vrpc(vrpc_common_protos protos/common generated/common NO_DEPEND_COMMON)
-generate_vrpc(vrpc_system_protos protos/services generated/services GEN_TYPES uart)
+generate_vrpc(vrpc_system_protos protos/services generated/services GEN_TYPES uart uart_server uart_client)
 
 add_library(vrpc STATIC
         parameters.h
         proto_helpers.h
         proto_helpers.cpp
+        server.h
         vrpc.h)
 target_include_directories(vrpc PUBLIC "${CMAKE_CURRENT_LIST_DIR}/..")
 target_link_libraries(vrpc PUBLIC nanopb halstd statechart)

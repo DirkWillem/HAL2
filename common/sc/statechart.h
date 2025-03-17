@@ -83,6 +83,24 @@ struct IsInState {
   }
 };
 
+template <typename T, std::invocable<const T&> F>
+struct TryGetStateValue {
+  F fn;
+
+  using Result = decltype(fn(std::declval<const T&>()));
+
+  [[nodiscard]] constexpr std::optional<Result>
+  operator()(const T& s) const noexcept {
+    return fn(s);
+  }
+
+  template <typename U>
+    requires(!std::is_same_v<std::decay_t<T>, std::decay_t<U>>)
+  constexpr std::optional<Result> operator()(const U&) const noexcept {
+    return {};
+  }
+};
+
 }   // namespace detail
 
 template <typename... Ts>
@@ -299,6 +317,11 @@ concept IsStateChartRunner = (detail::IsStateChartRunnerHelper<T>::value);
 template <typename T>
 constexpr auto IsInState() {
   return detail::IsInState<T>{};
+}
+
+template <typename T>
+constexpr auto TryGetStateValue(std::invocable<const T&> auto fn) noexcept {
+  return detail::TryGetStateValue<T, std::decay_t<decltype(fn)>>{fn};
 }
 
 template <typename Src, typename Event, typename Dst>
