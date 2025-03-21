@@ -101,6 +101,13 @@ struct Marker {};
 template <typename... Ts>
 struct Markers {};
 
+
+template <auto V>
+struct ValueMarker {};
+
 struct Empty {};
+
+template<typename In, typename Out>
+using Map = Out;
 
 }   // namespace halstd

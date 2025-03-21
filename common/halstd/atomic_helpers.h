@@ -55,4 +55,33 @@ auto ExclusiveWithAtomicFlag(F& flag, A&& action)
   }
 }
 
+/**
+ * Initializes an atomic flag as an event. When the flag is set, the event is
+ * handled, when it is cleared, the event is pending
+ * @param flag Flag event to initialize
+ */
+void InitializeEvent(AtomicFlag auto& flag) noexcept {
+  flag.test_and_set();
+}
+
+/**
+ * Unconditionally pends an event
+ * @param flag Flag to pend the event for
+ * @return Whether the event pas pended
+ */
+void PendEvent(AtomicFlag auto& flag) noexcept {
+  flag.clear();
+}
+
+/**
+ * Tests the atomic event flag and marks it as handled, returns whether the
+ * event was previously pending
+ * @param flag Flag to test and handle
+ * @return Whether there was an event that was marked as handled
+ */
+bool TestAndHandleEvent(AtomicFlag auto& flag) noexcept {
+  return !flag.test_and_set();
+}
+
+
 }   // namespace halstd

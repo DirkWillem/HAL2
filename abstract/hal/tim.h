@@ -162,6 +162,14 @@ class Alarm {
     tim.StartWithInterrupt();
   }
 
+  /**
+   * Cancels the alarm
+   */
+  void Cancel() noexcept {
+    AlarmTim auto& tim = T::instance();
+    tim.StopWithInterrupt();
+  }
+
  private:
   void PeriodElapsedCallback() {
     if (inner_callback != nullptr) {

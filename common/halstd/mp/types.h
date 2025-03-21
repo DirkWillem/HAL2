@@ -48,6 +48,7 @@ struct Types {
   using NthType = typename detail::NthTypeHelper<I, Ts...>::Result;
 
   static constexpr auto AreEqual = (... && std::is_same_v<NthType<0>, Ts>);
+  static constexpr auto Count    = sizeof...(Ts);
 
   template <typename T>
   static constexpr auto IndexOf() {

@@ -51,7 +51,11 @@ class DynamicMethodCallback final : public Callback<Args...> {
   using MethodPtr = void (T::*)(Args...);
 
  public:
-  ~DynamicMethodCallback() noexcept final = default;
+  // DynamicMethodCallback(const DynamicMethodCallback&)            = delete;
+  // DynamicMethodCallback(DynamicMethodCallback&&)                 = delete;
+  // DynamicMethodCallback& operator=(const DynamicMethodCallback&) = delete;
+  // DynamicMethodCallback& operator=(DynamicMethodCallback&&)      = delete;
+  ~DynamicMethodCallback() noexcept final                        = default;
 
   explicit DynamicMethodCallback(T* inst, MethodPtr ptr = nullptr)
       : inst{inst}

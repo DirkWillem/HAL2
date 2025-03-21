@@ -182,7 +182,8 @@ target_link_libraries(vrpc_uart_server INTERFACE
         vrpc_uart_common)
 
 add_library(vrpc_uart_client INTERFACE
-        uart/vrpc_uart_client.h
-        uart/vrpc_uart_service_client.h)
+        uart/client/service_client_base.h
+        uart/client/service_collection.h
+        uart/client/transport.h)
 target_link_libraries(vrpc_uart_client INTERFACE
         vrpc_uart_common)

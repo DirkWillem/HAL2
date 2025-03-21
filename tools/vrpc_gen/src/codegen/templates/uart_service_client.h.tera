@@ -3,8 +3,7 @@
 
 #pragma once
 
-#include <vrpc/uart/vrpc_uart_client.h>
-#include <vrpc/uart/vrpc_uart_service_client.h>
+#include <vrpc/uart/client/service_client_base.h>
 
 #include "{{ name }}.h"
 
@@ -12,15 +11,14 @@ namespace {{ package | package_to_namespace }}::uart {
 
 {% for _, svc in services %}
 
-template<hal::AsyncUart Uart, hal::System Sys, vrpc::VrpcNetworkConfig NC,
-                                                         vrpc::uart::VrpcUartClientOptions O>
+template<hal::AsyncUart Uart, hal::System Sys, vrpc::VrpcNetworkConfig NC, vrpc::uart::ClientTransportOptions O, std::size_t SlotId>
 class {{svc.name}}Client
-    : public vrpc::uart::VrpcUartServiceClient<Uart, Sys, NC, O, {{ client_macros::service_response_msgs(svc=svc) }}> {
-    static constexpr auto UsesAddressing = vrpc::uart::VrpcUartServiceClient<Uart, Sys, NC, O, {{ client_macros::service_response_msgs(svc=svc) }}>::UsesAddressing;
+    : public vrpc::uart::ServiceClientBase<Uart, Sys, NC, O, SlotId, {{ client_macros::service_response_msgs(svc=svc) }}> {
+    static constexpr auto UsesAddressing = vrpc::uart::ServiceClientBase<Uart, Sys, NC, O, SlotId, {{ client_macros::service_response_msgs(svc=svc) }}>::UsesAddressing;
   public:
    explicit {{svc.name}}Client(
-       vrpc::uart::VrpcUartClient<Uart, Sys, NC, O>& uart_client)
-       : vrpc::uart::VrpcUartServiceClient<Uart, Sys, NC, O, {{ client_macros::service_response_msgs(svc=svc) }}>{uart_client} {}
+       vrpc::uart::ClientTransport<Uart, Sys, NC, O>& transport)
+       : vrpc::uart::ServiceClientBase<Uart, Sys, NC, O, SlotId, {{ client_macros::service_response_msgs(svc=svc) }}>{transport} {}
 
    {% for _, method in svc.methods %}
    auto {{ method.name }}(

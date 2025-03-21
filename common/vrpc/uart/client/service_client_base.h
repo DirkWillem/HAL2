@@ -1,15 +1,14 @@
 #pragma once
 
-#include <halstd/mp/type_helpers.h>
-
-#include "vrpc_uart_client.h"
+#include "transport.h"
 
 namespace vrpc::uart {
 
 template <hal::AsyncUart Uart, hal::System Sys, VrpcNetworkConfig NC,
-          VrpcUartClientOptions O, typename... ResponseMsgs>
-class VrpcUartServiceClient {
-  using UartClient = VrpcUartClient<Uart, Sys, NC, O>;
+          ClientTransportOptions O, std::size_t SlotId,
+          typename... ResponseMsgs>
+class ServiceClientBase {
+  using UartClient = ClientTransport<Uart, Sys, NC, O>;
 
  public:
   void HandleResponses() { uart_client.HandleResponses(); }
@@ -17,8 +16,8 @@ class VrpcUartServiceClient {
  protected:
   static constexpr auto UsesAddressing = UartClient::UsesAddressing;
 
-  explicit VrpcUartServiceClient(
-      VrpcUartClient<Uart, Sys, NC, O>& uart_client) noexcept
+  explicit ServiceClientBase(
+      ClientTransport<Uart, Sys, NC, O>& uart_client) noexcept
       : uart_client{uart_client}
       , req_cb{this} {}
 
@@ -33,9 +32,9 @@ class VrpcUartServiceClient {
     error_callback   = err_callback.transform([](auto cb) { return &cb.get(); })
                          .value_or(nullptr);
 
-    req_cb.RebindUnguarded(&VrpcUartServiceClient::RequestCallback<Res>);
+    req_cb.RebindUnguarded(&ServiceClientBase::RequestCallback<Res>);
 
-    uart_client.template Request<Req>(svc_id, cmd_id, req, req_cb);
+    uart_client.template Request<Req>(SlotId, svc_id, cmd_id, req, req_cb);
   }
 
   template <typename Req, typename Res>
@@ -49,10 +48,10 @@ class VrpcUartServiceClient {
     error_callback   = err_callback.transform([](auto cb) { return &cb.get(); })
                          .value_or(nullptr);
 
-    req_cb.RebindUnguarded(&VrpcUartServiceClient::RequestCallback<Res>);
+    req_cb.RebindUnguarded(&ServiceClientBase::RequestCallback<Res>);
 
-    uart_client.template Request<Req>(server_address, svc_id, cmd_id, req,
-                                      req_cb);
+    uart_client.template Request<Req>(SlotId, server_address, svc_id, cmd_id,
+                                      req, req_cb);
   }
 
  private:
@@ -89,10 +88,10 @@ class VrpcUartServiceClient {
     }
   }
 
-  VrpcUartClient<Uart, Sys, NC, O>& uart_client;
+  ClientTransport<Uart, Sys, NC, O>& uart_client;
 
   halstd::DynamicMethodCallback<
-      VrpcUartServiceClient,
+      ServiceClientBase,
       std::expected<std::span<const std::byte>, RequestError>>
       req_cb;
 
