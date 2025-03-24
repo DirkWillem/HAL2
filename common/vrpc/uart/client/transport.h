@@ -46,7 +46,7 @@ enum class RequestError {
   InternalError
 };
 
-template <hal::AsyncUart Uart, hal::System Sys, VrpcNetworkConfig NC,
+template <hal::AsyncUart Uart, hal::System Sys, NetworkConfig NC,
           ClientTransportOptions O>
 class ClientTransport {
   using ResponseResult =

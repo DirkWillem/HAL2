@@ -12,7 +12,7 @@ enum class NetworkTopology {
   SingleClientMultipleServer,
 };
 
-struct VrpcNetworkConfig {
+struct NetworkConfig {
   NetworkTopology topology = NetworkTopology::SingleClientMultipleServer;
 };
 

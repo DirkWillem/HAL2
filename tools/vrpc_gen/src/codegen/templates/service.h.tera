@@ -6,6 +6,7 @@
 
 #ifdef __cplusplus
 
+#include <expected>
 #include <type_traits>
 #include <string_view>
 
@@ -51,6 +52,27 @@ concept {{svc.name}} = {% for _, method in svc.methods -%}
     {%- if not loop.first -%}&& {% endif -%}
     ({{- svc.name}}{{method.name}}Sync<Impl> || {{- svc.name}}{{method.name}}Async<Impl>)
 {%- endfor %};
+
+template<typename Impl>
+concept {{svc.name}}Client = requires(Impl& impl) {
+    typename Impl::Error;
+    { Impl::UsesAddressing } -> std::convertible_to<bool>;
+
+    {% for _, method in svc.methods %}
+    requires Impl::UsesAddressing || requires {
+        { impl.{{method.name}}(
+            std::declval<const {{ macros::msg_ref_class(msg=method.input_type) }}&>(),
+            std::declval<halstd::Callback<std::expected<std::reference_wrapper<const {{ macros::msg_ref_class(msg=method.output_type) }}>, typename Impl::Error>>&>()) };
+    };
+
+    requires !Impl::UsesAddressing || requires {
+            { impl.{{method.name}}(
+                std::declval<uint32_t>(),
+                std::declval<const {{ macros::msg_ref_class(msg=method.input_type) }}&>(),
+                std::declval<halstd::Callback<std::expected<std::reference_wrapper<const {{ macros::msg_ref_class(msg=method.output_type) }}>, typename Impl::Error>>&>()) };
+        };
+    {% endfor %}
+};
 
 {% include "service_parameter_bases" %}
 

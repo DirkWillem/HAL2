@@ -6,19 +6,19 @@
 #include <vrpc/generated/services/server_index_uart_server_service.h>
 #include <vrpc/vrpc.h>
 
-#include "vrpc_uart.h"
+#include <vrpc/uart/vrpc_uart.h>
 
 namespace vrpc::uart {
 
 template <typename O>
-concept VrpcUartServerOptions = requires {
+concept ServerOptions = requires {
   { O::RequestSlotCount } -> std::convertible_to<std::optional<std::size_t>>;
   { O::Name } -> std::convertible_to<std::string_view>;
   { O::MultiDrop } -> std::convertible_to<bool>;
   requires O::Name.length() <= 32;
 };
 
-struct DefaultVrpcUartServerOptions {
+struct DefaultServerOptions {
   static constexpr std::optional<std::size_t> RequestSlotCount = std::nullopt;
   static constexpr std::string_view           Name             = "vRPC App";
   static constexpr bool                       MultiDrop        = false;
@@ -26,10 +26,10 @@ struct DefaultVrpcUartServerOptions {
 
 namespace detail {
 
-template <VrpcUartServerOptions O>
+template <ServerOptions O>
 class VrpcUartServerExtensions {};
 
-template <VrpcUartServerOptions O>
+template <ServerOptions O>
   requires O::MultiDrop
 class VrpcUartServerExtensions<O> {
  protected:
@@ -46,8 +46,8 @@ class VrpcUartServerExtensions<O> {
 
 }   // namespace detail
 
-template <hal::AsyncUart Uart, hal::System Sys, VrpcNetworkConfig NC,
-          VrpcUartServerOptions O, ServiceImpl... Services>
+template <hal::AsyncUart Uart, hal::System Sys, NetworkConfig NC,
+          ServerOptions O, ServiceImpl... Services>
   requires(sizeof...(Services) > 0)
 /**
  * vRPC UART server implementation. Can operate in both a single sever, single
@@ -58,7 +58,7 @@ template <hal::AsyncUart Uart, hal::System Sys, VrpcNetworkConfig NC,
  * @tparam O Server options
  * @tparam Services Services to be implemented by the server
  */
-class VrpcUartServer
+class Server
     : private UartService<server_index::ServerIndexImpl,
                           server_index::uart::UartServerIndex>
     , private detail::ServiceRef<
@@ -112,21 +112,21 @@ class VrpcUartServer
   };
 
   struct RequestSlot {
-    explicit RequestSlot(VrpcUartServer* server) noexcept
+    explicit RequestSlot(Server* server) noexcept
         : async_cmd_callback{server} {}
 
     SlotState                      state{SlotState::Empty};
     CommandRequestFrame<FrameFmt>  frame{};
     std::array<std::byte, BufSize> buffer;
     std::span<const std::byte>     tx_data;
-    halstd::BoundDynamicMethodCallback<VrpcUartServer,
+    halstd::BoundDynamicMethodCallback<Server,
                                        halstd::Types<RequestSlot*>,
                                        halstd::Callback<HandleResult>>
         async_cmd_callback;
   };
 
   static constexpr std::array<RequestSlot, RequestSlotCount>
-  CreateRequestSlots(VrpcUartServer* server) noexcept {
+  CreateRequestSlots(Server* server) noexcept {
     return ([server]<std::size_t... Idxs>(std::index_sequence<Idxs...>) {
       return std::array<RequestSlot, RequestSlotCount>{
           {(static_cast<void>(Idxs), RequestSlot{server})...}};
@@ -134,7 +134,7 @@ class VrpcUartServer
   }
 
  public:
-  explicit VrpcUartServer(Uart& uart, Services&... services)
+  explicit Server(Uart& uart, Services&... services)
     requires(!HasAddress)
       : UartService<server_index::ServerIndexImpl,
                     server_index::uart::UartServerIndex>{}
@@ -151,8 +151,8 @@ class VrpcUartServer
                        }...}}
       , uart{uart}
       , decoder{request_slots[0].buffer}
-      , rx_callback{this, &VrpcUartServer::ReceiveCallback}
-      , tx_callback{this, &VrpcUartServer::TransmitCallback} {
+      , rx_callback{this, &Server::ReceiveCallback}
+      , tx_callback{this, &Server::TransmitCallback} {
     uart.RegisterUartReceiveCallback(rx_callback);
     uart.RegisterUartTransmitCallback(tx_callback);
 
@@ -163,7 +163,7 @@ class VrpcUartServer
     StartReceiveToCurrentBuffer();
   }
 
-  explicit VrpcUartServer(Uart& uart, uint32_t addr, Services&... services)
+  explicit Server(Uart& uart, uint32_t addr, Services&... services)
     requires HasAddress
       : UartService<server_index::ServerIndexImpl,
                     server_index::uart::UartServerIndex>{}
@@ -181,8 +181,8 @@ class VrpcUartServer
       , uart{uart}
       , request_slots{CreateRequestSlots(this)}
       , decoder{request_slots[0].buffer}
-      , rx_callback{this, &VrpcUartServer::ReceiveCallback}
-      , tx_callback{this, &VrpcUartServer::TransmitCallback} {
+      , rx_callback{this, &Server::ReceiveCallback}
+      , tx_callback{this, &Server::TransmitCallback} {
     uart.RegisterUartReceiveCallback(rx_callback);
     uart.RegisterUartTransmitCallback(tx_callback);
 
@@ -193,7 +193,7 @@ class VrpcUartServer
     StartReceiveToCurrentBuffer();
   }
 
-  ~VrpcUartServer() {
+  ~Server() {
     uart.ClearUartReceiveCallback();
     uart.ClearUartTransmitCallback();
   }
@@ -396,7 +396,7 @@ class VrpcUartServer
 
     slot.state = SlotState::Handling;
     slot.async_cmd_callback.RebindUnguarded(
-        &VrpcUartServer::AsyncCommandCallback<Service>, std::make_tuple(&slot));
+        &Server::AsyncCommandCallback<Service>, std::make_tuple(&slot));
 
     const auto handle_result =
         detail::ServiceRef<Service>::service.HandleCommand(
@@ -505,8 +505,8 @@ class VrpcUartServer
   RequestSlot*                              current_slot{&request_slots[0]};
   RequestSlot*                              transmitting_slot{nullptr};
 
-  halstd::MethodCallback<VrpcUartServer, std::span<std::byte>> rx_callback;
-  halstd::MethodCallback<VrpcUartServer>                       tx_callback;
+  halstd::MethodCallback<Server, std::span<std::byte>> rx_callback;
+  halstd::MethodCallback<Server>                       tx_callback;
 
   Decoder decoder;
 

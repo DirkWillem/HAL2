@@ -177,7 +177,7 @@ target_link_libraries(vrpc_uart_common PUBLIC
         vrpc_system_protos vrpc_builtins)
 
 add_library(vrpc_uart_server INTERFACE
-        uart/vrpc_uart_server.h)
+        uart/server/server.h)
 target_link_libraries(vrpc_uart_server INTERFACE
         vrpc_uart_common)
 

@@ -11,11 +11,15 @@ namespace {{ package | package_to_namespace }}::uart {
 
 {% for _, svc in services %}
 
-template<hal::AsyncUart Uart, hal::System Sys, vrpc::VrpcNetworkConfig NC, vrpc::uart::ClientTransportOptions O, std::size_t SlotId>
+template<hal::AsyncUart Uart, hal::System Sys, vrpc::NetworkConfig NC, vrpc::uart::ClientTransportOptions O, std::size_t SlotId>
 class {{svc.name}}Client
     : public vrpc::uart::ServiceClientBase<Uart, Sys, NC, O, SlotId, {{ client_macros::service_response_msgs(svc=svc) }}> {
-    static constexpr auto UsesAddressing = vrpc::uart::ServiceClientBase<Uart, Sys, NC, O, SlotId, {{ client_macros::service_response_msgs(svc=svc) }}>::UsesAddressing;
   public:
+  static constexpr auto UsesAddressing = vrpc::uart::ServiceClientBase<Uart, Sys, NC, O, SlotId, {{ client_macros::service_response_msgs(svc=svc) }}>::UsesAddressing;
+   using Error =
+         typename vrpc::uart::ServiceClientBase<Uart, Sys, NC, O, SlotId,
+                                                {{ client_macros::service_response_msgs(svc=svc) }}>::Error;
+
    explicit {{svc.name}}Client(
        vrpc::uart::ClientTransport<Uart, Sys, NC, O>& transport)
        : vrpc::uart::ServiceClientBase<Uart, Sys, NC, O, SlotId, {{ client_macros::service_response_msgs(svc=svc) }}>{transport} {}
@@ -33,10 +37,8 @@ class {{svc.name}}Client
    auto {{ method.name }}(
        uint32_t server_address,
        const {{ macros::msg_ref_class(msg=method.input_type) }}& request,
-       halstd::Callback<const {{ macros::msg_ref_class(msg=method.output_type) }}&>& callback,
-       std::optional<std::reference_wrapper<halstd::Callback<vrpc::uart::RequestError>>>
-                     err_callback = {}) noexcept requires (UsesAddressing){
-     return this->Request(server_address, {{ svc.id }}, {{ method.id }}, request, callback, err_callback);
+       halstd::Callback<std::expected<std::reference_wrapper<const {{ macros::msg_ref_class(msg=method.output_type) }}>, Error>>& callback) noexcept requires (UsesAddressing){
+     return this->Request(server_address, {{ svc.id }}, {{ method.id }}, request, callback);
    }
    {% endfor %}
 };

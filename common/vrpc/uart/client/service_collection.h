@@ -8,17 +8,17 @@ namespace vrpc::uart {
 
 namespace detail {
 
-template <hal::AsyncUart Uart, hal::System Sys, VrpcNetworkConfig NC,
+template <hal::AsyncUart Uart, hal::System Sys, NetworkConfig NC,
           ClientTransportOptions O, typename Result,
-          template <hal::AsyncUart, hal::System, VrpcNetworkConfig,
+          template <hal::AsyncUart, hal::System, NetworkConfig,
                     ClientTransportOptions, std::size_t> typename... Svcs>
 struct ClientTupleHelper;
 
-template <hal::AsyncUart Uart, hal::System Sys, VrpcNetworkConfig NC,
+template <hal::AsyncUart Uart, hal::System Sys, NetworkConfig NC,
           ClientTransportOptions O, typename... AssignedSvcs,
-          template <hal::AsyncUart, hal::System, VrpcNetworkConfig,
+          template <hal::AsyncUart, hal::System, NetworkConfig,
                     ClientTransportOptions, std::size_t> typename CurSvc,
-          template <hal::AsyncUart, hal::System, VrpcNetworkConfig,
+          template <hal::AsyncUart, hal::System, NetworkConfig,
                     ClientTransportOptions, std::size_t> typename... RestSvcs>
 struct ClientTupleHelper<Uart, Sys, NC, O, halstd::Types<AssignedSvcs...>,
                          CurSvc, RestSvcs...> {
@@ -32,20 +32,20 @@ struct ClientTupleHelper<Uart, Sys, NC, O, halstd::Types<AssignedSvcs...>,
                                  RestSvcs...>::Result;
 };
 
-template <hal::AsyncUart Uart, hal::System Sys, VrpcNetworkConfig NC,
+template <hal::AsyncUart Uart, hal::System Sys, NetworkConfig NC,
           ClientTransportOptions O, typename... AssignedSvcs>
 struct ClientTupleHelper<Uart, Sys, NC, O, halstd::Types<AssignedSvcs...>> {
   using Result = halstd::Types<AssignedSvcs...>;
 };
 
-template <hal::AsyncUart Uart, hal::System Sys, VrpcNetworkConfig NC,
+template <hal::AsyncUart Uart, hal::System Sys, NetworkConfig NC,
           ClientTransportOptions O,
-          template <hal::AsyncUart, hal::System, VrpcNetworkConfig,
+          template <hal::AsyncUart, hal::System, NetworkConfig,
                     ClientTransportOptions, std::size_t> typename... Svcs>
 using ClientTuple =
     typename ClientTupleHelper<Uart, Sys, NC, O, halstd::Types<>,
                                Svcs...>::Result;
-template <hal::AsyncUart Uart, hal::System Sys, VrpcNetworkConfig NC,
+template <hal::AsyncUart Uart, hal::System Sys, NetworkConfig NC,
           ClientTransportOptions O>
 class ClientCollectionTransport {
  protected:
@@ -54,7 +54,7 @@ class ClientCollectionTransport {
   ClientTransport<Uart, Sys, NC, O> transport;
 };
 
-template <hal::AsyncUart Uart, hal::System Sys, VrpcNetworkConfig NC,
+template <hal::AsyncUart Uart, hal::System Sys, NetworkConfig NC,
           ClientTransportOptions O, typename Svc>
 class ClientCollectionClient {
  protected:
@@ -64,11 +64,11 @@ class ClientCollectionClient {
   Svc svc;
 };
 
-template <hal::AsyncUart Uart, hal::System Sys, VrpcNetworkConfig NC,
+template <hal::AsyncUart Uart, hal::System Sys, NetworkConfig NC,
           ClientTransportOptions O, typename Svcs>
 class ClientCollectionImpl;
 
-template <hal::AsyncUart Uart, hal::System Sys, VrpcNetworkConfig NC,
+template <hal::AsyncUart Uart, hal::System Sys, NetworkConfig NC,
           ClientTransportOptions O, typename... Svcs>
 class ClientCollectionImpl<Uart, Sys, NC, O, halstd::Types<Svcs...>>
     : protected ClientCollectionTransport<Uart, Sys, NC, O>
@@ -82,16 +82,16 @@ class ClientCollectionImpl<Uart, Sys, NC, O, halstd::Types<Svcs...>>
 
 }   // namespace detail
 
-template <hal::AsyncUart Uart, hal::System Sys, VrpcNetworkConfig NC,
+template <hal::AsyncUart Uart, hal::System Sys, NetworkConfig NC,
           ClientTransportOptions O,
-          template <hal::AsyncUart, hal::System, VrpcNetworkConfig,
+          template <hal::AsyncUart, hal::System, NetworkConfig,
                     ClientTransportOptions, std::size_t> typename... Svcs>
 class ClientCollection
     : protected detail::ClientCollectionImpl<
           Uart, Sys, NC, O, detail::ClientTuple<Uart, Sys, NC, O, Svcs...>> {
   using Clients = detail::ClientTuple<Uart, Sys, NC, O, Svcs...>;
 
-  template <template <hal::AsyncUart, hal::System, VrpcNetworkConfig,
+  template <template <hal::AsyncUart, hal::System, NetworkConfig,
                       ClientTransportOptions, std::size_t> typename Svc>
   static consteval std::size_t GetSlotId() noexcept {
     return ([]<typename... AssignedSvcs, std::size_t... Idxs>(
@@ -117,7 +117,7 @@ class ClientCollection
             Uart, Sys, NC, O, detail::ClientTuple<Uart, Sys, NC, O, Svcs...>>{
             uart} {}
 
-  template <template <hal::AsyncUart, hal::System, VrpcNetworkConfig,
+  template <template <hal::AsyncUart, hal::System, NetworkConfig,
                       ClientTransportOptions, std::size_t> typename Svc>
   auto& get() & noexcept {
     constexpr auto SlotId = GetSlotId<Svc>();
