@@ -246,7 +246,10 @@ class TimImpl
 
     // Configure clock source
     TIM_ClockConfigTypeDef clk_config = {
-        .ClockSource = TIM_CLOCKSOURCE_INTERNAL,
+        .ClockSource    = TIM_CLOCKSOURCE_INTERNAL,
+        .ClockPolarity  = TIM_CLOCKPOLARITY_NONINVERTED,
+        .ClockPrescaler = TIM_CLOCKPRESCALER_DIV1,
+        .ClockFilter    = 0,
     };
     if (HAL_TIM_ConfigClockSource(&htim, &clk_config) != HAL_OK) {
       return false;
@@ -261,8 +264,9 @@ class TimImpl
 
     // Disable master/slave
     TIM_MasterConfigTypeDef master_config = {
-        .MasterOutputTrigger = TIM_TRGO_RESET,
-        .MasterSlaveMode     = TIM_MASTERSLAVEMODE_DISABLE,
+        .MasterOutputTrigger  = TIM_TRGO_RESET,
+        .MasterOutputTrigger2 = TIM_TRGO2_RESET,
+        .MasterSlaveMode      = TIM_MASTERSLAVEMODE_DISABLE,
     };
     if (HAL_TIMEx_MasterConfigSynchronization(&htim, &master_config)
         != HAL_OK) {

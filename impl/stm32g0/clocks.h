@@ -107,6 +107,8 @@ struct SystemClockSettings {
 
   [[nodiscard]] consteval bool
   Validate(halstd::Frequency auto sysclk) const noexcept {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-value"
     // Validate prescaler values
     assert(("AHB Prescaler must have a valid value",
             halstd::IsOneOf<1, 2, 4, 8, 16, 64, 128, 256, 512>(ahb_prescaler)));
@@ -122,6 +124,7 @@ struct SystemClockSettings {
     assert(("APB peripherals clock (PCLK1) frequency may not exceed 64 MHz",
             ApbPeripheralsClockFrequency(sysclk).template As<halstd::Hz>()
                 <= (64_MHz).As<halstd::Hz>()));
+#pragma GCC diagnostic pop
 
     return true;
   }
@@ -194,8 +197,11 @@ struct ClockSettings {
   }
 
   [[nodiscard]] consteval bool Validate() const noexcept {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-value"
     assert(("HSI Prescaler must have a valid value",
             halstd::IsOneOf<1, 2, 4, 8, 16, 64, 128>(hsi_prescaler)));
+#pragma GCC diagnostic pop
     return system_clock_settings.Validate(SysClkSourceClockFrequency());
   }
 };
@@ -228,7 +234,7 @@ namespace detail {
 }
 
 [[nodiscard]] consteval uint32_t GetPllM(uint32_t div) noexcept {
-  return (div - 1 << RCC_PLLCFGR_PLLM_Pos) & RCC_PLLCFGR_PLLM_Msk;
+  return ((div - 1) << RCC_PLLCFGR_PLLM_Pos) & RCC_PLLCFGR_PLLM_Msk;
 }
 
 [[nodiscard]] consteval uint32_t GetPllPDiv(uint32_t div) noexcept {
@@ -326,7 +332,16 @@ bool ConfigurePowerAndClocks() noexcept {
       .HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT,
       .LSIState            = RCC_LSI_OFF,
       .HSI48State          = RCC_HSI48_ON,
-      .PLL                 = {.PLLState = RCC_PLL_OFF},
+      .PLL =
+          {
+              .PLLState  = RCC_PLL_OFF,
+              .PLLSource = RCC_PLLSOURCE_NONE,
+              .PLLM      = RCC_PLLM_DIV1,
+              .PLLN      = 8,
+              .PLLP      = RCC_PLLP_DIV2,
+              .PLLQ      = RCC_PLLQ_DIV2,
+              .PLLR      = RCC_PLLR_DIV2,
+          },
   };
 
   if (CS.pll.enable) {

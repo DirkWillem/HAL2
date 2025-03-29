@@ -61,12 +61,16 @@ void SetupUartNoFc(UartId id, UART_HandleTypeDef& huart, unsigned baud,
   // Set up handle
   huart.Instance = GetUartPointer(id);
   huart.Init     = {
-          .BaudRate   = baud,
-          .WordLength = USART_WORDLENGTH_8B,
-          .StopBits   = ToHalStopBits(stop_bits),
-          .Parity     = ToHalParity(parity),
-          .Mode       = USART_MODE_TX_RX,
-          .HwFlowCtl  = UART_HWCONTROL_NONE,
+          .BaudRate       = baud,
+          .WordLength     = USART_WORDLENGTH_8B,
+          .StopBits       = ToHalStopBits(stop_bits),
+          .Parity         = ToHalParity(parity),
+          .Mode           = USART_MODE_TX_RX,
+          .HwFlowCtl      = UART_HWCONTROL_NONE,
+          .OverSampling   = UART_OVERSAMPLING_16,
+          .OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE,
+          .ClockPrescaler = UART_PRESCALER_DIV1,
+
   };
   HAL_UART_Init(&huart);
 }
@@ -77,8 +81,7 @@ void InitializeUartForPollMode(UART_HandleTypeDef& huart) noexcept {
   HAL_UARTEx_DisableFifoMode(&huart);
 }
 
-void InitializeUartForInterruptMode(UartId              id,
-                                    UART_HandleTypeDef& huart) noexcept {
+void InitializeUartForInterruptMode(UartId id, UART_HandleTypeDef&) noexcept {
   const auto irqn = GetIrqn(id);
   HAL_NVIC_SetPriority(irqn, 0, 0);
   HAL_NVIC_EnableIRQ(irqn);

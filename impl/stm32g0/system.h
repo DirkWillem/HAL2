@@ -8,20 +8,29 @@
 
 namespace stm32g0 {
 
-class CriticalSectionInterface {
+class DisableIrqAtomicFlag {
+public:
+  bool test_and_set() noexcept;
+  void clear();
+
+private:
+  bool value{false};
+};
+
+class DisableInterruptsCriticalSectionInterface {
  public:
   static void Enter() noexcept;
   static void Exit() noexcept;
 };
 
 struct BareMetalSystem {
-  using CriticalSectionInterface = CriticalSectionInterface;
+  using CriticalSectionInterface = DisableInterruptsCriticalSectionInterface;
   using Clock                    = SysTickClock;
 
   template <typename T>
   using Atomic = std::atomic<T>;
 
-  using AtomicFlag = std::atomic_flag;
+  using AtomicFlag = DisableIrqAtomicFlag;
 };
 
 static_assert(hal::System<BareMetalSystem>);

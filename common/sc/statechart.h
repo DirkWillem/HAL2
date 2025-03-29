@@ -115,7 +115,7 @@ Transitions(Ts...) -> Transitions<Ts...>;
 template <typename SL, typename EL>
 struct StateChart;
 
-template <typename SC>
+template <typename Sys, typename SC>
 class StateChartRunner;
 
 template <typename... Ss, typename... Es>
@@ -129,7 +129,7 @@ struct StateChart<States<Ss...>, Events<Es...>> {
     static constexpr std::size_t NEvents = sizeof...(Es);
     using TrList = typename Transitions<Trs...>::TransitionList;
 
-    template <typename T>
+    template <typename Sys, typename T>
     friend class StateChartRunner;
 
     using Trs::operator()...;
@@ -214,12 +214,12 @@ struct StateChart<States<Ss...>, Events<Es...>> {
   Chart(Si, Tr) -> Chart<Tr>;
 };
 
-template <typename SC>
+template <typename Sys, typename SC>
 class StateChartRunner {
  public:
   static constexpr auto JumpTable = SC::BuildTransitionTable();
 
-  explicit StateChartRunner(SC chart)
+  StateChartRunner(halstd::Marker<Sys>, SC chart)
       : chart{chart} {}
 
   /**
@@ -239,7 +239,8 @@ class StateChartRunner {
           const auto& ee = *enqueued_event;
 
           const auto ee_idx = ee.index();
-          if (const auto tr_method = JumpTable[chart.state.index()][ee.index()];
+          const auto s_idx  = chart.state.index();
+          if (const auto tr_method = JumpTable[s_idx][ee_idx];
               tr_method != nullptr) {
             (chart.*tr_method)(ee);
           }
@@ -272,8 +273,6 @@ class StateChartRunner {
   template <typename E>
     requires(SC::template IsValidEvent<E>())
   void EnqueueEvent(E event) noexcept {
-    constexpr auto Ei = SC::template EventIndex<std::decay_t<E>>();
-
     if (!has_enqueued_event.test_and_set()) {
       enqueued_event = event;
     }
@@ -288,8 +287,9 @@ class StateChartRunner {
         if (enqueued_event.has_value()) {
           const auto& ee = *enqueued_event;
 
+          const auto s_idx  = chart.state.index();
           const auto ee_idx = ee.index();
-          if (const auto tr_method = JumpTable[chart.state.index()][ee.index()];
+          if (const auto tr_method = JumpTable[s_idx][ee_idx];
               tr_method != nullptr) {
             (chart.*tr_method)(ee);
           }
@@ -321,8 +321,8 @@ class StateChartRunner {
   SC                                chart;
   std::optional<typename SC::Event> enqueued_event{};
 
-  std::atomic_flag has_enqueued_event{};
-  std::atomic_flag processing_event{};
+  typename Sys::AtomicFlag has_enqueued_event{};
+  typename Sys::AtomicFlag processing_event{};
 };
 
 namespace detail {
@@ -330,8 +330,8 @@ namespace detail {
 template <typename T>
 struct IsStateChartRunnerHelper : std::false_type {};
 
-template <typename T>
-struct IsStateChartRunnerHelper<StateChartRunner<T>> : std::true_type {};
+template <typename S, typename T>
+struct IsStateChartRunnerHelper<StateChartRunner<S, T>> : std::true_type {};
 
 }   // namespace detail
 

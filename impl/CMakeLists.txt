@@ -60,7 +60,7 @@ function(add_stm32g0_hal VARIANT XMLFILE)
             stm32g0/uart.cpp
             stm32g0/uart.h)
 
-    target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor")
+    target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor" project_settings)
     target_include_directories("${VARIANT}_hal" PUBLIC
             "${CMAKE_CURRENT_LIST_DIR}"
             "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}")
@@ -114,7 +114,7 @@ function(add_stm32g4_hal VARIANT XMLFILE)
             stm32g4/uart.h
     )
 
-    target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor")
+    target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor" project_settings)
     target_include_directories("${VARIANT}_hal" PUBLIC
             "${CMAKE_CURRENT_LIST_DIR}"
             "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}")
@@ -160,7 +160,7 @@ function(add_stm32h5_hal VARIANT XMLFILE)
             stm32h5/uart.h
     )
 
-    target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor")
+    target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor" project_settings)
     target_include_directories("${VARIANT}_hal" PUBLIC
             "${CMAKE_CURRENT_LIST_DIR}"
             "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}")
@@ -214,7 +214,7 @@ function(add_stm32h7_hal VARIANT XMLFILE)
             stm32h7/uart.h
     )
 
-    target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor")
+    target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor" project_settings)
     target_include_directories("${VARIANT}_hal" PUBLIC
             "${CMAKE_CURRENT_LIST_DIR}"
             "${CMAKE_CURRENT_LIST_DIR}/stm32h7/generated/${VARIANT}")

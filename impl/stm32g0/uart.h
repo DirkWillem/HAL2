@@ -35,10 +35,13 @@ struct UartPinoutHelper<Id, hal::UartFlowControl::None> {
         , rx{rx}
         , pull_tx{pull_tx}
         , pull_rx{pull_rx} {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-value"
       assert(("TX pin must be valid",
               hal::FindPinAFMapping(UartTxPinMappings, Id, tx).has_value()));
       assert(("RX pin must be valid",
               hal::FindPinAFMapping(UartRxPinMappings, Id, rx).has_value()));
+#pragma GCC diagnostic pop
     }
 
     PinId tx;

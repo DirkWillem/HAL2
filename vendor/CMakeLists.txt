@@ -22,7 +22,7 @@ function(add_stm32g0_vendor_hal VARIANT)
 
     target_link_libraries("${VARIANT}_device" INTERFACE
             cmsis_core_includes
-            project_settings)
+            project_settings_base)
 
     target_compile_definitions("${VARIANT}_device" INTERFACE
             "CORE_CM0P" "STM32G0" "${VARIANT_UPPER}" "${VARIANT_UPPER}xx")

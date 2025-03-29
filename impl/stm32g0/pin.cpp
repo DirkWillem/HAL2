@@ -34,6 +34,7 @@ constexpr void EnablePortClk(Port port) {
     case hal::PinMode::PushPull: return GPIO_MODE_OUTPUT_PP;
     case hal::PinMode::OpenDrain: return GPIO_MODE_OUTPUT_OD;
     }
+    break;
   case hal::PinDirection::Analog: return GPIO_MODE_ANALOG;
   }
 
@@ -92,10 +93,11 @@ void Pin::InitializeInterrupt(PinId id, hal::Edge edge,
   EnablePortClk(id.port);
 
   GPIO_InitTypeDef init{
-      .Pin   = id.hal_pin(),
-      .Mode  = ToHalEdge(edge),
-      .Pull  = ToHalPull(pull),
-      .Speed = GPIO_SPEED_FREQ_VERY_HIGH,
+      .Pin       = id.hal_pin(),
+      .Mode      = ToHalEdge(edge),
+      .Pull      = ToHalPull(pull),
+      .Speed     = GPIO_SPEED_FREQ_VERY_HIGH,
+      .Alternate = 0,
   };
   HAL_GPIO_Init(id.hal_port(), &init);
 }

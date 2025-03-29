@@ -4,12 +4,26 @@
 
 namespace stm32g0 {
 
-void CriticalSectionInterface::Enter() noexcept {
+bool DisableIrqAtomicFlag::test_and_set() noexcept {
+  bool ret{true};
   __disable_irq();
+  std::swap(ret, value);
+  __enable_irq();
+  return ret;
 }
 
-void CriticalSectionInterface::Exit() noexcept {
+void DisableIrqAtomicFlag::clear() {
+  __disable_irq();
+  value = false;
   __enable_irq();
 }
 
-}   // namespace stm32g4
+void DisableInterruptsCriticalSectionInterface::Enter() noexcept {
+  __disable_irq();
+}
+
+void DisableInterruptsCriticalSectionInterface::Exit() noexcept {
+  __enable_irq();
+}
+
+}   // namespace stm32g0

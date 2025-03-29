@@ -119,8 +119,7 @@ class Server
     CommandRequestFrame<FrameFmt>  frame{};
     std::array<std::byte, BufSize> buffer;
     std::span<const std::byte>     tx_data;
-    halstd::BoundDynamicMethodCallback<Server,
-                                       halstd::Types<RequestSlot*>,
+    halstd::BoundDynamicMethodCallback<Server, halstd::Types<RequestSlot*>,
                                        halstd::Callback<HandleResult>>
         async_cmd_callback;
   };
@@ -180,9 +179,9 @@ class Server
                        }...}}
       , uart{uart}
       , request_slots{CreateRequestSlots(this)}
-      , decoder{request_slots[0].buffer}
       , rx_callback{this, &Server::ReceiveCallback}
-      , tx_callback{this, &Server::TransmitCallback} {
+      , tx_callback{this, &Server::TransmitCallback}
+      , decoder{request_slots[0].buffer} {
     uart.RegisterUartReceiveCallback(rx_callback);
     uart.RegisterUartTransmitCallback(tx_callback);
 
@@ -423,9 +422,10 @@ class Server
             vrpc::ServerServiceType::MultiService),
         .single_service_id = 0,
         .index_service_id  = IndexService::ServiceId,
+        .server_name       = {},
     };
 
-    WriteProtoString(O::Name, info.server_name);
+    (void)WriteProtoString(O::Name, info.server_name);
 
     const auto [encode_success, encoded_payload] =
         ProtoEncode(info, payload_buffer);
@@ -510,8 +510,8 @@ class Server
 
   Decoder decoder;
 
-  std::atomic_flag transmitting{};
-  std::atomic_flag receiving{};
+  typename Sys::AtomicFlag transmitting{};
+  typename Sys::AtomicFlag receiving{};
 };
 
 }   // namespace vrpc::uart

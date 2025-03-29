@@ -30,45 +30,47 @@ struct EndRead {};
 struct StartWrite {};
 struct EndWrite {};
 
-template <typename T>
+template <typename Sys, typename T>
 class ParameterSlot {
   using States = sc::States<IdleA, ReadA, WriteB, ReadAWriteB, ReadANewB, IdleB,
                             ReadB, WriteA, ReadBWriteA, ReadBNewA>;
   using Events = sc::Events<StartRead, EndRead, StartWrite, EndWrite>;
 
   static constexpr auto CreateStateChart() {
-    return sc::StateChartRunner{sc::StateChart<States, Events>::Chart{
-        IdleA{},
-        sc::Transitions{
-            sc::MakeTransition<IdleA, StartRead, ReadA>(),
-            sc::MakeTransition<IdleA, StartWrite, WriteB>(),
+    return sc::StateChartRunner{
+        halstd::Marker<Sys>(),
+        sc::StateChart<States, Events>::Chart{
+            IdleA{},
+            sc::Transitions{
+                sc::MakeTransition<IdleA, StartRead, ReadA>(),
+                sc::MakeTransition<IdleA, StartWrite, WriteB>(),
 
-            sc::MakeTransition<ReadA, EndRead, IdleA>(),
-            sc::MakeTransition<ReadA, StartWrite, ReadAWriteB>(),
+                sc::MakeTransition<ReadA, EndRead, IdleA>(),
+                sc::MakeTransition<ReadA, StartWrite, ReadAWriteB>(),
 
-            sc::MakeTransition<WriteB, StartRead, ReadAWriteB>(),
-            sc::MakeTransition<WriteB, EndWrite, IdleB>(),
+                sc::MakeTransition<WriteB, StartRead, ReadAWriteB>(),
+                sc::MakeTransition<WriteB, EndWrite, IdleB>(),
 
-            sc::MakeTransition<ReadAWriteB, EndRead, WriteB>(),
-            sc::MakeTransition<ReadAWriteB, EndWrite, ReadANewB>(),
+                sc::MakeTransition<ReadAWriteB, EndRead, WriteB>(),
+                sc::MakeTransition<ReadAWriteB, EndWrite, ReadANewB>(),
 
-            sc::MakeTransition<ReadANewB, EndRead, IdleB>(),
+                sc::MakeTransition<ReadANewB, EndRead, IdleB>(),
 
-            sc::MakeTransition<IdleB, StartRead, ReadB>(),
-            sc::MakeTransition<IdleB, StartWrite, WriteA>(),
+                sc::MakeTransition<IdleB, StartRead, ReadB>(),
+                sc::MakeTransition<IdleB, StartWrite, WriteA>(),
 
-            sc::MakeTransition<ReadB, EndRead, IdleB>(),
-            sc::MakeTransition<ReadB, StartWrite, ReadBWriteA>(),
+                sc::MakeTransition<ReadB, EndRead, IdleB>(),
+                sc::MakeTransition<ReadB, StartWrite, ReadBWriteA>(),
 
-            sc::MakeTransition<WriteA, StartRead, ReadBWriteA>(),
-            sc::MakeTransition<WriteA, EndWrite, IdleA>(),
+                sc::MakeTransition<WriteA, StartRead, ReadBWriteA>(),
+                sc::MakeTransition<WriteA, EndWrite, IdleA>(),
 
-            sc::MakeTransition<ReadBWriteA, EndRead, WriteA>(),
-            sc::MakeTransition<ReadBWriteA, EndWrite, ReadBNewA>(),
+                sc::MakeTransition<ReadBWriteA, EndRead, WriteA>(),
+                sc::MakeTransition<ReadBWriteA, EndWrite, ReadBNewA>(),
 
-            sc::MakeTransition<ReadBNewA, EndRead, IdleA>(),
-        },
-    }};
+                sc::MakeTransition<ReadBNewA, EndRead, IdleA>(),
+            },
+        }};
   }
 
   using StateChart = std::decay_t<decltype(CreateStateChart())>;

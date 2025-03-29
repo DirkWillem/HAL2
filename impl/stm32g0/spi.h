@@ -43,12 +43,15 @@ struct SpiPinoutHelper<Id, hal::SpiMode::Master,
         , pull_mosi{pull_mosi}
         , pull_miso{pull_miso}
         , pull_sck{pull_sck} {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-value"
       assert(("MOSI pin must be valid",
               hal::FindPinAFMapping(SpiMosiPinMappings, Id, mosi).has_value()));
       assert(("MISO pin must be valid",
               hal::FindPinAFMapping(SpiMisoPinMappings, Id, miso).has_value()));
       assert(("SCK pin must be valid",
               hal::FindPinAFMapping(SpiSckPinMappings, Id, sck).has_value()));
+#pragma GCC diagnostic pop
     }
 
     PinId mosi;

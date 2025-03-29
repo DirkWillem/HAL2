@@ -112,6 +112,7 @@ namespace stm32g0::detail {
     case TimDmaRequest::Ch1: return DMA_REQUEST_TIM17_CH1;
     default: std::unreachable();
     }
+  default: break;
   }
 
   std::unreachable();
