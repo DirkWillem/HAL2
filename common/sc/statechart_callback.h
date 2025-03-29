@@ -7,7 +7,7 @@
 namespace sc {
 
 template <typename SCR, typename E, typename... Args>
-class ApplyEventCallback final : halstd::Callback<Args...> {
+class ApplyEventCallback final : public halstd::Callback<Args...> {
   static_assert(IsStateChartRunner<SCR>);
 
  public:
@@ -15,10 +15,32 @@ class ApplyEventCallback final : halstd::Callback<Args...> {
       : state_chart{state_chart}
       , event{} {}
 
+  ~ApplyEventCallback() final = default;
+
   void operator()(Args...) const noexcept final {
     if (!state_chart.ApplyEvent(event)) {
       std::unreachable();
     }
+  }
+
+ private:
+  SCR& state_chart;
+  E    event;
+};
+
+template <typename SCR, typename E, typename... Args>
+class EnqueueEventCallback final : public halstd::Callback<Args...> {
+  static_assert(IsStateChartRunner<SCR>);
+
+ public:
+  explicit EnqueueEventCallback(SCR& state_chart)
+      : state_chart{state_chart}
+      , event{} {}
+
+  ~EnqueueEventCallback() final = default;
+
+  void operator()(Args...) const noexcept final {
+    state_chart.EnqueueEvent(event);
   }
 
  private:

@@ -152,6 +152,24 @@ struct DurationFactory {
     return std::chrono::duration<Rep, R>{count};
   }
 
+  constexpr auto operator+(const DurationFactory<Rep, R>& rhs) const noexcept {
+    return DurationFactory<Rep, R>{count + rhs.count};
+  }
+
+  constexpr auto operator-(const DurationFactory<Rep, R>& rhs) const noexcept {
+    return DurationFactory<Rep, R>{count - rhs.count};
+  }
+
+  constexpr auto operator*(Rep rhs) const noexcept {
+    return DurationFactory<Rep, R>{count * rhs};
+  }
+
+  template <typename To>
+  constexpr auto Cast() const noexcept {
+    const auto result = std::chrono::duration_cast<To>(MakeDuration());
+    return DurationFactory<Rep, R>(result.count());
+  }
+
   Rep count;
 };
 

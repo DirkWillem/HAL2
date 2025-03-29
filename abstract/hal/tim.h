@@ -102,7 +102,7 @@ class Alarm {
    * Constructor
    * @param alarm_cb Alarm callback
    */
-  explicit Alarm(halstd::Callback<>& alarm_cb) noexcept
+  explicit Alarm(const halstd::Callback<>& alarm_cb) noexcept
       : callback{this, &Alarm::PeriodElapsedCallback}
       , inner_callback{&alarm_cb} {
     T::instance().RegisterPeriodElapsedCallback(callback);
@@ -181,7 +181,7 @@ class Alarm {
   }
 
   halstd::MethodCallback<Alarm<T, TO>> callback;
-  halstd::Callback<>*                  inner_callback;
+  const halstd::Callback<>*            inner_callback;
 };
 
 /**

@@ -19,6 +19,22 @@ enum class PinDirection { Input, Output, Analog };
 
 enum class Edge { Rising, Falling, Both };
 
+/**
+ * Returns an edge from two pin states
+ * @param from Before pin state
+ * @param to After pin state
+ * @return Edge between the two states. If from == to, behavior is undefined
+ */
+consteval Edge GetEdge(bool from, bool to) noexcept {
+  if (!from && to) {
+    return Edge::Rising;
+  } else if (from && !to) {
+    return Edge::Falling;
+  }
+
+  std::unreachable();
+}
+
 template <typename P>
 concept PinId = std::equality_comparable<P>;
 

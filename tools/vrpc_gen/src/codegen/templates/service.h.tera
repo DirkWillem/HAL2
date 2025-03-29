@@ -3,6 +3,7 @@
 
 #include <vrpc/parameters.h>
 #include <vrpc/server.h>
+#include <vrpc/vrpc.h>
 
 #ifdef __cplusplus
 
@@ -78,6 +79,15 @@ concept {{svc.name}}Client = requires(Impl& impl) {
 
 {% endfor %}
 
+
+}
+
+namespace vrpc {
+
+{% for _, enum in enums -%}
+template<>
+struct EnumMapping<{{ macros::nanopb_enum(enum=enum) }}, ::{{ package | package_to_namespace }}::{{enum.name}}> : std::true_type {};
+{% endfor %}
 
 }
 

@@ -222,6 +222,13 @@ class StateChartRunner {
   explicit StateChartRunner(SC chart)
       : chart{chart} {}
 
+  /**
+   * Immediately applies an event to the state chart. This method should not
+   * be used in an ISR context. In that case, use EnqueueEvent instead
+   * @tparam E Event type
+   * @param event Event to apply
+   * @return Whether applying the event was successful
+   */
   template <typename E>
     requires(SC::template IsValidEvent<E>())
   [[nodiscard]] bool ApplyEvent(E event) noexcept {
@@ -257,6 +264,24 @@ class StateChartRunner {
         .value_or(false);
   }
 
+  /**
+   * Enqueues an event to be processed later. This method should typically
+   * be used from an ISR context
+   * @tparam E Event type
+   */
+  template <typename E>
+    requires(SC::template IsValidEvent<E>())
+  void EnqueueEvent(E event) noexcept {
+    constexpr auto Ei = SC::template EventIndex<std::decay_t<E>>();
+
+    if (!has_enqueued_event.test_and_set()) {
+      enqueued_event = event;
+    }
+  }
+
+  /**
+   * Processes any event that was previously enqueued by EnqueueEvent
+   */
   void ProcessEnqueuedEvent() noexcept {
     if (has_enqueued_event.test_and_set()) {
       const auto inner = [&, this] {
@@ -275,19 +300,18 @@ class StateChartRunner {
       };
 
       halstd::ExclusiveWithAtomicFlag(processing_event, inner);
+    } else {
+      has_enqueued_event.clear();
     }
   }
 
-  template <typename E>
-    requires(SC::template IsValidEvent<E>())
-  void EnqueueEvent(E event) noexcept {
-    constexpr auto Ei = SC::template EventIndex<std::decay_t<E>>();
-
-    if (!has_enqueued_event.test_and_set()) {
-      enqueued_event = event;
-    }
-  }
-
+  /**
+   * Applies a visitor to the current state of the statechart and returns
+   * the result
+   * @tparam V Visitor type
+   * @param visitor Visitor to apply
+   * @return Visitor result
+   */
   template <typename V>
   auto Visit(V visitor) const noexcept {
     return std::visit(visitor, chart.state);
@@ -314,11 +338,24 @@ struct IsStateChartRunnerHelper<StateChartRunner<T>> : std::true_type {};
 template <typename T>
 concept IsStateChartRunner = (detail::IsStateChartRunnerHelper<T>::value);
 
+/**
+ * Visitor that returns whether a state chart is in the given state
+ * @tparam T State to check
+ * @return Visitor
+ */
 template <typename T>
-constexpr auto IsInState() {
+constexpr auto IsInState() noexcept {
   return detail::IsInState<T>{};
 }
 
+/**
+ * Visitor that extracts a value from a given state using the given
+ * function and wraps it in a std::optional. If the visitor is in a different
+ * state, returns std::nullopt
+ * @tparam T State to extract the value from
+ * @param fn Function to apply to the state to obtain the extracted value
+ * @return Visitor
+ */
 template <typename T>
 constexpr auto TryGetStateValue(std::invocable<const T&> auto fn) noexcept {
   return detail::TryGetStateValue<T, std::decay_t<decltype(fn)>>{fn};

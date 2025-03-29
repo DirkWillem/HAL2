@@ -2,6 +2,7 @@
 
 #include <optional>
 #include <type_traits>
+#include <variant>
 
 namespace halstd {
 
@@ -55,9 +56,39 @@ struct Types {
     return detail::FindIndexHelper<0, T, Ts...>::Result;
   }
 
+  template <typename T>
+  static constexpr bool Contains() noexcept {
+    return detail::FindIndexHelper<0, T, Ts...>::Result.has_value();
+  }
+
   using SingleType = std::conditional_t<AreEqual, NthType<0>, void>;
 
-  using Tuple = std::tuple<Ts...>;
+  using Tuple   = std::tuple<Ts...>;
+  using Variant = std::variant<Ts...>;
 };
+
+namespace detail {
+
+template <typename Result, typename... Ts>
+struct UniqueTypesHelper;
+
+template <typename... ResultTypes, typename TCur, typename... TRest>
+struct UniqueTypesHelper<Types<ResultTypes...>, TCur, TRest...> {
+  using Result = std::conditional_t<
+      Types<ResultTypes...>::template Contains<TCur>(),
+      typename UniqueTypesHelper<Types<ResultTypes...>, TRest...>::Result,
+      typename UniqueTypesHelper<Types<ResultTypes..., TCur>,
+                                 TRest...>::Result>;
+};
+
+template <typename... ResultTypes>
+struct UniqueTypesHelper<Types<ResultTypes...>> {
+  using Result = Types<ResultTypes...>;
+};
+
+}   // namespace detail
+
+template <typename... Ts>
+using UniqueTypes = typename detail::UniqueTypesHelper<Types<>, Ts...>::Result;
 
 }   // namespace halstd
