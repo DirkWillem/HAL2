@@ -1,8 +1,9 @@
 #include "spi.h"
 
+
 namespace stm32g0::detail {
 
-[[nodiscard]] constexpr uint32_t ToHalDataSize(unsigned size) noexcept {
+[[nodiscard]] static constexpr uint32_t ToHalDataSize(unsigned size) noexcept {
   // ReSharper disable once CppRedundantParentheses
   return (size - 1) << 8U;
 }
@@ -10,7 +11,7 @@ namespace stm32g0::detail {
 static_assert(ToHalDataSize(4) == SPI_DATASIZE_4BIT);
 static_assert(ToHalDataSize(16) == SPI_DATASIZE_16BIT);
 
-[[nodiscard]] constexpr uint32_t
+[[nodiscard]] static constexpr uint32_t
 ToHalMasterDirection(const hal::SpiTransmissionType tt) noexcept {
   switch (tt) {
   case hal::SpiTransmissionType::FullDuplex: return SPI_DIRECTION_2LINES;

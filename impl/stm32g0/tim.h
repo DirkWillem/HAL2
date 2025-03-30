@@ -57,9 +57,9 @@ enum class TimerBitCount {
 }
 
 }   // namespace detail
-
-template <TimId Id, hal::DmaPriority Prio = hal::DmaPriority::Low>
-using TimPeriodElapsedDma = DmaChannel<Id, TimDmaRequest::PeriodElapsed, Prio>;
+//
+// template <TimId Id, hal::DmaPriority Prio = hal::DmaPriority::Low>
+// using TimPeriodElapsedDma = DmaChannel<Id, TimDmaRequest::PeriodElapsed, Prio>;
 
 template <typename Impl>
 concept TimConfigFn = requires(Impl f) {
@@ -132,7 +132,10 @@ class TimImpl
   void Start() noexcept { HAL_TIM_Base_Start(&htim); }
   void Stop() noexcept { HAL_TIM_Base_Stop(&htim); }
 
-  void StartWithInterrupt() noexcept { HAL_TIM_Base_Start_IT(&htim); }
+  bool StartWithInterrupt() noexcept {
+    return HAL_TIM_Base_Start_IT(&htim) == HAL_OK;
+  }
+
   void StopWithInterrupt() noexcept { HAL_TIM_Base_Stop_IT(&htim); }
 
   [[nodiscard]] uint32_t GetCounter() const noexcept {

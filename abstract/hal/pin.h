@@ -28,7 +28,9 @@ enum class Edge { Rising, Falling, Both };
 consteval Edge GetEdge(bool from, bool to) noexcept {
   if (!from && to) {
     return Edge::Rising;
-  } else if (from && !to) {
+  }
+
+  if (from && !to) {
     return Edge::Falling;
   }
 

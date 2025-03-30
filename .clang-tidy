@@ -1,7 +1,5 @@
 ---
-Checks: '*,-fuchsia-*,-google-*,-zircon-*,-abseil-*,-altera-*,-llvm-*,-llvmlibc-*,-modernize-use-trailing-return-type,-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers,-bugprone-dynamic-static-initializers,-cppcoreguidelines-pro-type-union-access,-misc-no-recursion,-cert-dcl21-cpp,-bugprone-easily-swappable-parameters,-readability-identifier-length,-cppcoreguidelines-avoid-const-or-ref-data-members,-misc-non-private-member-variables-in-classes'
-WarningsAsErrors: '1'
+Checks: '*,-fuchsia-*,-google-*,-zircon-*,-abseil-*,-altera-*,-llvm-*,-llvmlibc-*,-modernize-use-trailing-return-type,-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers,-bugprone-dynamic-static-initializers,-cppcoreguidelines-pro-type-union-access,-misc-no-recursion,-cert-dcl21-cpp,-bugprone-easily-swappable-parameters,-readability-identifier-length,-cppcoreguidelines-avoid-const-or-ref-data-members,-misc-non-private-member-variables-in-classes,-performance-enum-size,-misc-include-header'
 HeaderFilterRegex: '.*'
 FormatStyle: file
-cppcoreguidelines-special-member-functions: AllowSoleDefaultDtor
 

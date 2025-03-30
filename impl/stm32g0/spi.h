@@ -1,6 +1,9 @@
 #pragma once
 
+#include <cstdint>
 #include <span>
+
+#include <stm32g0xx_hal.h>
 
 #include <halstd/logic.h>
 
@@ -164,7 +167,7 @@ FindPrescalerValue(halstd::Frequency auto baud_rate) {
           .ApbPeripheralsClockFrequency(CS.SysClkSourceClockFrequency())
           .As<halstd::Hz>();
 
-  std::array<std::tuple<SpiBaudPrescaler, halstd::Hz>, 8> options{{
+  const std::array<std::tuple<SpiBaudPrescaler, halstd::Hz>, 8> options{{
       {SpiBaudPrescaler::Prescale2, f_src / 2},
       {SpiBaudPrescaler::Prescale4, f_src / 4},
       {SpiBaudPrescaler::Prescale8, f_src / 8},
@@ -278,16 +281,18 @@ class SpiImpl : public hal::UsedPeripheral {
     detail::SetupSpiMaster(Id, hspi, baud_prescaler, DS, TT);
   }
 
-  SpiImpl(hal::Dma auto& dma, Pinout pinout, halstd::Frequency auto clock_frequency)
+  SpiImpl(hal::Dma auto& dma, Pinout pinout,
+          halstd::Frequency auto clock_frequency)
     requires(OM == SpiOperatingMode::Dma)
   {
     // Validate DMA instance
+    using Dma = std::decay_t<decltype(dma)>;
     static_assert(halstd::Implies(hal::SpiTransmitEnabled(TT),
-                                  dma.template ChannelEnabled<TxDmaChannel>()),
+                                  Dma::template ChannelEnabled<TxDmaChannel>()),
                   "If the transmission mode allows transmission, the TX DMA "
                   "channel must be enabled");
     static_assert(halstd::Implies(hal::SpiReceiveEnabled(TT),
-                                  dma.template ChannelEnabled<RxDmaChannel>()),
+                                  Dma::template ChannelEnabled<RxDmaChannel>()),
                   "If the transmission mode allows transmission, the RX DMA "
                   "channel must be enabled");
 

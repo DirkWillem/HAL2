@@ -28,7 +28,9 @@ class MethodCallback final : public Callback<Args...> {
       : inst{inst}
       , ptr{ptr} {}
 
-  void operator()(Args... args) const noexcept final { (inst->*ptr)(args...); }
+  virtual void operator()(Args... args) const noexcept {
+    (inst->*ptr)(args...);
+  }
 
   /**
    * Re-binds the method callback to a different method pointer.
@@ -55,7 +57,7 @@ class DynamicMethodCallback final : public Callback<Args...> {
   // DynamicMethodCallback(DynamicMethodCallback&&)                 = delete;
   // DynamicMethodCallback& operator=(const DynamicMethodCallback&) = delete;
   // DynamicMethodCallback& operator=(DynamicMethodCallback&&)      = delete;
-  ~DynamicMethodCallback() noexcept final                        = default;
+  ~DynamicMethodCallback() noexcept final = default;
 
   explicit DynamicMethodCallback(T* inst, MethodPtr ptr = nullptr)
       : inst{inst}
@@ -129,6 +131,11 @@ struct LambdaCallback {
     explicit Cb(T&& t)
         : Callback<Args...>{}
         , T{t} {}
+
+    Cb(const Cb&)            = delete;
+    Cb(Cb&&)                 = default;
+    Cb& operator=(const Cb&) = delete;
+    Cb& operator=(Cb&&)      = default;
 
     ~Cb() final = default;
 

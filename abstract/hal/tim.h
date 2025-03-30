@@ -88,32 +88,31 @@ struct TimClock {
 template <typename Impl>
 concept AlarmTim = Tim<Impl> && RegisterableTimPeriodElapsedCallback<Impl>;
 
-/**
- * Class that uses a timer to implemented an alarm, i.e. a callback that is
- * invoked from an interrupt context after a fixed amount of time from starting
- * the alarm
- * @tparam T Timer instance
- * @tparam TO Timeout value, see halstd::DurationFactory
- */
-template <AlarmTim T, halstd::ToDuration auto TO>
-class Alarm {
- public:
-  /**
-   * Constructor
-   * @param alarm_cb Alarm callback
-   */
-  explicit Alarm(const halstd::Callback<>& alarm_cb) noexcept
-      : callback{this, &Alarm::PeriodElapsedCallback}
+namespace detail {
+
+template <AlarmTim T>
+class AlarmImpl {
+ protected:
+  explicit AlarmImpl(const halstd::Callback<>& alarm_cb) noexcept
+      : callback{this, &AlarmImpl::PeriodElapsedCallback}
       , inner_callback{&alarm_cb} {
     T::instance().RegisterPeriodElapsedCallback(callback);
+  }
+
+  ~AlarmImpl() noexcept {
+    if (inner_callback != nullptr) {
+      AlarmTim auto& tim = T::instance();
+      tim.DisableInterrupt();
+      tim.ClearPeriodElapsedCallback();
+    }
   }
 
   /**
    * Move contructor
    * @param rhs Moved value
    */
-  Alarm(Alarm&& rhs) noexcept
-      : callback{this, &Alarm::PeriodElapsedCallback}
+  AlarmImpl(AlarmImpl&& rhs) noexcept
+      : callback{this, &AlarmImpl::PeriodElapsedCallback}
       , inner_callback{rhs.inner_callback} {
     rhs.inner_callback = nullptr;
     T::instance().RegisterPeriodElapsedCallback(callback);
@@ -124,42 +123,27 @@ class Alarm {
    * @param rhs Assigned instance
    * @return Current instance
    */
-  Alarm& operator=(Alarm&& rhs) noexcept {
+  AlarmImpl& operator=(AlarmImpl&& rhs) noexcept {
     callback     = rhs.callback;
     rhs.callback = nullptr;
     T::instance().RegisterPeriodElapsedCallback(callback);
     return *this;
   }
 
-  Alarm(const Alarm&)            = delete;
-  Alarm& operator=(const Alarm&) = delete;
+  AlarmImpl(const AlarmImpl&)            = delete;
+  AlarmImpl& operator=(const AlarmImpl&) = delete;
 
-  ~Alarm() noexcept {
-    if (inner_callback != nullptr) {
-      AlarmTim auto& tim = T::instance();
-      tim.DisableInterrupt();
-      tim.ClearPeriodElapsedCallback();
-    }
-  }
-
-  /**
-   * Starts the alarm
-   */
-  void Start() noexcept {
-    constexpr auto TimFreq   = T::Frequency();
-    constexpr auto TimPeriod = TimFreq.Period();
-    constexpr auto Timeout =
-        std::chrono::duration_cast<std::decay_t<decltype(TimPeriod)>>(
-            halstd::MakeDuration(TO));
-    constexpr auto Period = Timeout.count() / TimPeriod.count() - 1;
-
+  void StartImpl(uint32_t period) noexcept {
     AlarmTim auto& tim = T::instance();
 
     tim.StopWithInterrupt();
-    tim.SetPeriod(Period);
+    tim.SetPeriod(period);
     tim.ResetCounter();
     tim.EnableInterrupt();
-    tim.StartWithInterrupt();
+
+    if (!tim.StartWithInterrupt()) {
+      asm("bkpt 1");
+    }
   }
 
   /**
@@ -180,8 +164,44 @@ class Alarm {
     }
   }
 
-  halstd::MethodCallback<Alarm<T, TO>> callback;
+  halstd::MethodCallback<AlarmImpl<T>> callback;
   const halstd::Callback<>*            inner_callback;
+};
+
+}   // namespace detail
+
+/**
+ * Class that uses a timer to implemented an alarm, i.e. a callback that is
+ * invoked from an interrupt context after a fixed amount of time from starting
+ * the alarm
+ * @tparam T Timer instance
+ * @tparam TO Timeout value, see halstd::DurationFactory
+ */
+template <AlarmTim T, halstd::ToDuration auto TO>
+class Alarm : private detail::AlarmImpl<T> {
+ public:
+  /**
+   * Constructor
+   * @param alarm_cb Alarm callback
+   */
+  explicit Alarm(const halstd::Callback<>& alarm_cb) noexcept
+      : detail::AlarmImpl<T>{alarm_cb} {}
+
+  /**
+   * Starts the alarm
+   */
+  void Start() noexcept {
+    constexpr auto TimFreq   = T::Frequency();
+    constexpr auto TimPeriod = TimFreq.Period();
+    constexpr auto Timeout =
+        std::chrono::duration_cast<std::decay_t<decltype(TimPeriod)>>(
+            halstd::MakeDuration(TO));
+    constexpr auto Period = Timeout.count() / TimPeriod.count() - 1;
+
+    detail::AlarmImpl<T>::StartImpl(Period);
+  }
+
+  using detail::AlarmImpl<T>::Cancel;
 };
 
 /**

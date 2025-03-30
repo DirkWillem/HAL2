@@ -80,18 +80,20 @@ class AsyncCommandCallback<false, Response> {};
 
 template <typename Response>
 class AsyncCommandCallback<true, Response> {
- protected:
-  AsyncCommandCallback() noexcept
-      : callback{this, &AsyncCommandCallback::CommandCallback} {}
-
+public:
   AsyncResult<Response> InitializeCallback(
-      std::span<std::byte>            new_response_buf,
-      halstd::Callback<HandleResult>& new_inner_callback) & noexcept {
+    std::span<std::byte>            new_response_buf,
+    halstd::Callback<HandleResult>& new_inner_callback) & noexcept {
     response_buf   = new_response_buf;
     inner_callback = &new_inner_callback;
 
     return AsyncResult{response, callback};
   }
+ protected:
+  AsyncCommandCallback() noexcept
+      : callback{this, &AsyncCommandCallback::CommandCallback} {}
+
+
 
   void CommandCallback() noexcept {
     if (inner_callback != nullptr) {

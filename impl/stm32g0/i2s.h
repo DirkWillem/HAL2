@@ -95,7 +95,7 @@ class I2sImpl : public hal::UsedPeripheral {
     HAL_I2S_Transmit_DMA(&hi2s, data.data(), data.size());
   }
 
-  void EndTransmit(std::span<uint16_t> data)
+  void EndTransmit(std::span<uint16_t>)
     requires(OM == hal::I2sOperatingMode::DmaCircular)
   {
     HAL_I2S_DMAStop(&hi2s);

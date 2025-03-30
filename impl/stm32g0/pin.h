@@ -107,6 +107,7 @@ static constexpr uint32_t ToHalEdge(hal::Edge edge) noexcept {
   }
 }
 
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
 /**
  * Pin ID helper macro
  */
@@ -114,6 +115,7 @@ static constexpr uint32_t ToHalEdge(hal::Edge edge) noexcept {
   ::stm32g0::PinId {           \
     ::stm32g0::Port::PORT, NUM \
   }
+// NOLINTEND(cppcoreguidelines-macro-usage)
 
 /**
  * Pin helper struct

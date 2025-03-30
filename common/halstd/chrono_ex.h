@@ -167,7 +167,8 @@ struct DurationFactory {
   template <typename To>
   constexpr auto Cast() const noexcept {
     const auto result = std::chrono::duration_cast<To>(MakeDuration());
-    return DurationFactory<Rep, R>(result.count());
+    return DurationFactory<typename To::rep, typename To::period>(
+        result.count());
   }
 
   Rep count;

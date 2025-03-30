@@ -1,6 +1,9 @@
 #include "proto_helpers.h"
 
+#include <algorithm>
 #include <cstring>
+#include <string_view>
+#include <span>
 
 namespace vrpc {
 

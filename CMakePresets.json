@@ -23,7 +23,7 @@
       "hidden": true,
       "generator": "Ninja",
       "cacheVariables": {
-        "CMAKE_TOOLCHAIN_FILE": "${fileDir}/cmake/toolchains/arm-cortex-m0p-gcc.cmake"
+        "CMAKE_TOOLCHAIN_FILE": "${fileDir}/cmake/toolchains/arm-cortex-m0p-clang.cmake"
       }
     },
     {

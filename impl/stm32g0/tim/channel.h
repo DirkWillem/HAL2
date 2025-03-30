@@ -8,9 +8,8 @@
 #include <stm32g0xx_hal.h>
 
 #include <stm32g0/dma.h>
-#include <stm32g0/pin.h>
 #include <stm32g0/mappings/tim_pin_mapping.h>
-
+#include <stm32g0/pin.h>
 
 #include "common.h"
 
@@ -190,7 +189,6 @@ struct ChannelList {
 template <TimId Id, unsigned Ch, hal::DmaPriority Prio = hal::DmaPriority::Low>
 using TimChDma = DmaChannel<Id, detail::ChannelToDmaRequest(Ch), Prio>;
 
-
 template <unsigned Ch, PinId P, PwmControlMode CM = PwmControlMode::Direct,
           PwmMode PM = PwmMode::Pwm1>
 class TimPwmOutputChannel {
@@ -211,10 +209,13 @@ class TimPwmOutputChannel {
 
     // Configure channel
     TIM_OC_InitTypeDef init{
-        .OCMode     = detail::HalOcMode(PM),
-        .Pulse      = 0,
-        .OCPolarity = TIM_OCPOLARITY_HIGH,
-        .OCFastMode = TIM_OCFAST_DISABLE,
+        .OCMode       = detail::HalOcMode(PM),
+        .Pulse        = 0,
+        .OCPolarity   = TIM_OCPOLARITY_HIGH,
+        .OCNPolarity  = TIM_OCNPOLARITY_HIGH,
+        .OCFastMode   = TIM_OCFAST_DISABLE,
+        .OCIdleState  = TIM_OCIDLESTATE_RESET,
+        .OCNIdleState = TIM_OCNIDLESTATE_RESET,
     };
 
     if (HAL_TIM_OC_ConfigChannel(&htim, &init, detail::HalChannel(Ch))
@@ -289,6 +290,7 @@ class TimPwmOutputChannel {
         &htim, TIM_DMABASE_CCR1 + (Ch - 1), TIM_DMA_UPDATE,
         reinterpret_cast<const uint32_t*>(cmps.data()),
         TIM_DMABURSTLENGTH_1TRANSFER, cmps.size());
+    (void)result;
     return;
     // HAL_TIM_PWM_Start(&htim, HalChannel());
   }
@@ -401,10 +403,13 @@ class TimMultiplePwmOutputChannel {
 
     // Configure channel
     TIM_OC_InitTypeDef init{
-        .OCMode     = detail::HalOcMode(PM),
-        .Pulse      = 0,
-        .OCPolarity = TIM_OCPOLARITY_HIGH,
-        .OCFastMode = TIM_OCFAST_DISABLE,
+        .OCMode       = detail::HalOcMode(PM),
+        .Pulse        = 0,
+        .OCPolarity   = TIM_OCPOLARITY_HIGH,
+        .OCNPolarity  = TIM_OCNPOLARITY_HIGH,
+        .OCFastMode   = TIM_OCFAST_DISABLE,
+        .OCIdleState  = TIM_OCIDLESTATE_RESET,
+        .OCNIdleState = TIM_OCNIDLESTATE_RESET,
     };
 
     if (HAL_TIM_OC_ConfigChannel(&htim, &init, detail::HalChannel(Ch))
@@ -455,6 +460,5 @@ static_assert(TimChannel<TimMultiplePwmOutputChannel<
 static_assert(PeriodElapsedCallback<TimMultiplePwmOutputChannel<
                   1, halstd::Values<PinId, PIN(A, 6), PIN(A, 7)>,
                   halstd::Values<PwmMode, PwmMode::Pwm2, PwmMode::Pwm1>>>);
-
 
 }   // namespace stm32g0

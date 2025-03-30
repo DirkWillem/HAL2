@@ -143,10 +143,8 @@ struct SystemClockSettings {
   ApbTimersClockFrequency(halstd::Frequency auto sysclk) const noexcept {
     if (apb_prescaler == 1) {
       return ApbPeripheralsClockFrequency(sysclk).template As<halstd::Hz>();
-    } else {
-      return (ApbPeripheralsClockFrequency(sysclk) * 2)
-          .template As<halstd::Hz>();
     }
+    return (ApbPeripheralsClockFrequency(sysclk) * 2).template As<halstd::Hz>();
   }
 };
 

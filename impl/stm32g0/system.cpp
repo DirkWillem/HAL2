@@ -5,9 +5,9 @@
 namespace stm32g0 {
 
 bool DisableIrqAtomicFlag::test_and_set() noexcept {
-  bool ret{true};
   __disable_irq();
-  std::swap(ret, value);
+  const bool ret = value;
+  value          = true;
   __enable_irq();
   return ret;
 }

@@ -148,7 +148,28 @@ struct StateChart<States<Ss...>, Events<Es...>> {
       const E& e = std::get<E>(event);
       const S& s = std::get<S>(state);
 
-      state = (*this)(s, e);
+      using ReturnType = decltype((*this)(s, e));
+
+      if constexpr (IsValidState<ReturnType>()) {
+        state = (*this)(s, e);
+      } else if constexpr (halstd::IsInstantiationOfVariadic<ReturnType,
+                                                             std::variant<>>) {
+        const auto result = (*this)(s, e);
+        ([this]<typename... Rs>(const std::variant<Rs...>& result) {
+          static_assert((... && IsValidState<Rs>()),
+                        "Every option in a variant returned by an event "
+                        "handler must be a valid state");
+
+          (..., ([this, &result]<typename R>(halstd::Marker<R>) {
+             if (std::holds_alternative<R>(result)) {
+               state = std::get<R>(result);
+             }
+           })(halstd::Marker<Rs>()));
+        })(result);
+      } else {
+        static_assert(false, "Return type of event must be either a valid "
+                             "state or a std::variant of valid states");
+      }
     }
 
     template <typename S>
@@ -273,8 +294,12 @@ class StateChartRunner {
   template <typename E>
     requires(SC::template IsValidEvent<E>())
   void EnqueueEvent(E event) noexcept {
-    if (!has_enqueued_event.test_and_set()) {
+    const auto event_already_enqueued = has_enqueued_event.test_and_set();
+    if (!event_already_enqueued) {
       enqueued_event = event;
+    } else {
+      __asm("bkpt");
+      std::unreachable();
     }
   }
 
@@ -285,7 +310,9 @@ class StateChartRunner {
     if (has_enqueued_event.test_and_set()) {
       const auto inner = [&, this] {
         if (enqueued_event.has_value()) {
-          const auto& ee = *enqueued_event;
+          const auto ee = *enqueued_event;
+          enqueued_event.reset();
+          has_enqueued_event.clear();
 
           const auto s_idx  = chart.state.index();
           const auto ee_idx = ee.index();
@@ -293,10 +320,9 @@ class StateChartRunner {
               tr_method != nullptr) {
             (chart.*tr_method)(ee);
           }
+        } else {
+          has_enqueued_event.clear();
         }
-
-        enqueued_event.reset();
-        has_enqueued_event.clear();
       };
 
       halstd::ExclusiveWithAtomicFlag(processing_event, inner);
@@ -304,6 +330,12 @@ class StateChartRunner {
       has_enqueued_event.clear();
     }
   }
+
+  /**
+   * Returns the index of the active state
+   * @return Index of the active state
+   */
+  auto GetStateIndex() const noexcept { return chart.state.index(); }
 
   /**
    * Applies a visitor to the current state of the statechart and returns

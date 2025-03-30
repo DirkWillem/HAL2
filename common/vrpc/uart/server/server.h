@@ -15,6 +15,9 @@ concept ServerOptions = requires {
   { O::RequestSlotCount } -> std::convertible_to<std::optional<std::size_t>>;
   { O::Name } -> std::convertible_to<std::string_view>;
   { O::MultiDrop } -> std::convertible_to<bool>;
+
+  { O::AutoStart } -> std::convertible_to<bool>;
+
   requires O::Name.length() <= 32;
 };
 
@@ -22,6 +25,7 @@ struct DefaultServerOptions {
   static constexpr std::optional<std::size_t> RequestSlotCount = std::nullopt;
   static constexpr std::string_view           Name             = "vRPC App";
   static constexpr bool                       MultiDrop        = false;
+  static constexpr bool                       AutoStart        = true;
 };
 
 namespace detail {
@@ -149,9 +153,10 @@ class Server
                            .identifier = Services::Identifier,
                        }...}}
       , uart{uart}
-      , decoder{request_slots[0].buffer}
+      , request_slots{CreateRequestSlots(this)}
       , rx_callback{this, &Server::ReceiveCallback}
-      , tx_callback{this, &Server::TransmitCallback} {
+      , tx_callback{this, &Server::TransmitCallback}
+      , decoder{request_slots[0].buffer} {
     uart.RegisterUartReceiveCallback(rx_callback);
     uart.RegisterUartTransmitCallback(tx_callback);
 
@@ -189,7 +194,9 @@ class Server
                 server_index::uart::UartServerIndex>::svc
         .InitializeIds(service_infos);
 
-    StartReceiveToCurrentBuffer();
+    if constexpr (O::AutoStart) {
+      StartReceiveToCurrentBuffer();
+    }
   }
 
   ~Server() {
@@ -198,17 +205,22 @@ class Server
   }
 
   /**
+   * Starts the server
+   */
+  void Start() noexcept { StartReceiveToCurrentBuffer(); }
+
+  /**
    * Returns whether the vRPC UART has any requests that are pending to be
    *   handled
    * @return Whether there are any pending requests
    */
-  [[nodiscard]] constexpr bool has_pending_requests() noexcept {
+  [[nodiscard]] constexpr bool has_pending_requests() const noexcept {
     return std::ranges::any_of(request_slots, [](auto& rs) {
       return rs.state == SlotState::PendingRequest;
     });
   }
 
-  void HandlePendingRequests() {
+  void HandlePendingRequests() noexcept {
     for (auto& request : request_slots) {
       // Check if the request should be handled, otherwise continue
       {
@@ -512,6 +524,13 @@ class Server
 
   typename Sys::AtomicFlag transmitting{};
   typename Sys::AtomicFlag receiving{};
+};
+
+template <typename Impl>
+concept IsServer = requires(Impl& impl, const Impl& c_impl) {
+  { impl.Start() };
+  { c_impl.has_pending_requests() } -> std::convertible_to<bool>;
+  { impl.HandlePendingRequests() };
 };
 
 }   // namespace vrpc::uart

@@ -16,8 +16,11 @@ namespace vrpc {
 template <typename Msg>
 [[nodiscard]] bool ProtoDecode(std::span<const std::byte> src,
                                Msg&                       dst) noexcept {
+
+  // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
   auto istream = pb_istream_from_buffer(
       reinterpret_cast<const pb_byte_t*>(src.data()), src.size());
+  // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
   return pb_decode(&istream, nanopb::MessageDescriptor<Msg>::fields(), &dst);
 }
 
@@ -44,11 +47,13 @@ FindFieldByPointer(const Msg&                        msg,
   pb_field_iter_begin_const(&iter, nanopb::MessageDescriptor<Msg>::fields(),
                             &msg);
 
+  // NOLINTBEGIN(cppcoreguidelines-avoid-do-while)
   do {
     if (iter.pField == &(msg.*field_ptr)) {
       return {iter};
     }
   } while (pb_field_iter_next(&iter));
+  // NOLINTEND(cppcoreguidelines-avoid-do-while)
 
   return {};
 }
@@ -64,10 +69,12 @@ GetRepeatedFieldFromPtr(const Msg&                          msg,
       return {};
     }
 
+    // NOLINTBEGIN(cppcoreguidelines-pro-type-reinterpret-cast)
     const auto count = static_cast<std::size_t>(
         *reinterpret_cast<const pb_size_t*>(iter.pSize));
 
     return std::span{reinterpret_cast<const El*>(iter.pData), count};
+    // NOLINTEND(cppcoreguidelines-pro-type-reinterpret-cast)
   }
 
   return {};

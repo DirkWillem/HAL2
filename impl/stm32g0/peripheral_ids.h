@@ -87,19 +87,26 @@ enum class UartId {
   using std::operator""sv;
   if (name == "USART1"sv) {
     return UartId::Usart1;
-  } else if (name == "USART2"sv) {
+  }
+  if (name == "USART2"sv) {
     return UartId::Usart2;
-  } else if (name == "USART3"sv) {
+  }
+  if (name == "USART3"sv) {
     return UartId::Usart3;
-  } else if (name == "USART4"sv) {
+  }
+  if (name == "USART4"sv) {
     return UartId::Usart4;
-  } else if (name == "USART5"sv) {
+  }
+  if (name == "USART5"sv) {
     return UartId::Usart5;
-  } else if (name == "USART6"sv) {
+  }
+  if (name == "USART6"sv) {
     return UartId::Usart6;
-  } else if (name == "LPUART1"sv) {
+  }
+  if (name == "LPUART1"sv) {
     return UartId::LpUart1;
-  } else if (name == "LPUART2"sv) {
+  }
+  if (name == "LPUART2"sv) {
     return UartId::LpUart2;
   }
 

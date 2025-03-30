@@ -1,8 +1,10 @@
 #include "pin.h"
 
+#include <stm32g0xx_hal_rcc.h>
+
 namespace stm32g0 {
 
-constexpr void EnablePortClk(Port port) {
+static constexpr void EnablePortClk(Port port) {
   switch (port) {
 #ifdef GPIOA
   case Port::A: __HAL_RCC_GPIOA_CLK_ENABLE(); break;
@@ -25,7 +27,7 @@ constexpr void EnablePortClk(Port port) {
   }
 }
 
-[[nodiscard]] constexpr uint32_t ToHalMode(hal::PinDirection dir,
+[[nodiscard]] static constexpr uint32_t ToHalMode(hal::PinDirection dir,
                                            hal::PinMode      mode) {
   switch (dir) {
   case hal::PinDirection::Input: return GPIO_MODE_INPUT;
@@ -41,7 +43,7 @@ constexpr void EnablePortClk(Port port) {
   std::unreachable();
 }
 
-[[nodiscard]] constexpr uint32_t ToHalAlternateMode(hal::PinMode mode) {
+[[nodiscard]] static constexpr uint32_t ToHalAlternateMode(hal::PinMode mode) {
   switch (mode) {
   case hal::PinMode::PushPull: return GPIO_MODE_AF_PP;
   case hal::PinMode::OpenDrain: return GPIO_MODE_AF_OD;
@@ -50,7 +52,7 @@ constexpr void EnablePortClk(Port port) {
   std::unreachable();
 }
 
-[[nodiscard]] constexpr uint32_t ToHalPull(hal::PinPull pull) {
+[[nodiscard]] static constexpr uint32_t ToHalPull(hal::PinPull pull) {
   switch (pull) {
   case hal::PinPull::NoPull: return GPIO_NOPULL;
   case hal::PinPull::PullUp: return GPIO_PULLUP;
