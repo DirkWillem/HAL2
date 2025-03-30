@@ -19,7 +19,34 @@
     },
 
     {
-      "name": "cortex-m0plus-base",
+      "name": "cortex-m0plus-gcc-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${fileDir}/cmake/toolchains/arm-cortex-m0p-gcc.cmake"
+      }
+    },
+    {
+      "name": "cortex-m0plus-gcc-debug",
+      "inherits": "cortex-m0plus-gcc-base",
+      "displayName": "Cortex-M0+ (GCC, Debug)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m0plus-gcc-debug"
+    },
+    {
+      "name": "cortex-m0plus-gcc-release",
+      "inherits": "cortex-m0plus-gcc-base",
+      "displayName": "Cortex-M0+ (GCC, Release)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m0plus-gcc-release"
+    },
+
+    {
+      "name": "cortex-m0plus-clang-base",
       "hidden": true,
       "generator": "Ninja",
       "cacheVariables": {
@@ -27,22 +54,22 @@
       }
     },
     {
-      "name": "cortex-m0plus-debug",
-      "inherits": "cortex-m0plus-base",
-      "displayName": "Cortex-M0+ (Debug)",
+      "name": "cortex-m0plus-clang-debug",
+      "inherits": "cortex-m0plus-clang-base",
+      "displayName": "Cortex-M0+ (Clang, Debug)",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       },
-      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m0plus-debug"
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m0plus-clang-debug"
     },
     {
-      "name": "cortex-m0plus-release",
-      "inherits": "cortex-m0plus-base",
+      "name": "cortex-m0plus-clang-release",
+      "inherits": "cortex-m0plus-clang-base",
       "displayName": "Cortex-M0+ (Release)",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       },
-      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m0plus-release"
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m0plus-clang-release"
     },
 
     {
