@@ -17,10 +17,10 @@ namespace ct {
   for (auto byte : data) {
     crc ^= static_cast<uint16_t>(byte);
     for (auto i = 0; i < 8; i++) {
-      if (crc & 0b1U) {
-        crc = (crc >> 1) ^ poly;
+      if ((crc & 0b1U) != 0) {
+        crc = (crc >> 1U) ^ poly;
       } else {
-        crc >>= 1;
+        crc >>= 1U;
       }
     }
   }

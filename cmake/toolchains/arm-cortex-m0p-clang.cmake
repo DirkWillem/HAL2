@@ -108,7 +108,7 @@ set(CMAKE_EXECUTABLE_SUFFIX_CXX .elf)
 set(CMAKE_EXECUTABLE_SUFFIX_ASM .elf)
 
 # Clang-tidy setup
-# set(CMAKE_CXX_CLANG_TIDY "${TOOLCHAIN_PREFIX}clang-tidy" "*,-fuchsia-*,-google-*,-zircon-*,-abseil-*,-altera-*,-llvm-*,-llvmlibc-*,-modernize-use-trailing-return-type,-cppcoreguidelines-avoid-magic-numbers,-readability-magic-numbers,-bugprone-dynamic-static-initializers,-cppcoreguidelines-pro-type-union-access,-misc-no-recursion,-cert-dcl21-cpp,-bugprone-easily-swappable-parameters,-readability-identifier-length,-cppcoreguidelines-avoid-const-or-ref-data-members,-misc-non-private-member-variables-in-classes,-performance-enum-size,-misc-include-header")
+# set(CMAKE_CXX_CLANG_TIDY "${TOOLCHAIN_PREFIX}clang-tidy")
 
 set(TARGET "arm-cortex-m0plus")
 

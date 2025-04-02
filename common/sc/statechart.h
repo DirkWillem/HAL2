@@ -78,7 +78,7 @@ struct IsInState {
 
   template <typename U>
     requires(!std::is_same_v<std::decay_t<T>, std::decay_t<U>>)
-  [[nodiscard]] constexpr bool operator()(U) const noexcept {
+  [[nodiscard]] constexpr bool operator()(const U&) const noexcept {
     return false;
   }
 };
@@ -151,10 +151,10 @@ struct StateChart<States<Ss...>, Events<Es...>> {
       using ReturnType = decltype((*this)(s, e));
 
       if constexpr (IsValidState<ReturnType>()) {
-        state = (*this)(s, e);
+        state.template emplace<ReturnType>((*this)(s, e));
       } else if constexpr (halstd::IsInstantiationOfVariadic<ReturnType,
                                                              std::variant<>>) {
-        const auto result = (*this)(s, e);
+        auto result = (*this)(s, e);
         ([this]<typename... Rs>(const std::variant<Rs...>& result) {
           static_assert((... && IsValidState<Rs>()),
                         "Every option in a variant returned by an event "
@@ -162,7 +162,7 @@ struct StateChart<States<Ss...>, Events<Es...>> {
 
           (..., ([this, &result]<typename R>(halstd::Marker<R>) {
              if (std::holds_alternative<R>(result)) {
-               state = std::get<R>(result);
+               state.template emplace<R>(std::move(std::get<R>(result)));
              }
            })(halstd::Marker<Rs>()));
         })(result);
@@ -240,8 +240,8 @@ class StateChartRunner {
  public:
   static constexpr auto JumpTable = SC::BuildTransitionTable();
 
-  StateChartRunner(halstd::Marker<Sys>, SC chart)
-      : chart{chart} {}
+  StateChartRunner(halstd::Marker<Sys>, SC&& chart)
+      : chart{std::move(chart)} {}
 
   /**
    * Immediately applies an event to the state chart. This method should not
@@ -293,21 +293,21 @@ class StateChartRunner {
    */
   template <typename E>
     requires(SC::template IsValidEvent<E>())
-  void EnqueueEvent(E event) noexcept {
+  bool EnqueueEvent(E event) noexcept {
     const auto event_already_enqueued = has_enqueued_event.test_and_set();
     if (!event_already_enqueued) {
       enqueued_event = event;
-    } else {
-      __asm("bkpt");
-      std::unreachable();
+      return true;
     }
+
+    return false;
   }
 
   /**
    * Processes any event that was previously enqueued by EnqueueEvent
    */
   void ProcessEnqueuedEvent() noexcept {
-    if (has_enqueued_event.test_and_set()) {
+    if (has_enqueued_event.test()) {
       const auto inner = [&, this] {
         if (enqueued_event.has_value()) {
           const auto ee = *enqueued_event;
@@ -326,8 +326,6 @@ class StateChartRunner {
       };
 
       halstd::ExclusiveWithAtomicFlag(processing_event, inner);
-    } else {
-      has_enqueued_event.clear();
     }
   }
 

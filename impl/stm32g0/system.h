@@ -10,11 +10,12 @@ namespace stm32g0 {
 
 class DisableIrqAtomicFlag {
 public:
+  bool test() const noexcept;
   bool test_and_set() noexcept;
   void clear();
 
 private:
-  bool value{false};
+  volatile bool value{false};
 };
 
 class DisableInterruptsCriticalSectionInterface {

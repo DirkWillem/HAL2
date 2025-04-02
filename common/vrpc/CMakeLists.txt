@@ -1,5 +1,15 @@
 include(CMakeParseArguments)
 
+set_source_files_properties(
+        vendor/nanopb/pb.h
+        vendor/nanopb/pb_common.c
+        vendor/nanopb/pb_common.h
+        vendor/nanopb/pb_decode.c
+        vendor/nanopb/pb_decode.h
+        vendor/nanopb/pb_encode.c
+        vendor/nanopb/pb_encode.h
+        PROPERTIES SKIP_LINTING ON)
+
 add_library(nanopb STATIC
         vendor/nanopb/pb.h
         vendor/nanopb/pb_common.c
@@ -125,6 +135,8 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
     target_include_directories(${TARGET} PUBLIC "${DSTDIR_ABS}")
     target_link_libraries(${TARGET}
             PUBLIC nanopb)
+
+    set_source_files_properties(${GEN_SRCS} PROPERTIES SKIP_LINTING ON)
 
     # "Bare" library
     add_library(${TARGET}_bare STATIC ${GEN_SRCS})

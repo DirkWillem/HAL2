@@ -124,8 +124,8 @@ class AlarmImpl {
    * @return Current instance
    */
   AlarmImpl& operator=(AlarmImpl&& rhs) noexcept {
-    callback     = rhs.callback;
-    rhs.callback = nullptr;
+    callback           = rhs.callback;
+    rhs.inner_callback = nullptr;
     T::instance().RegisterPeriodElapsedCallback(callback);
     return *this;
   }
@@ -141,9 +141,7 @@ class AlarmImpl {
     tim.ResetCounter();
     tim.EnableInterrupt();
 
-    if (!tim.StartWithInterrupt()) {
-      asm("bkpt 1");
-    }
+    tim.StartWithInterrupt();
   }
 
   /**
@@ -183,9 +181,15 @@ class Alarm : private detail::AlarmImpl<T> {
   /**
    * Constructor
    * @param alarm_cb Alarm callback
+   * @param autostart Whether to immediately start the alarm
    */
-  explicit Alarm(const halstd::Callback<>& alarm_cb) noexcept
-      : detail::AlarmImpl<T>{alarm_cb} {}
+  explicit Alarm(const halstd::Callback<>& alarm_cb,
+                 bool                      autostart = false) noexcept
+      : detail::AlarmImpl<T>{alarm_cb} {
+    if (autostart) {
+      Start();
+    }
+  }
 
   /**
    * Starts the alarm
