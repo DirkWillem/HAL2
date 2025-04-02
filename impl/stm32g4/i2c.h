@@ -2,8 +2,8 @@
 
 #include <optional>
 
-#include <constexpr_tools/chrono_ex.h>
 #include <constexpr_tools/spans.h>
+#include <halstd/chrono_ex.h>
 
 #include <stm32g4/internal/i2c_timing.h>
 #include <stm32g4/mappings/i2c_pin_mapping.h>
@@ -115,9 +115,10 @@ class I2cImpl : public hal::UsedPeripheral {
    * @param size Size of the data to read. Defaults to the destination buffer
    * size
    */
-  void ReadMemoryBlocking(uint16_t             device_address,
-                          hal::I2cMemAddr auto memory_address,
-                          std::span<std::byte> dest, ct::Duration auto timeout,
+  void ReadMemoryBlocking(uint16_t                   device_address,
+                          hal::I2cMemAddr auto       memory_address,
+                          std::span<std::byte>       dest,
+                          halstd::Duration auto      timeout,
                           std::optional<std::size_t> size = {}) noexcept {
     dev_addr = device_address;
     mem_addr = memory_address;
@@ -142,7 +143,7 @@ class I2cImpl : public hal::UsedPeripheral {
   void WriteMemoryBlocking(uint16_t             device_address,
                            hal::I2cMemAddr auto memory_address,
                            std::span<std::byte> data,
-                           ct::Duration auto    timeout) {
+                           halstd::Duration auto    timeout) {
     dev_addr = device_address;
     mem_addr = memory_address;
 
@@ -164,7 +165,7 @@ class I2cImpl : public hal::UsedPeripheral {
   template <typename T>
   void WriteMemoryValueBlocking(uint16_t             device_address,
                                 hal::I2cMemAddr auto memory_address,
-                                const T& value, ct::Duration auto timeout) {
+                                const T& value, halstd::Duration auto timeout) {
     std::array<std::byte, sizeof(T)> bytes =
         std::bit_cast<std::array<std::byte, sizeof(T)>>(value);
     WriteMemoryBlocking(

@@ -29,8 +29,8 @@ endif()
 
 
 set(TOOLCHAIN_SUFFIX "")
-set(CLANG_TARGET_TRIPLE "armv6m-none-eabi")
-set(MACHINE_FLAGS -mcpu=cortex-m0 -mfloat-abi=soft)
+set(CLANG_TARGET_TRIPLE "armv7em-none-eabi")
+set(MACHINE_FLAGS -mcpu=cortex-m4 -mfloat-abi=hard)
 
 if (NOT "${CLANG_EXPLICIT_VERSION}" STREQUAL "")
 set(CLANG_VERSION_SUFFIX "-${CLANG_EXPLICIT_VERSION}")
@@ -107,5 +107,5 @@ set(CMAKE_EXECUTABLE_SUFFIX_ASM .elf)
 # Clang-tidy setup
 # set(CMAKE_CXX_CLANG_TIDY "${TOOLCHAIN_PREFIX}clang-tidy")
 
-set(TARGET "arm-cortex-m0plus")
+set(TARGET "arm-cortex-m4")
 

@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <span>
 
-#include "callback.h"
+#include <halstd/callback.h>
 
 namespace hal {
 
@@ -53,8 +53,8 @@ concept AsyncI2c = AsyncI2cCallbacks<Impl> && requires(Impl& impl) {
 template <typename Impl>
 concept AsyncI2cRegisterableCallbacks = requires(Impl& impl) {
   impl.RegisterI2cReceiveCallback(
-      std::declval<hal::Callback<uint16_t, std::span<std::byte>>&>());
-  impl.RegisterI2cTransmitCallback(std::declval<hal::Callback<uint16_t>&>());
+      std::declval<halstd::Callback<uint16_t, std::span<std::byte>>&>());
+  impl.RegisterI2cTransmitCallback(std::declval<halstd::Callback<uint16_t>&>());
 };
 
 class I2cCallbacks {
@@ -66,7 +66,7 @@ class I2cCallbacks {
   }
 
   constexpr void
-  RegisterI2cErrorCallback(hal::Callback<>& new_callback) noexcept {
+  RegisterI2cErrorCallback(halstd::Callback<>& new_callback) noexcept {
     err_callback = &new_callback;
   }
 
@@ -78,7 +78,7 @@ class I2cCallbacks {
   }
 
   constexpr void RegisterI2cReceiveCallback(
-      hal::Callback<uint16_t, std::span<std::byte>>& new_callback) noexcept {
+      halstd::Callback<uint16_t, std::span<std::byte>>& new_callback) noexcept {
     rx_callback = &new_callback;
   }
 
@@ -88,13 +88,14 @@ class I2cCallbacks {
     }
   }
 
-  constexpr void
-  RegisterI2cTransmitCallback(hal::Callback<uint16_t>& new_callback) noexcept {
+  constexpr void RegisterI2cTransmitCallback(
+      halstd::Callback<uint16_t>& new_callback) noexcept {
     tx_callback = &new_callback;
   }
 
   constexpr void RegisterI2cMemReadCallback(
-      hal::Callback<uint16_t, uint16_t, std::span<std::byte>>& new_callback) {
+      halstd::Callback<uint16_t, uint16_t, std::span<std::byte>>&
+          new_callback) {
     mem_read_callback = &new_callback;
   }
 
@@ -113,18 +114,18 @@ class I2cCallbacks {
   }
 
   constexpr void RegisterI2cMemWriteCallback(
-      hal::Callback<uint16_t, uint16_t>& new_callback) noexcept {
+      halstd::Callback<uint16_t, uint16_t>& new_callback) noexcept {
     mem_write_callback = &new_callback;
   }
 
  private:
-  hal::Callback<>* err_callback{nullptr};
+  halstd::Callback<>* err_callback{nullptr};
 
-  hal::Callback<uint16_t, std::span<std::byte>>*           rx_callback{nullptr};
-  hal::Callback<uint16_t>*                                 tx_callback{nullptr};
-  hal::Callback<uint16_t, uint16_t, std::span<std::byte>>* mem_read_callback{
+  halstd::Callback<uint16_t, std::span<std::byte>>* rx_callback{nullptr};
+  halstd::Callback<uint16_t>*                       tx_callback{nullptr};
+  halstd::Callback<uint16_t, uint16_t, std::span<std::byte>>* mem_read_callback{
       nullptr};
-  hal::Callback<uint16_t, uint16_t>* mem_write_callback{nullptr};
+  halstd::Callback<uint16_t, uint16_t>* mem_write_callback{nullptr};
 };
 
 static_assert(AsyncI2cCallbacks<I2cCallbacks>);

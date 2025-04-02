@@ -96,8 +96,8 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
     # Command for generating service headers
     #            --common-dir "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/vendor/nanopb/generator/proto"
     add_custom_command(
-            DEPENDS ${PROTOS}
             OUTPUT ${SVC_HDRS}
+            DEPENDS ${PROTOS}
             COMMAND
             vrpc_gen
             --gen service
@@ -108,8 +108,8 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
     # Command for generating UART headers
     if ("uart_server" IN_LIST GENERATE_VRPC_GEN_TYPES)
         add_custom_command(
-                DEPENDS ${PROTOS}
                 OUTPUT ${UART_SERVER_HDRS}
+                DEPENDS ${PROTOS}
                 COMMAND
                 vrpc_gen
                 --gen uart-server-service
@@ -120,8 +120,8 @@ function(GENERATE_VRPC TARGET SRCDIR DSTDIR)
 
     if ("uart_client" IN_LIST GENERATE_VRPC_GEN_TYPES)
         add_custom_command(
-                DEPENDS ${PROTOS}
                 OUTPUT ${UART_CLIENT_HDRS}
+                DEPENDS ${PROTOS}
                 COMMAND
                 vrpc_gen
                 --gen uart-service-client

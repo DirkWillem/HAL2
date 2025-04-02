@@ -73,7 +73,7 @@
     },
 
     {
-      "name": "cortex-m4f-base",
+      "name": "cortex-m4f-gcc-base",
       "hidden": true,
       "generator": "Ninja",
       "cacheVariables": {
@@ -81,22 +81,49 @@
       }
     },
     {
-      "name": "cortex-m4f-debug",
-      "inherits": "cortex-m4f-base",
-      "displayName": "Cortex-M4F (Debug)",
+      "name": "cortex-m4f-gcc-debug",
+      "inherits": "cortex-m4f-gcc-base",
+      "displayName": "Cortex-M4F (GCC, Debug)",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       },
-      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m4f-debug"
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m4f-gcc-debug"
     },
     {
-      "name": "cortex-m4f-release",
-      "inherits": "cortex-m4f-base",
-      "displayName": "Cortex-M4F (Release)",
+      "name": "cortex-m4f-gcc-release",
+      "inherits": "cortex-m4f-gcc-base",
+      "displayName": "Cortex-M4F (GCC, Release)",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       },
-      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m4f-release"
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m4f-gcc-release"
+    },
+
+    {
+      "name": "cortex-m4f-clang-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${fileDir}/cmake/toolchains/arm-cortex-m4f-clang.cmake"
+      }
+    },
+    {
+      "name": "cortex-m4f-clang-debug",
+      "inherits": "cortex-m4f-clang-base",
+      "displayName": "Cortex-M4F (Clang, Debug)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m4f-clang-debug"
+    },
+    {
+      "name": "cortex-m4f-clang-release",
+      "inherits": "cortex-m4f-clang-base",
+      "displayName": "Cortex-M4F (Clang, Release)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m4f-clang-release"
     },
 
     {

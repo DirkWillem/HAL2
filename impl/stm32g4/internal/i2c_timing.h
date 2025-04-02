@@ -10,7 +10,7 @@
 #include <tuple>
 #include <utility>
 
-#include <constexpr_tools/chrono_ex.h>
+#include <halstd/chrono_ex.h>
 
 namespace stm32g4::detail {
 
@@ -93,8 +93,8 @@ struct I2cTiming {
 
 template <std::size_t N>
 constexpr std::tuple<std::array<I2cTiming, N>, std::size_t>
-ComputePrescScldelSdadel(ct::Frequency auto clock_src_freq,
-                         uint32_t           speed_idx) noexcept {
+ComputePrescScldelSdadel(halstd::Frequency auto clock_src_freq,
+                         uint32_t               speed_idx) noexcept {
   std::array<I2cTiming, N> result{};
 
   uint32_t prev_presc = I2cPrescMax;
@@ -104,7 +104,8 @@ ComputePrescScldelSdadel(ct::Frequency auto clock_src_freq,
   uint32_t presc, scldel, sdadel;
   uint32_t tafdel_min, tafdel_max;
 
-  const uint32_t clock_src_freq_hz = clock_src_freq.template As<ct::Hz>().count;
+  const uint32_t clock_src_freq_hz =
+      clock_src_freq.template As<halstd::Hz>().count;
   ti2cclk = (Nanoseconds + (clock_src_freq_hz / 2U)) / clock_src_freq_hz;
 
   tafdel_min = I2cUseAnalogFilter ? I2cAnalogFilterDelayMin : 0U;
@@ -175,7 +176,7 @@ ComputePrescScldelSdadel(ct::Frequency auto clock_src_freq,
 }
 
 constexpr std::optional<I2cTiming>
-ComputeScllSclh(ct::Frequency auto clock_src_freq, uint32_t speed_idx,
+ComputeScllSclh(halstd::Frequency auto clock_src_freq, uint32_t speed_idx,
                 std::span<const I2cTiming> timings) noexcept {
   bool     found = false;
   uint32_t ret   = 0xFFFFFFFFU;
@@ -190,7 +191,8 @@ ComputeScllSclh(ct::Frequency auto clock_src_freq, uint32_t speed_idx,
   uint32_t ret_scll;
   uint32_t ret_sclh;
 
-  const uint32_t clock_src_freq_hz = clock_src_freq.template As<ct::Hz>().count;
+  const uint32_t clock_src_freq_hz =
+      clock_src_freq.template As<halstd::Hz>().count;
   ti2cclk   = (Nanoseconds + (clock_src_freq_hz / 2U)) / clock_src_freq_hz;
   ti2cspeed = (Nanoseconds + (I2cCharacteristics[speed_idx].freq / 2U))
               / I2cCharacteristics[speed_idx].freq;
@@ -209,11 +211,12 @@ ComputeScllSclh(ct::Frequency auto clock_src_freq, uint32_t speed_idx,
     /* tPRESC = (PRESC+1) x tI2CCLK*/
     uint32_t tpresc = (timings[count].presc + 1U) * ti2cclk;
 
-    const auto scll_lb =
-        std::max((I2cCharacteristics[speed_idx].lscl_min
-                  - (tafdel_min + dnf_delay + (2U * ti2cclk)))
-                     / tpresc,
-                 std::max(2U / (timings[count].presc + 1U), 1UL));
+    const auto scll_lb = std::max(
+        static_cast<unsigned long>((I2cCharacteristics[speed_idx].lscl_min
+                                    - (tafdel_min + dnf_delay + (2U * ti2cclk)))
+                                   / tpresc),
+        std::max(static_cast<unsigned long>(2U / (timings[count].presc + 1U)),
+                 1UL));
     for (scll = scll_lb; scll < I2cScllMax; scll++) {
       uint32_t tscl_l =
           tafdel_min + dnf_delay + (2U * ti2cclk) + ((scll + 1U) * tpresc);
@@ -229,14 +232,15 @@ ComputeScllSclh(ct::Frequency auto clock_src_freq, uint32_t speed_idx,
            - tafdel_min - dnf_delay - (2U * ti2cclk))
                   / tpresc
               - 1U);
-      const auto sclh_ub =
-          std::min(I2cSclhMax, (clk_max
-                                - (2 * (tafdel_min + dnf_delay) + (4U * ti2cclk)
-                                   + ((scll + 2U) * tpresc)
-                                   + I2cCharacteristics[speed_idx].trise
-                                   + I2cCharacteristics[speed_idx].tfall))
-                                       / tpresc
-                                   - 1U);
+      const auto sclh_ub = std::min(
+          I2cSclhMax,
+          static_cast<unsigned long>(
+              (clk_max
+               - (2 * (tafdel_min + dnf_delay) + (4U * ti2cclk)
+                  + ((scll + 2U) * tpresc) + I2cCharacteristics[speed_idx].trise
+                  + I2cCharacteristics[speed_idx].tfall))
+                  / tpresc
+              - 1U));
 
       for (sclh = sclh_lb; sclh < sclh_ub; sclh++) {
         /* tHIGH(min) <= tAF(min) + tDNF + 2 x tI2CCLK + [(SCLH+1) x tPRESC]
@@ -276,8 +280,8 @@ ComputeScllSclh(ct::Frequency auto clock_src_freq, uint32_t speed_idx,
   }
 }
 
-consteval std::optional<uint32_t> CalculateI2cTiming(ct::Frequency auto src_clk,
-                                                     hal::I2cSpeedMode  speed) {
+consteval std::optional<uint32_t>
+CalculateI2cTiming(halstd::Frequency auto src_clk, hal::I2cSpeedMode speed) {
   switch (speed) {
   case hal::I2cSpeedMode::Standard: {
     const auto intermediate = ComputePrescScldelSdadel<128>(src_clk, 0);

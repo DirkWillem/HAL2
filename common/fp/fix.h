@@ -5,7 +5,7 @@
 
 #include <constexpr_tools/integer.h>
 #include <constexpr_tools/static_string.h>
-#include <constexpr_tools/type_helpers.h>
+#include <halstd/mp/type_helpers.h>
 
 namespace fp {
 
@@ -71,7 +71,6 @@ class Fix {
   template <std::signed_integral I>
   explicit constexpr Fix(I val) noexcept
       : val{IntToRaw(static_cast<Storage>(val))} {}
-
 
   template <std::floating_point FP>
   explicit constexpr Fix(FP value) noexcept
@@ -309,7 +308,7 @@ constexpr auto operator+(Fix<Sl, Wl, Fl, Ql> lhs,
           + static_cast<Storage>(rhs.template As<Wo, Fo, Qo>().raw()))};
 }
 
-template <bool Sl, unsigned Wl, unsigned Fl, int Ql, ct::Integer R>
+template <bool Sl, unsigned Wl, unsigned Fl, int Ql, halstd::Integer R>
 constexpr auto operator+(Fix<Sl, Wl, Fl, Ql> lhs, R rhs) noexcept {
   constexpr auto So = Sl || std::is_signed_v<R>;
   constexpr auto Qo = Ql;
@@ -321,7 +320,7 @@ constexpr auto operator+(Fix<Sl, Wl, Fl, Ql> lhs, R rhs) noexcept {
   return lhs.template As<Wo, Fo, Qo>() + To{static_cast<To::Storage>(rhs)};
 }
 
-template <ct::Integer L, bool Sr, unsigned Wr, unsigned Fr, int Qr>
+template <halstd::Integer L, bool Sr, unsigned Wr, unsigned Fr, int Qr>
 constexpr auto operator+(L lhs, Fix<Sr, Wr, Fr, Qr> rhs) noexcept {
   return rhs + lhs;
 }
@@ -344,7 +343,7 @@ constexpr auto operator-(Fix<Sl, Wl, Fl, Ql> lhs,
           - static_cast<Storage>(rhs.template As<Wo, Fo, Qo>().raw()))};
 }
 
-template <bool Sl, unsigned Wl, unsigned Fl, int Ql, ct::Integer R>
+template <bool Sl, unsigned Wl, unsigned Fl, int Ql, halstd::Integer R>
 constexpr auto operator-(Fix<Sl, Wl, Fl, Ql> lhs, R rhs) noexcept {
   constexpr auto So = Sl || std::is_signed_v<R>;
   constexpr auto Qo = Ql;
@@ -363,12 +362,12 @@ constexpr auto operator-(Fix<true, Wl, Fl, Ql> rhs) noexcept {
                 static_cast<typename Result::Storage>(-rhs.raw())};
 }
 
-template <ct::Integer L, bool Sr, unsigned Wr, unsigned Fr, int Qr>
+template <halstd::Integer L, bool Sr, unsigned Wr, unsigned Fr, int Qr>
 constexpr auto operator*(L lhs, Fix<Sr, Wr, Fr, Qr> rhs) noexcept {
   return rhs * lhs;
 }
 
-template <bool Sl, unsigned Wl, unsigned Fl, int Ql, ct::Integer R>
+template <bool Sl, unsigned Wl, unsigned Fl, int Ql, halstd::Integer R>
 constexpr auto operator*(Fix<Sl, Wl, Fl, Ql> lhs, R rhs) noexcept {
   constexpr auto So = Sl || std::is_signed_v<R>;
   constexpr auto Qo = Ql;

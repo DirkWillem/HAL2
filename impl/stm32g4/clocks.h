@@ -11,15 +11,15 @@
 
 #include <hal/clocks.h>
 
-#include <constexpr_tools/chrono_ex.h>
 #include <constexpr_tools/helpers.h>
 #include <constexpr_tools/math.h>
+#include <halstd/chrono_ex.h>
 
 #include <stm32g4/peripheral_ids.h>
 
 namespace stm32g4 {
 
-using namespace ct::literals;
+using namespace halstd::literals;
 
 enum class PllSource { Hsi = RCC_PLLSOURCE_HSI, Hse = RCC_PLLSOURCE_HSE };
 
@@ -68,11 +68,11 @@ class ClockConfig {
   static constexpr auto SysTickFrequency = 1_kHz;
 
   [[nodiscard]] consteval auto PllClkFreq() const noexcept {
-    ct::hertz result{0};
+    halstd::hertz result{0};
     if (pll.source == PllSource::Hsi) {
-      result = HsiFreq.As<ct::Hz>();
+      result = HsiFreq.As<halstd::Hz>();
     } else {
-      result = f_hse.As<ct::Hz>();
+      result = f_hse.As<halstd::Hz>();
     }
 
     result *= pll.n;
@@ -84,9 +84,9 @@ class ClockConfig {
 
   [[nodiscard]] consteval auto SysClkFreq() const noexcept {
     switch (mcs.sys_clk_source) {
-    case SysClkSource::Hsi: return HsiFreq.As<ct::Hz>();
-    case SysClkSource::Hse: return f_hse.As<ct::Hz>();
-    case SysClkSource::Pll: return PllClkFreq().As<ct::Hz>();
+    case SysClkSource::Hsi: return HsiFreq.As<halstd::Hz>();
+    case SysClkSource::Hse: return f_hse.As<halstd::Hz>();
+    case SysClkSource::Pll: return PllClkFreq().As<halstd::Hz>();
     default: std::unreachable();
     }
   }
@@ -115,26 +115,26 @@ class ClockConfig {
     }
 
     switch (clk_src) {
-    case I2cSourceClock::Pclk1: return Pclk1Freq().As<ct::Hz>();
-    case I2cSourceClock::SysClk: return SysClkFreq().As<ct::Hz>();
-    case I2cSourceClock::Hsi: return HsiFreq.As<ct::Hz>();
+    case I2cSourceClock::Pclk1: return Pclk1Freq().As<halstd::Hz>();
+    case I2cSourceClock::SysClk: return SysClkFreq().As<halstd::Hz>();
+    case I2cSourceClock::Hsi: return HsiFreq.As<halstd::Hz>();
     }
   }
 
   [[nodiscard]] consteval auto PeripheralClkFreq(SpiId id) const {
     switch (id) {
     case SpiId::Spi1: [[fallthrough]];
-    case SpiId::Spi4: return Pclk2Freq().As<ct::Hz>();
+    case SpiId::Spi4: return Pclk2Freq().As<halstd::Hz>();
     case SpiId::Spi2: [[fallthrough]];
-    case SpiId::Spi3: return Pclk1Freq().As<ct::Hz>();
+    case SpiId::Spi3: return Pclk1Freq().As<halstd::Hz>();
     default: std::unreachable();
     }
   }
 
-  consteval ClockConfig(ct::Frequency auto f_hse, PllSettings pll,
+  consteval ClockConfig(halstd::Frequency auto f_hse, PllSettings pll,
                         MainClockSettings             mcs,
                         PeripheralSourceClockSettings pscs = {}) noexcept
-      : f_hse{f_hse.template As<ct::Hz>()}
+      : f_hse{f_hse.template As<halstd::Hz>()}
       , pll{pll}
       , pscs{pscs} {
     // Validate PLL settings
@@ -149,7 +149,7 @@ class ClockConfig {
               (pll.r == 2 || pll.r == 4 || pll.r == 6 || pll.r == 8)));
 
       assert(("PLLCLK may not exceed 170 MHz",
-              (PllClkFreq().As<ct::MHz>().count <= 170)));
+              (PllClkFreq().As<halstd::MHz>().count <= 170)));
     }
 
     // Validate main clock settings
@@ -165,14 +165,14 @@ class ClockConfig {
          (mcs.system_timer_prescaler == 1 || mcs.system_timer_prescaler == 8)));
 
     assert(("PCLK1 may not exceed 170 MHz",
-            (Pclk1Freq().As<ct::MHz>().count <= 170)));
+            (Pclk1Freq().As<halstd::MHz>().count <= 170)));
     assert(("PCLK2 may not exceed 170 MHz",
-            (Pclk2Freq().As<ct::MHz>().count <= 170)));
+            (Pclk2Freq().As<halstd::MHz>().count <= 170)));
   }
 
   [[nodiscard]] bool Configure() const noexcept;
 
-  ct::hertz                     f_hse;
+  halstd::hertz                 f_hse;
   PllSettings                   pll;
   MainClockSettings             mcs;
   PeripheralSourceClockSettings pscs;
@@ -180,8 +180,8 @@ class ClockConfig {
 
 template <typename C>
 concept ClockFrequencies = hal::ClockFrequencies<C> && requires(const C& cfs) {
-  { cfs.PeripheralClkFreq(std::declval<I2cId>()) } -> ct::Frequency;
-  { cfs.PeripheralClkFreq(std::declval<SpiId>()) } -> ct::Frequency;
+  { cfs.PeripheralClkFreq(std::declval<I2cId>()) } -> halstd::Frequency;
+  { cfs.PeripheralClkFreq(std::declval<SpiId>()) } -> halstd::Frequency;
 };
 
 static_assert(ClockFrequencies<ClockConfig>);
@@ -189,7 +189,7 @@ static_assert(ClockFrequencies<ClockConfig>);
 template <hal::ClockFrequencies auto CF>
 class SysTickClock {
  public:
-  constexpr static ct::Duration auto TimeSinceBoot() noexcept {
+  constexpr static halstd::Duration auto TimeSinceBoot() noexcept {
     constexpr auto systick_freq = CF.SysTickFrequency;
 
     return HAL_GetTick() * systick_freq.Period();

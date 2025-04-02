@@ -9,7 +9,7 @@
 #include <constexpr_tools/buffer_io.h>
 #include <constexpr_tools/crc.h>
 #include <constexpr_tools/math.h>
-#include <constexpr_tools/type_helpers.h>
+#include <halstd/mp/type_helpers.h>
 
 #include <hal/clocks.h>
 
@@ -59,7 +59,7 @@ inline constexpr auto DescribeFrameEndChar   = std::byte{'I'};
 inline constexpr auto NullFrameStartChar = std::byte{'('};
 inline constexpr auto NullFrameEndChar   = std::byte{')'};
 
-template <hal::AsyncUart Uart, hal::Clock C, FrameType... Frames>
+template <hal::AsyncUart Uart, halstd::Clock C, FrameType... Frames>
   requires(sizeof...(Frames) > 0)
 /**
  * UART Implementation for SBS (Simple Binary Signals)
@@ -467,8 +467,8 @@ class SbsUart : private detail::FrameSlot<typename Frames::FrameType>... {
 
   std::span<std::byte> rx_message_view{};
 
-  hal::MethodCallback<SbsUart, std::span<std::byte>> uart_rx_callback;
-  hal::MethodCallback<SbsUart>                       uart_tx_callback;
+  halstd::MethodCallback<SbsUart, std::span<std::byte>> uart_rx_callback;
+  halstd::MethodCallback<SbsUart>                       uart_tx_callback;
 };
 
 }   // namespace sbs::uart

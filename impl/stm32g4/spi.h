@@ -4,7 +4,7 @@
 #include <span>
 #include <tuple>
 
-#include <constexpr_tools/logic.h>
+#include <halstd/logic.h>
 
 #include <hal/spi.h>
 
@@ -160,30 +160,30 @@ void SetupSpiMaster(SpiId id, SPI_HandleTypeDef& hspi,
 template <SpiId Id, auto CF>
   requires ClockFrequencies<decltype(CF)>
 [[nodiscard]] constexpr SpiBaudPrescaler
-FindPrescalerValue(ct::Frequency auto baud_rate) {
-  std::array<std::tuple<SpiBaudPrescaler, ct::Hz>, 8> options{{
+FindPrescalerValue(halstd::Frequency auto baud_rate) {
+  std::array<std::tuple<SpiBaudPrescaler, halstd::Hz>, 8> options{{
       {SpiBaudPrescaler::Prescale2,
-       (CF.PeripheralClkFreq(Id) / 2).template As<ct::Hz>()},
+       (CF.PeripheralClkFreq(Id) / 2).template As<halstd::Hz>()},
       {SpiBaudPrescaler::Prescale4,
-       (CF.PeripheralClkFreq(Id) / 4).template As<ct::Hz>()},
+       (CF.PeripheralClkFreq(Id) / 4).template As<halstd::Hz>()},
       {SpiBaudPrescaler::Prescale8,
-       (CF.PeripheralClkFreq(Id) / 8).template As<ct::Hz>()},
+       (CF.PeripheralClkFreq(Id) / 8).template As<halstd::Hz>()},
       {SpiBaudPrescaler::Prescale16,
-       (CF.PeripheralClkFreq(Id) / 16).template As<ct::Hz>()},
+       (CF.PeripheralClkFreq(Id) / 16).template As<halstd::Hz>()},
       {SpiBaudPrescaler::Prescale32,
-       (CF.PeripheralClkFreq(Id) / 32).template As<ct::Hz>()},
+       (CF.PeripheralClkFreq(Id) / 32).template As<halstd::Hz>()},
       {SpiBaudPrescaler::Prescale64,
-       (CF.PeripheralClkFreq(Id) / 64).template As<ct::Hz>()},
+       (CF.PeripheralClkFreq(Id) / 64).template As<halstd::Hz>()},
       {SpiBaudPrescaler::Prescale128,
-       (CF.PeripheralClkFreq(Id) / 128).template As<ct::Hz>()},
+       (CF.PeripheralClkFreq(Id) / 128).template As<halstd::Hz>()},
       {SpiBaudPrescaler::Prescale256,
-       (CF.PeripheralClkFreq(Id) / 256).template As<ct::Hz>()},
+       (CF.PeripheralClkFreq(Id) / 256).template As<halstd::Hz>()},
   }};
 
   auto best_err      = std::numeric_limits<uint32_t>::max();
   auto best_prescale = SpiBaudPrescaler::Prescale2;
 
-  const auto desired = baud_rate.template As<ct::Hz>();
+  const auto desired = baud_rate.template As<halstd::Hz>();
 
   for (const auto [prescale, actual_baud] : options) {
     const auto err = (actual_baud > desired ? (actual_baud - desired)
@@ -234,7 +234,7 @@ class SpiImpl : public hal::UsedPeripheral {
   }
 
   [[nodiscard]] bool ReceiveBlocking(std::span<Data>   into,
-                                     ct::Duration auto timeout) noexcept
+                                     halstd::Duration auto timeout) noexcept
     requires(hal::SpiReceiveEnabled(TT))
   {
     return HAL_SPI_Receive(
@@ -254,7 +254,7 @@ class SpiImpl : public hal::UsedPeripheral {
   }
 
  protected:
-  SpiImpl(Pinout pinout, ct::Frequency auto clock_frequency)
+  SpiImpl(Pinout pinout, halstd::Frequency auto clock_frequency)
     requires(OM == SpiOperatingMode::Poll)
   {
     const auto presc = detail::FindPrescalerValue<Id, CF>(clock_frequency);
@@ -263,17 +263,17 @@ class SpiImpl : public hal::UsedPeripheral {
     detail::SetupSpiMaster(Id, hspi, presc, DS, TT);
   }
 
-  SpiImpl(hal::Dma auto& dma, Pinout pinout, ct::Frequency auto clock_frequency)
+  SpiImpl(hal::Dma auto& dma, Pinout pinout, halstd::Frequency auto clock_frequency)
     requires(OM == SpiOperatingMode::Dma)
   {
     using DmaT = std::decay_t<decltype(dma)>;
 
     // Validate DMA instance
-    static_assert(ct::Implies(hal::SpiTransmitEnabled(TT),
+    static_assert(halstd::Implies(hal::SpiTransmitEnabled(TT),
                               DmaT::template ChannelEnabled<TxDmaChannel>()),
                   "If the transmission mode allows transmission, the TX DMA "
                   "channel must be enabled");
-    static_assert(ct::Implies(hal::SpiReceiveEnabled(TT),
+    static_assert(halstd::Implies(hal::SpiReceiveEnabled(TT),
                               DmaT::template ChannelEnabled<RxDmaChannel>()),
                   "If the transmission mode allows transmission, the RX DMA "
                   "channel must be enabled");
