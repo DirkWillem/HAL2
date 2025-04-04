@@ -5,8 +5,8 @@
 #include <span>
 #include <variant>
 
+#include <../../halstd/spans.h>
 #include <constexpr_tools/crc.h>
-#include <constexpr_tools/spans.h>
 
 #include "vrpc_uart_frames.h"
 

@@ -21,7 +21,6 @@ enum class UartStopBits { Half, One, OneAndHalf, Two };
 template <typename Impl>
 concept UartBase = Peripheral<Impl> && IsPeripheralInUse<Impl>() && requires {
   { Impl::OperatingMode } -> std::convertible_to<UartOperatingMode>;
-  { Impl::FlowControl } -> std::convertible_to<UartFlowControl>;
 };
 
 template <typename Impl>

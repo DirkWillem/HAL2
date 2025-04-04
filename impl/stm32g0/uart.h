@@ -5,6 +5,9 @@
 
 #include <stm32g0xx_hal.h>
 
+#include <halstd/compile_time_assert.h>
+#include <halstd/spans.h>
+
 #include <hal/peripheral.h>
 #include <hal/uart.h>
 
@@ -20,13 +23,47 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t size);
 
 namespace stm32g0 {
 
+enum class UartFlowControl {
+  None,
+  Rs485,
+};
+
+enum class Rs485DriveEnablePolarity : uint32_t {
+  High = UART_DE_POLARITY_HIGH,
+  Low  = UART_DE_POLARITY_LOW
+};
+
+/**
+ * Struct containing all configuration parameters of a UART peripheral
+ */
+struct UartConfig {
+  hal::UartParity   parity    = hal::UartParity::None;
+  hal::UartStopBits stop_bits = hal::UartStopBits::One;
+
+  UartFlowControl          flow_control = UartFlowControl::None;
+  Rs485DriveEnablePolarity de_polarity  = Rs485DriveEnablePolarity::High;
+  uint8_t                  rs485_assertion_time   = 0;
+  uint8_t                  rs485_deassertion_time = 0;
+
+  consteval bool Validate() const noexcept {
+    // Validate RS-485-related parameters
+    halstd::Assert(rs485_assertion_time <= 31,
+                   "RS-485 assertion time must be between 0 and 31");
+    halstd::Assert(rs485_deassertion_time <= 31,
+                   "RS-485 assertion time must be between 0 and 31");
+
+    return true;
+  }
+};
+
 namespace detail {
 
-template <UartId Id, hal::UartFlowControl FC>
+template <UartId Id, UartConfig C>
 struct UartPinoutHelper;
 
-template <UartId Id>
-struct UartPinoutHelper<Id, hal::UartFlowControl::None> {
+template <UartId Id, UartConfig C>
+  requires(C.flow_control == UartFlowControl::None)
+struct UartPinoutHelper<Id, C> {
   struct Pinout {
     consteval Pinout(PinId tx, PinId rx,
                      hal::PinPull pull_tx = hal::PinPull::NoPull,
@@ -35,13 +72,19 @@ struct UartPinoutHelper<Id, hal::UartFlowControl::None> {
         , rx{rx}
         , pull_tx{pull_tx}
         , pull_rx{pull_rx} {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-value"
-      assert(("TX pin must be valid",
-              hal::FindPinAFMapping(UartTxPinMappings, Id, tx).has_value()));
-      assert(("RX pin must be valid",
-              hal::FindPinAFMapping(UartRxPinMappings, Id, rx).has_value()));
-#pragma GCC diagnostic pop
+      halstd::Assert(
+          hal::FindPinAFMapping(UartTxPinMappings, Id, tx).has_value(),
+          "TX pin must be valid");
+      halstd::Assert(
+          hal::FindPinAFMapping(UartRxPinMappings, Id, rx).has_value(),
+          "RX pin must be valid");
+    }
+
+    void Initialize() noexcept {
+      Pin::InitializeAlternate(
+          tx, hal::FindPinAFMapping(UartTxPinMappings, Id, tx)->af, pull_tx);
+      Pin::InitializeAlternate(
+          rx, hal::FindPinAFMapping(UartRxPinMappings, Id, rx)->af, pull_rx);
     }
 
     PinId tx;
@@ -52,9 +95,55 @@ struct UartPinoutHelper<Id, hal::UartFlowControl::None> {
   };
 };
 
+template <UartId Id, UartConfig C>
+  requires(C.flow_control == UartFlowControl::Rs485)
+struct UartPinoutHelper<Id, C> {
+  struct Pinout {
+    consteval Pinout(PinId tx, PinId rx, PinId de,
+                     hal::PinPull pull_tx = hal::PinPull::NoPull,
+                     hal::PinPull pull_rx = hal::PinPull::NoPull,
+                     hal::PinPull pull_de = hal::PinPull::NoPull) noexcept
+        : tx{tx}
+        , rx{rx}
+        , de{de}
+        , pull_tx{pull_tx}
+        , pull_rx{pull_rx}
+        , pull_de{pull_de} {
+      halstd::Assert(
+          hal::FindPinAFMapping(UartTxPinMappings, Id, tx).has_value(),
+          "TX pin must be valid");
+      halstd::Assert(
+          hal::FindPinAFMapping(UartRxPinMappings, Id, rx).has_value(),
+          "RX pin must be valid");
+      halstd::Assert(
+          hal::FindPinAFMapping(UartRtsPinMappings, Id, de).has_value(),
+          "DE pin must be valid");
+    }
+
+    void Initialize() noexcept {
+      Pin::InitializeAlternate(
+          tx, hal::FindPinAFMapping(UartTxPinMappings, Id, tx)->af, pull_tx);
+      Pin::InitializeAlternate(
+          rx, hal::FindPinAFMapping(UartRxPinMappings, Id, rx)->af, pull_rx);
+      Pin::InitializeAlternate(
+          de, hal::FindPinAFMapping(UartRtsPinMappings, Id, de)->af, pull_de);
+    }
+
+    PinId tx;
+    PinId rx;
+    PinId de;
+
+    hal::PinPull pull_tx;
+    hal::PinPull pull_rx;
+    hal::PinPull pull_de;
+  };
+};
+
 void SetupUartNoFc(UartId id, UART_HandleTypeDef& huart, unsigned baud,
-                   hal::UartParity   parity,
-                   hal::UartStopBits stop_bits) noexcept;
+                   const UartConfig& cfg) noexcept;
+
+void SetupUartRs485(UartId id, UART_HandleTypeDef& huart, unsigned baud,
+                    const UartConfig& cfg) noexcept;
 
 void InitializeUartForPollMode(UART_HandleTypeDef& huart) noexcept;
 void InitializeUartForInterruptMode(UartId              id,
@@ -62,15 +151,25 @@ void InitializeUartForInterruptMode(UartId              id,
 
 }   // namespace detail
 
+/**
+ * UART Transmit DMA channel
+ * @tparam Id UART Id
+ * @tparam Prio DMA Priority
+ */
 template <UartId Id, hal::DmaPriority Prio = hal::DmaPriority::Low>
 using UartTxDma = DmaChannel<Id, UartDmaRequest::Tx, Prio>;
 
+/**
+ * UART Receive DMA channel
+ * @tparam Id UART Id
+ * @tparam Prio DMA Priority
+ */
 template <UartId Id, hal::DmaPriority Prio = hal::DmaPriority::Low>
 using UartRxDma = DmaChannel<Id, UartDmaRequest::Rx, Prio>;
 
 template <typename Impl, UartId Id,
           hal::UartOperatingMode OM = hal::UartOperatingMode::Poll,
-          hal::UartFlowControl   FC = hal::UartFlowControl::None>
+          UartConfig             C  = {}>
 /**
  * Implementation for UART
  * @tparam Id UART Id
@@ -82,12 +181,13 @@ class UartImpl : public hal::UsedPeripheral {
                                            uint16_t            size);
   friend void ::HAL_UART_TxCpltCallback(UART_HandleTypeDef*);
 
+  static_assert(C.Validate());
+
  public:
   static constexpr auto OperatingMode = OM;
-  static constexpr auto FlowControl   = FC;
   using TxDmaChannel                  = DmaChannel<Id, UartDmaRequest::Tx>;
   using RxDmaChannel                  = DmaChannel<Id, UartDmaRequest::Rx>;
-  using Pinout = detail::UartPinoutHelper<Id, FC>::Pinout;
+  using Pinout = typename detail::UartPinoutHelper<Id, C>::Pinout;
 
   void HandleInterrupt() noexcept { HAL_UART_IRQHandler(&huart); }
 
@@ -98,28 +198,28 @@ class UartImpl : public hal::UsedPeripheral {
   void Write(std::string_view sv)
     requires(OM == hal::UartOperatingMode::Poll)
   {
-    HAL_UART_Transmit(&huart, reinterpret_cast<const uint8_t*>(sv.data()),
+    HAL_UART_Transmit(&huart, halstd::ReinterpretSpan<uint8_t>(sv).data(),
                       sv.size(), 500);
   }
 
   void Write(std::string_view sv)
     requires(OM == hal::UartOperatingMode::Interrupt)
   {
-    HAL_UART_Transmit_IT(&huart, reinterpret_cast<const uint8_t*>(sv.data()),
+    HAL_UART_Transmit_IT(&huart, halstd::ReinterpretSpan<uint8_t>(sv).data(),
                          sv.size());
   }
 
   void Write(std::string_view sv)
     requires(OM == hal::UartOperatingMode::Dma)
   {
-    HAL_UART_Transmit_DMA(&huart, reinterpret_cast<const uint8_t*>(sv.data()),
+    HAL_UART_Transmit_DMA(&huart, halstd::ReinterpretSpan<uint8_t>(sv).data(),
                           sv.size());
   }
 
   void Write(std::span<const std::byte> data)
     requires(OM == hal::UartOperatingMode::Dma)
   {
-    HAL_UART_Transmit_DMA(&huart, reinterpret_cast<const uint8_t*>(data.data()),
+    HAL_UART_Transmit_DMA(&huart, halstd::ReinterpretSpan<uint8_t>(data).data(),
                           data.size());
   }
 
@@ -128,7 +228,8 @@ class UartImpl : public hal::UsedPeripheral {
   {
     rx_buf = into;
     HAL_UARTEx_ReceiveToIdle_DMA(
-        &huart, reinterpret_cast<uint8_t*>(rx_buf.data()), rx_buf.size());
+        &huart, halstd::ReinterpretSpanMut<uint8_t>(rx_buf).data(),
+        rx_buf.size());
   }
 
   /**
@@ -145,25 +246,19 @@ class UartImpl : public hal::UsedPeripheral {
    * Constructor for UART without flow control in poll or interrupt mode
    * @param pinout UART pinout
    * @param baud UART baud rate
-   * @param parity UART parity
-   * @param stop_bits UART stop bits
    */
-  UartImpl(Pinout pinout, unsigned baud,
-           hal::UartParity   parity    = hal::UartParity::None,
-           hal::UartStopBits stop_bits = hal::UartStopBits::One)
-    requires(FC == hal::UartFlowControl::None
-             && OM != hal::UartOperatingMode::Dma)
+  UartImpl(Pinout pinout, unsigned baud)
+    requires(OM != hal::UartOperatingMode::Dma)
       : huart{} {
-    // Set up tx and rx pins
-    Pin::InitializeAlternate(
-        pinout.tx, hal::FindPinAFMapping(UartTxPinMappings, Id, pinout.tx)->af,
-        pinout.pull_tx);
-    Pin::InitializeAlternate(
-        pinout.rx, hal::FindPinAFMapping(UartRxPinMappings, Id, pinout.rx)->af,
-        pinout.pull_rx);
+    // Set up pins
+    pinout.Initialize();
 
     // Initialize UART
-    detail::SetupUartNoFc(Id, huart, baud, parity, stop_bits);
+    if constexpr (C.flow_control == UartFlowControl::None) {
+      detail::SetupUartNoFc(Id, huart, baud, C);
+    } else if constexpr (C.flow_control == UartFlowControl::Rs485) {
+      detail::SetupUartRs485(Id, huart, baud, C);
+    }
 
     // Set up UART for the requested operation mode
     if constexpr (OM == hal::UartOperatingMode::Poll) {
@@ -191,14 +286,9 @@ class UartImpl : public hal::UsedPeripheral {
    * Constructor for UART without flow control in DMA mode
    * @param pinout UART pinout
    * @param baud UART baud rate
-   * @param parity UART parity
-   * @param stop_bits UART stop bits
    */
-  UartImpl(hal::Dma auto& dma, Pinout pinout, unsigned baud,
-           hal::UartParity   parity    = hal::UartParity::None,
-           hal::UartStopBits stop_bits = hal::UartStopBits::One)
-    requires(FC == hal::UartFlowControl::None
-             && OM == hal::UartOperatingMode::Dma)
+  UartImpl(hal::Dma auto& dma, Pinout pinout, unsigned baud)
+    requires(OM == hal::UartOperatingMode::Dma)
       : huart{} {
     using Dma = std::decay_t<decltype(dma)>;
     static_assert(Dma::template ChannelEnabled<TxDmaChannel>(),
@@ -206,16 +296,15 @@ class UartImpl : public hal::UsedPeripheral {
     static_assert(Dma::template ChannelEnabled<RxDmaChannel>(),
                   "RX DMA channel must be enabled");
 
-    // Set up tx and rx pins
-    Pin::InitializeAlternate(
-        pinout.tx, hal::FindPinAFMapping(UartTxPinMappings, Id, pinout.tx)->af,
-        pinout.pull_tx);
-    Pin::InitializeAlternate(
-        pinout.rx, hal::FindPinAFMapping(UartRxPinMappings, Id, pinout.rx)->af,
-        pinout.pull_rx);
+    // Set up pins
+    pinout.Initialize();
 
     // Initialize UART
-    detail::SetupUartNoFc(Id, huart, baud, parity, stop_bits);
+    if constexpr (C.flow_control == UartFlowControl::None) {
+      detail::SetupUartNoFc(Id, huart, baud, C);
+    } else if constexpr (C.flow_control == UartFlowControl::Rs485) {
+      detail::SetupUartRs485(Id, huart, baud, C);
+    }
 
     // Set up UART for the requested operation mode
     auto& htxdma = dma.template SetupChannel<TxDmaChannel>(

@@ -1,5 +1,7 @@
 #include "uart.h"
 
+#include <stm32g0xx_hal_uart_ex.h>
+
 namespace stm32g0::detail {
 
 constexpr void EnableUartClk(UartId id) noexcept {
@@ -53,8 +55,7 @@ ToHalStopBits(hal::UartStopBits stop_bits) noexcept {
 }
 
 void SetupUartNoFc(UartId id, UART_HandleTypeDef& huart, unsigned baud,
-                   hal::UartParity   parity,
-                   hal::UartStopBits stop_bits) noexcept {
+                   const UartConfig& cfg) noexcept {
   // Enable UART clock
   EnableUartClk(id);
 
@@ -63,8 +64,8 @@ void SetupUartNoFc(UartId id, UART_HandleTypeDef& huart, unsigned baud,
   huart.Init     = {
           .BaudRate       = baud,
           .WordLength     = USART_WORDLENGTH_8B,
-          .StopBits       = ToHalStopBits(stop_bits),
-          .Parity         = ToHalParity(parity),
+          .StopBits       = ToHalStopBits(cfg.stop_bits),
+          .Parity         = ToHalParity(cfg.parity),
           .Mode           = USART_MODE_TX_RX,
           .HwFlowCtl      = UART_HWCONTROL_NONE,
           .OverSampling   = UART_OVERSAMPLING_16,
@@ -73,6 +74,30 @@ void SetupUartNoFc(UartId id, UART_HandleTypeDef& huart, unsigned baud,
 
   };
   HAL_UART_Init(&huart);
+}
+
+void SetupUartRs485(UartId id, UART_HandleTypeDef& huart, unsigned baud,
+                    const UartConfig& cfg) noexcept {
+  // Enable UART clock
+  EnableUartClk(id);
+
+  // Set up handle
+  huart.Instance = GetUartPointer(id);
+  huart.Init     = {
+          .BaudRate       = baud,
+          .WordLength     = USART_WORDLENGTH_8B,
+          .StopBits       = ToHalStopBits(cfg.stop_bits),
+          .Parity         = ToHalParity(cfg.parity),
+          .Mode           = USART_MODE_TX_RX,
+          .HwFlowCtl      = UART_HWCONTROL_NONE,
+          .OverSampling   = UART_OVERSAMPLING_16,
+          .OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE,
+          .ClockPrescaler = UART_PRESCALER_DIV1,
+
+  };
+
+  HAL_RS485Ex_Init(&huart, static_cast<uint32_t>(cfg.de_polarity),
+                   cfg.rs485_assertion_time, cfg.rs485_deassertion_time);
 }
 
 void InitializeUartForPollMode(UART_HandleTypeDef& huart) noexcept {

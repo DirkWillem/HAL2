@@ -1,9 +1,10 @@
 #pragma once
 
 #include <span>
+#include <string_view>
 #include <utility>
 
-namespace ct {
+namespace halstd {
 
 /**
  * Returns whether a span is a sub-span of another span
@@ -84,9 +85,21 @@ std::span<const TOut> ReinterpretSpan(std::span<const TIn> in) noexcept {
   };
 }
 
+template <ByteLike TOut>
+/**
+ * Returns a byte view over the data contained in a string view
+ * @tparam TOut Output type, must be a type that is able to access the raw
+ *   memory representation of an object (std::byte, unsigned char)
+ * @param in Input string view
+ * @return Byte view over the passed span
+ */
+std::span<const TOut> ReinterpretSpan(std::string_view in) noexcept {
+  return std::span{reinterpret_cast<const TOut*>(in.data()), in.size()};
+}
+
 template <ByteLike TOut, typename TIn>
 std::span<TOut> MutByteViewOver(TIn& in) {
   return std::span{reinterpret_cast<TOut*>(&in), sizeof(in)};
 }
 
-}   // namespace ct
+}   // namespace halstd

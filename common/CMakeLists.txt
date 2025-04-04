@@ -5,7 +5,6 @@ add_library(constexpr_tools INTERFACE
         constexpr_tools/integer.h
         constexpr_tools/math.h
         constexpr_tools/memory_size.h
-        constexpr_tools/spans.h
         constexpr_tools/static_mapping.h
         constexpr_tools/static_string.h
         constexpr_tools/strings.h)
@@ -22,8 +21,10 @@ add_library(halstd INTERFACE
         halstd/atomic_helpers.h
         halstd/callback.h
         halstd/chrono_ex.h
+        halstd/compile_time_assert.h
         halstd/logic.h
-        halstd/ratio_ex.h)
+        halstd/ratio_ex.h
+        halstd/spans.h)
 target_include_directories(halstd INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
 
