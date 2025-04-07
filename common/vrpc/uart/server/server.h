@@ -36,7 +36,7 @@ class VrpcUartServerExtensions {};
 template <ServerOptions O>
   requires O::MultiDrop
 class VrpcUartServerExtensions<O> {
- protected:
+ public:
   constexpr void ChangeAddress(uint32_t new_address) noexcept {
     address = new_address;
   }
