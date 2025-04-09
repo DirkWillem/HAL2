@@ -4,6 +4,7 @@
 #include <cassert>
 #include <concepts>
 #include <optional>
+#include <utility>
 
 namespace hal {
 

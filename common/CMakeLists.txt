@@ -29,6 +29,25 @@ target_include_directories(halstd INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
 
 
+
+add_library(hstd)
+target_sources(hstd
+    PUBLIC
+    FILE_SET CXX_MODULES FILES
+        halstd_module/mp/helpers.cppm
+        halstd_module/mp/types.cppm
+        halstd_module/mp/values.cppm
+
+        halstd_module/atomic.cppm
+        halstd_module/callback.cppm
+        halstd_module/chrono.cppm
+        halstd_module/logic.cppm
+        halstd_module/ratio.cppm
+        halstd_module/spans.cppm
+
+        halstd_module/halstd.cppm)
+target_link_libraries(hstd PRIVATE project_settings)
+
 # Proxy library for CMSIS-DSP which allows disabling it under certain build conditions
 add_library(cmsis_dsp INTERFACE)
 target_link_libraries(cmsis_dsp INTERFACE CMSISDSP)
