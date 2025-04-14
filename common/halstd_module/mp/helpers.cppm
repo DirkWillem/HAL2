@@ -7,22 +7,18 @@ module;
 
 export module hstd:mp.helpers;
 
-export namespace hstd {
+namespace hstd {
 
 /**
  * Maps a NTTP to a type
  * @tparam V Value to map from
  * @tparam T Type to map to
  */
-template <std::equality_comparable auto V, typename T>
+export template <std::equality_comparable auto V, typename T>
 struct ValToType {
   static constexpr auto Value = V;
   using Type                  = T;
 };
-
-}   // namespace halstd
-
-namespace hstd {
 
 template <std::equality_comparable auto V, typename... Ms>
 struct MapValToTypeHelper;
@@ -71,45 +67,41 @@ struct TypePartitionHelper<Predicate, List, List<MatchedTypes...>,
   using Unmatched = List<UnmatchedTypes...>;
 };
 
-}   // namespace halstd
-
-export namespace hstd {
-
 /** Concept for a field pointer for a given StructType and FieldType */
-template <typename T, typename StructType, typename FieldType>
+export template <typename T, typename StructType, typename FieldType>
 concept FieldPointer = requires(T ptr, StructType s) {
   { s.*ptr } -> std::convertible_to<FieldType>;
 };
 
-template <typename T>
+export template <typename T>
 concept Integer = std::is_unsigned_v<T> || std::is_signed_v<T>;
 
-template <std::equality_comparable auto V, typename... Ms>
+export template <std::equality_comparable auto V, typename... Ms>
 using MapValToType = typename MapValToTypeHelper<V, Ms...>::Type;
 
-template <std::size_t V>
+export template <std::size_t V>
 using Size = std::integral_constant<std::size_t, V>;
 
-template <template <typename> typename Predicate,
-          template <typename...> typename List, typename... Ts>
+export template <template <typename> typename Predicate,
+                 template <typename...> typename List, typename... Ts>
 using PartitionTypes =
     TypePartitionHelper<Predicate, List, List<>, List<>, Ts...>;
 
-template <typename T>
+export template <typename>
 struct Marker {};
 
-template <typename... Ts>
+export template <typename...>
 struct Markers {};
 
-template <auto V>
+export template <auto>
 struct ValueMarker {};
 
-struct Empty {};
+export struct Empty {};
 
-template <typename In, typename Out>
+export template <typename, typename Out>
 using Map = Out;
 
-template <auto V>
+export template <auto>
 constexpr bool IsConstantExpression() {
   return true;
 }
@@ -120,12 +112,24 @@ constexpr bool IsConstantExpression() {
  * @param check Check to perform
  * @param message Diagnostic message
  */
-consteval void Assert(bool                              check,
-                      [[maybe_unused]] std::string_view message) noexcept {
+export consteval void
+Assert(bool check, [[maybe_unused]] std::string_view message) noexcept {
   if (!check) {
     std::unreachable();
   }
 }
 
+export template <typename TIn, typename TOut, std::size_t N>
+[[nodiscard]] consteval TOut
+StaticMap(std::equality_comparable_with<TIn> auto value,
+          std::array<std::pair<TIn, TOut>, N>     mapping) {
+  for (const auto [in, out] : mapping) {
+    if (value == in) {
+      return out;
+    }
+  }
 
-}   // namespace halstd
+  std::unreachable();
+}
+
+}   // namespace hstd

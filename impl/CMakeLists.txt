@@ -64,6 +64,56 @@ function(add_stm32g0_hal VARIANT XMLFILE)
     target_include_directories("${VARIANT}_hal" PUBLIC
             "${CMAKE_CURRENT_LIST_DIR}"
             "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}")
+
+    if (NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.cppm")
+        add_generated_file(
+                stm32g0
+                "${VARIANT}"
+                "uart-pin-mapping-module"
+                "${XMLFILE}"
+                "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.cppm")
+    endif()
+
+    add_library("${VARIANT}_hal_mod")
+    target_sources("${VARIANT}_hal_mod"
+            PUBLIC
+            FILE_SET CXX_MODULES
+            FILES
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.cppm"
+
+            stm32g0_mod/clocks.cppm
+            stm32g0_mod/dma.cppm
+            stm32g0_mod/peripherals.cppm
+            stm32g0_mod/pin.cppm
+            stm32g0_mod/system.cppm
+            stm32g0_mod/uart.cppm
+
+            stm32g0_mod/stm32g0.cppm
+
+            PUBLIC
+            FILE_SET pub_headers TYPE HEADERS
+            BASE_DIRS "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod"
+            FILES
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/pin_macros.h"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/interrupts.h"
+            PRIVATE
+            FILE_SET gen_headers TYPE HEADERS
+            BASE_DIRS "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}"
+            FILES
+            "stm32g0/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.h"
+            "stm32g0/generated/${VARIANT}/stm32g0/mappings/spi_i2s_pin_mapping.h"
+            "stm32g0/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.h"
+    )
+
+    target_link_libraries("${VARIANT}_hal_mod"
+            PUBLIC
+            "${VARIANT}_vendor"
+
+            PRIVATE
+            hstd
+            hal_abstract
+            project_settings)
+
 endfunction()
 
 function(add_stm32g4_hal VARIANT XMLFILE)
@@ -223,20 +273,20 @@ endfunction()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
     add_stm32g0_hal(stm32g0b1 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G0B1R(B-C-E)Tx.xml")
-endif()
+endif ()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m4")
     add_stm32g4_hal(stm32g474 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G474R(B-C-E)Tx.xml")
 
     add_multicore_linkopts(stm32h755 cm4)
     add_stm32h7_hal(stm32h755 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32H755ZITx.xml")
-endif()
+endif ()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m7")
     add_multicore_linkopts(stm32h755 cm7)
     add_stm32h7_hal(stm32h755 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32H755ZITx.xml")
-endif()
+endif ()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m33")
     add_stm32h5_hal(stm32h533 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32H533RETx.xml")
-endif()
+endif ()

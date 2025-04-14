@@ -29,11 +29,10 @@ target_include_directories(halstd INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
 
 
-
 add_library(hstd)
 target_sources(hstd
-    PUBLIC
-    FILE_SET CXX_MODULES FILES
+        PUBLIC
+        FILE_SET CXX_MODULES FILES
         halstd_module/mp/helpers.cppm
         halstd_module/mp/types.cppm
         halstd_module/mp/values.cppm

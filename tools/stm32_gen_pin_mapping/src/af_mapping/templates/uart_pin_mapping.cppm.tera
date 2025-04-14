@@ -1,0 +1,32 @@
+{% import "uart_macros" as uart -%}
+module;
+
+#include <array>
+
+#include <pin_macros.h>
+
+export module hal.{{family}}:pin_mapping.uart;
+
+import hal.abstract;
+
+import :peripherals;
+import :pin;
+
+namespace {{ family }} {
+
+using UartPinMapping = hal::AFMapping<PinId, UartId>;
+
+/** TX pin mappings */
+{{ uart::pin_mappings(var_name="UartTxPinMappings", pins=uart_pins.tx) }}
+
+/** RX pin mappings */
+{{ uart::pin_mappings(var_name="UartRxPinMappings", pins=uart_pins.rx) }}
+
+/** RTS pin mappings */
+{{ uart::pin_mappings(var_name="UartRtsPinMappings", pins=uart_pins.rts) }}
+
+/** CTS pin mappings */
+{{ uart::pin_mappings(var_name="UartCtsPinMappings", pins=uart_pins.cts) }}
+
+}
+

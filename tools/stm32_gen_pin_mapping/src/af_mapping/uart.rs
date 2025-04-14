@@ -78,3 +78,23 @@ pub fn gen_mapping_header(pin_data: &PinData, family: &str, mcu: &str) -> anyhow
 
     Ok(tera.render("uart_pin_mapping", &context)?)
 }
+
+pub fn gen_mapping_module(pin_data: &PinData, family: &str, mcu: &str) -> anyhow::Result<String> {
+    // Get UART pin mappings
+    let uart_pin_mappings = get_uart_pin_mappings(&pin_data)?;
+
+    // Setup templates
+    let mut tera = Tera::default();
+    tera.add_raw_template("uart_macros", include_str!("templates/uart_macros.tera"))?;
+    tera.add_raw_template(
+        "uart_pin_mapping",
+        include_str!("templates/uart_pin_mapping.cppm.tera"),
+    )?;
+
+    let mut context = tera::Context::new();
+    context.insert("family", family);
+    context.insert("mcu", mcu);
+    context.insert("uart_pins", &uart_pin_mappings);
+
+    Ok(tera.render("uart_pin_mapping", &context)?)
+}

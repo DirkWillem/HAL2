@@ -16,6 +16,7 @@ use tera::Tera;
 #[derive(ValueEnum, Clone, Serialize)]
 enum GenType {
     UartPinMapping,
+    UartPinMappingModule,
     SpiI2sPinMapping,
     I2cPinMapping,
     UsbPinMapping,
@@ -60,6 +61,7 @@ fn main() -> anyhow::Result<()> {
 
     let header = match cli.gen {
         GenType::UartPinMapping => uart::gen_mapping_header(&pin_data, &cli.family, &cli.mcu)?,
+        GenType::UartPinMappingModule => uart::gen_mapping_module(&pin_data, &cli.family, &cli.mcu)?,
         GenType::SpiI2sPinMapping => spi_i2s::gen_mapping_header(&pin_data, &cli.family, &cli.mcu)?,
         GenType::I2cPinMapping => i2c::gen_mapping_header(&pin_data, &cli.family, &cli.mcu)?,
         GenType::UsbPinMapping => usb::gen_mapping_header(&pin_data, &cli.family, &cli.mcu)?,
