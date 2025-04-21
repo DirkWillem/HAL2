@@ -21,6 +21,7 @@ enum GenType {
     I2cPinMapping,
     UsbPinMapping,
     TimPinMapping,
+    TimPinMappingModule,
 }
 
 #[derive(Parser)]
@@ -61,11 +62,14 @@ fn main() -> anyhow::Result<()> {
 
     let header = match cli.gen {
         GenType::UartPinMapping => uart::gen_mapping_header(&pin_data, &cli.family, &cli.mcu)?,
-        GenType::UartPinMappingModule => uart::gen_mapping_module(&pin_data, &cli.family, &cli.mcu)?,
+        GenType::UartPinMappingModule => {
+            uart::gen_mapping_module(&pin_data, &cli.family, &cli.mcu)?
+        }
         GenType::SpiI2sPinMapping => spi_i2s::gen_mapping_header(&pin_data, &cli.family, &cli.mcu)?,
         GenType::I2cPinMapping => i2c::gen_mapping_header(&pin_data, &cli.family, &cli.mcu)?,
         GenType::UsbPinMapping => usb::gen_mapping_header(&pin_data, &cli.family, &cli.mcu)?,
         GenType::TimPinMapping => tim::gen_mapping_header(&pin_data, &cli.family, &cli.mcu)?,
+        GenType::TimPinMappingModule => tim::gen_mapping_module(&pin_data, &cli.family, &cli.mcu)?,
     };
 
     let mut out_file = File::create(cli.out_file.as_str())?;

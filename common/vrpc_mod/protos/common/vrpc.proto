@@ -1,0 +1,77 @@
+syntax = "proto3";
+
+import "nanopb.proto";
+
+option csharp_namespace = "Vrpc.Generated";
+
+package vrpc;
+
+message UFix {
+  uint32 w = 1;
+  uint32 f = 2;
+}
+
+message UFixQ {
+  uint32 w = 1;
+  uint32 f = 2;
+  int32 q = 3;
+}
+
+message Fix {
+  oneof fix {
+    UFix ufix = 1;
+    UFixQ ufixq = 2;
+  }
+}
+
+enum RequestFailureType {
+  REQUEST_FAILURE_TYPE_UNKNOWN_SERVICE = 0;
+  REQUEST_FAILURE_TYPE_UNKNOWN_METHOD = 1;
+  REQUEST_FAILURE_TYPE_MALFORMED_PAYLOAD = 2;
+  REQUEST_FAILURE_TYPE_ENCODE_FAILURE = 3;
+  REQUEST_FAILURE_TYPE_INTERNAL = 0xFF;
+}
+
+message RequestFailure {
+  RequestFailureType type = 1;
+}
+
+enum ServerServiceType {
+  SERVER_SERVICE_TYPE_SINGLE_SERVICE = 0;
+  SERVER_SERVICE_TYPE_MULTI_SERVICE = 1;
+}
+
+message ServerInfo {
+  uint32 info_version = 1;
+
+  ServerServiceType service_type = 10;
+  uint32 single_service_id = 11;
+  uint32 index_service_id = 12;
+
+  string server_name = 20 [(nanopb).max_length = 32];
+}
+
+message ReadParameterGroupRequest {}
+
+
+enum WriteParametersError {
+  WRITE_PARAMETER_ERROR_NONE = 0;
+
+  WRITE_READ_FAILED = 1;
+  WRITE_STORE_FAILED = 2;
+}
+
+message WriteParametersResponse {
+  WriteParametersError error = 1;
+}
+
+enum VrpcParameterPersistence {
+  VRPC_PARAMETER_PERSISTENCE_NONE = 0;
+  VRPC_PARAMETER_PERSISTENCE_ON_LATCH = 1;
+  VRPC_PARAMETER_PERSISTENCE_EXPLICIT = 2;
+}
+
+enum VrpcParameterLatching {
+  VRPC_PARAMETER_LATCHING_IMMEDIATE = 0;
+  VRPC_PARAMETER_LATCHING_SERVER_CONTROLLED = 1;
+}

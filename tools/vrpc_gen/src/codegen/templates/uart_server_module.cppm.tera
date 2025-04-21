@@ -1,0 +1,108 @@
+{% import "macros" as macros -%}
+
+module;
+
+#include <algorithm>
+#include <cstdint>
+#include <span>
+
+export module {{module_name}}.{{name}}.uart.server;
+
+import hstd;
+import nanopb;
+
+import vrpc.server;
+import vrpc.uart.common;
+
+export import {{module_name}}.{{name}}.server;
+
+namespace {{ package | package_to_namespace }}::uart {
+
+{% for _, svc in services %}
+
+export template<{{svc.name}} Impl>
+class Uart{{svc.name}} :
+{% for _, method in svc.methods %}
+    {%- if not loop.first -%},{% endif -%}
+    public vrpc::uart::AsyncCommandCallback<{{ svc.name }}{{ method.name }}Async<Impl>, {{ macros::msg_ref_class(msg=method.output_type) }}>
+{% endfor %}
+
+{
+ public:
+  static constexpr uint32_t ServiceId   = {{ svc.name }}Id;
+  static constexpr auto     Identifier  = {{ svc.name }}Identifier;
+  static constexpr auto     DisplayName = {{ svc.name }}DisplayName;
+
+  static consteval std::size_t MinBufferSize() {
+    return std::max({
+        {%- for _, method in svc.methods %}
+        nanopb::MsgDescriptor<{{ macros::msg_ref_class(msg=method.input_type) }}>::size,
+        nanopb::MsgDescriptor<{{ macros::msg_ref_class(msg=method.output_type) }}>::size,
+        {%- endfor %}
+    });
+  }
+
+  explicit Uart{{svc.name}}(Impl& impl)
+      : impl{impl} {}
+
+  vrpc::uart::HandleResult
+  HandleCommand(uint32_t id, std::span<const std::byte> request_buf,
+                std::span<std::byte> response_buf,
+                hstd::Callback<vrpc::uart::HandleResult>&     async_complete_callback) {
+    switch (id) {
+    {%- for _, method in svc.methods %}
+    case {{ method.id }}: {
+      {{ macros::msg_ref_class(msg=method.input_type) }} request{};
+      if (!vrpc::ProtoDecode(request_buf, request)) {
+        return {
+            .state            = vrpc::uart::HandleState::ErrMalformedPayload,
+            .response_payload = {},
+        };
+      }
+
+      if constexpr ({{ svc.name }}{{ method.name }}Sync<Impl>) {
+        {{ macros::msg_ref_class(msg=method.output_type) }} response{};
+        impl.{{method.name}}(request, response);
+
+        const auto [enc_success, enc_data] = vrpc::ProtoEncode(
+            response, response_buf);
+
+        if (!enc_success) {
+          return {
+              .state            = vrpc::uart::HandleState::ErrEncodeFailure,
+              .response_payload = {},
+          };
+        }
+
+        return {
+            .state            = vrpc::uart::HandleState::Handled,
+            .response_payload = enc_data,
+        };
+      } else if constexpr ({{ svc.name }}{{ method.name }}Async<Impl>) {
+        using AsyncCmd = vrpc::uart::AsyncCommandCallback<true, {{ macros::msg_ref_class(msg=method.output_type) }}>;
+
+        auto async_result = AsyncCmd::InitializeCallback(response_buf, async_complete_callback);
+        impl.{{method.name}}Async(request, std::move(async_result));
+
+        return {
+            .state = vrpc::uart::HandleState::HandlingAsync,
+            .response_payload = {},
+        };
+      }
+    }
+    {%- endfor %}
+    default:
+      return {
+          .state            = vrpc::uart::HandleState::ErrUnknownCommand,
+          .response_payload = {},
+      };
+    }
+  }
+
+ private:
+  Impl& impl;
+};
+
+{% endfor %}
+
+}

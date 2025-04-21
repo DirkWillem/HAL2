@@ -1,0 +1,26 @@
+{% import "tim_macros" as tim -%}
+module;
+
+#include <array>
+
+#include <pin_macros.h>
+
+export module hal.{{family}}:pin_mapping.tim;
+
+import hal.abstract;
+
+import :peripherals;
+import :pin;
+
+namespace {{ family }} {
+
+export using TimPinMapping = hal::TimAFMapping<PinId, TimId>;
+
+/** Ch pin mappings */
+export {{ tim::pin_mappings(var_name="TimChPinMappings", pins=tim_pins.ch) }}
+
+/** ChN pin mappings */
+export {{ tim::pin_mappings(var_name="TimChNPinMappings", pins=tim_pins.chn) }}
+
+}
+

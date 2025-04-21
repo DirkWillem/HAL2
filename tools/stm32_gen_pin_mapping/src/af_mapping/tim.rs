@@ -68,3 +68,23 @@ pub fn gen_mapping_header(pin_data: &PinData, family: &str, mcu: &str) -> anyhow
     Ok(tera.render("tim_pin_mapping", &context)?)
 }
 
+pub fn gen_mapping_module(pin_data: &PinData, family: &str, mcu: &str) -> anyhow::Result<String> {
+    // Get TIM pin mappings
+    let tim_pin_mappings = get_tim_pin_mappings(&pin_data)?;
+
+    // Setup templates
+    let mut tera = Tera::default();
+    tera.add_raw_template("tim_macros", include_str!("templates/tim_macros.tera"))?;
+    tera.add_raw_template(
+        "tim_pin_mapping",
+        include_str!("templates/tim_pin_mapping.cppm.tera"),
+    )?;
+
+    let mut context = tera::Context::new();
+    context.insert("family", family);
+    context.insert("mcu", mcu);
+    context.insert("tim_pins", &tim_pin_mappings);
+
+    Ok(tera.render("tim_pin_mapping", &context)?)
+}
+

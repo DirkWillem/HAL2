@@ -74,16 +74,31 @@ function(add_stm32g0_hal VARIANT XMLFILE)
                 "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.cppm")
     endif()
 
+    if (NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.cppm")
+        add_generated_file(
+                stm32g0
+                "${VARIANT}"
+                "tim-pin-mapping-module"
+                "${XMLFILE}"
+                "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.cppm")
+    endif()
+
     add_library("${VARIANT}_hal_mod")
     target_sources("${VARIANT}_hal_mod"
             PUBLIC
             FILE_SET CXX_MODULES
             FILES
             "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.cppm"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.cppm"
+
+            stm32g0_mod/tim/channel.cppm
+            stm32g0_mod/tim/common.cppm
+            stm32g0_mod/tim/tim.cppm
 
             stm32g0_mod/clocks.cppm
             stm32g0_mod/dma.cppm
             stm32g0_mod/peripherals.cppm
+            stm32g0_mod/pin_interrupt.cppm
             stm32g0_mod/pin.cppm
             stm32g0_mod/system.cppm
             stm32g0_mod/uart.cppm

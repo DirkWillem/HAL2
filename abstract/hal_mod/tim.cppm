@@ -209,7 +209,7 @@ class Alarm : private AlarmImpl<T> {
  * Base class that can be inherited from to automatically implement
  * RegisterableTimPeriodElapsedCallback
  */
-class TimPeriodElapsedCallback {
+export class TimPeriodElapsedCallback {
  public:
   constexpr void InvokePeriodElapsedCallback() noexcept {
     if (callback != nullptr) {

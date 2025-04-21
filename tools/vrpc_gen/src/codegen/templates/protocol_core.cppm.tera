@@ -1,0 +1,48 @@
+{% import "macros" as macros -%}
+module;
+
+#include "{{ name }}.pb.h"
+
+#include <expected>
+#include <type_traits>
+#include <string_view>
+
+export module {{module_name}}.{{ name }};
+
+import vrpc.common;
+
+{% if package | trim | length > 0 %}
+
+
+namespace {{ package | package_to_namespace }} {
+
+{% for _, enum in enums -%}
+export enum class {{ enum.name }} : std::underlying_type_t<{{ macros::nanopb_enum(enum=enum) }}> {
+{% for member in enum.members -%}
+{# #}  {{ member.parsed_name | upper_snake_case_to_pascal_case }} = ::{{ macros::nanopb_enum_member(enum=enum, member=member) }},
+{% endfor -%}
+};
+{% endfor %}
+
+{% for _, msg in messages -%}
+export using {{ msg.name }} = ::{{ macros::nanopb_msg(msg=msg) }};
+{% endfor %}
+
+{% for _, svc in services -%}
+export inline constexpr uint32_t         {{ svc.name }}Id          = {{svc.id}};
+export inline constexpr std::string_view {{ svc.name }}Identifier  = "{{svc.identifier}}";
+export inline constexpr std::string_view {{ svc.name }}DisplayName = "{{svc.display_name}}";
+{% endfor %}
+
+}
+
+namespace vrpc {
+
+{% for _, enum in enums -%}
+export template<>
+struct EnumMapping<{{ macros::nanopb_enum(enum=enum) }}, ::{{ package | package_to_namespace }}::{{enum.name}}> : std::true_type {};
+{% endfor %}
+
+}
+
+{% endif %}

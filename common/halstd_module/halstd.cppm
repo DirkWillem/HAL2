@@ -6,6 +6,7 @@ export import :mp.values;
 
 export import :atomic;
 export import :callback;
+export import :crc;
 export import :chrono;
 export import :logic;
 export import :ratio;

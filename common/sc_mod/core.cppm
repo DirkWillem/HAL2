@@ -1,19 +1,22 @@
-#pragma once
+module;
 
+#include <array>
+#include <optional>
 #include <variant>
 
-#include <halstd/atomic_helpers.h>
-#include <halstd/mp/type_helpers.h>
-#include <halstd/mp/types.h>
+export module statechart:core;
+
+import hstd;
 
 namespace sc {
-template <typename... S>
-struct States : halstd::Types<S...> {};
 
-template <typename... E>
-struct Events : halstd::Types<E...> {};
+export template <typename... S>
+struct States : hstd::Types<S...> {};
 
-template <typename S, typename E, typename D>
+export template <typename... E>
+struct Events : hstd::Types<E...> {};
+
+export template <typename S, typename E, typename D>
 struct Transition {
   using Src   = std::remove_cvref_t<S>;
   using Dst   = D;
@@ -36,8 +39,6 @@ template <typename T, typename S, typename E, typename D>
 struct TransitionTraits<auto (T::*)(S, E) const->D> : std::true_type {
   using Tr = Transition<S, E, D>;
 };
-
-namespace detail {
 
 template <typename Src, typename Event, typename... Trs>
 struct FindTransitionHelper;
@@ -69,8 +70,8 @@ struct TransitionList {
   using FindTransition = typename FindTransitionHelper<Src, Event>::Result;
 };
 
-template <typename T>
-struct IsInState {
+export template <typename T>
+struct IsInStateImpl {
   [[nodiscard]] constexpr bool operator()(const T&) const noexcept {
     return true;
   }
@@ -82,8 +83,8 @@ struct IsInState {
   }
 };
 
-template <typename T, std::invocable<const T&> F>
-struct TryGetStateValue {
+export template <typename T, std::invocable<const T&> F>
+struct TryGetStateValueImpl {
   F fn;
 
   using Result = decltype(fn(std::declval<const T&>()));
@@ -100,21 +101,19 @@ struct TryGetStateValue {
   }
 };
 
-}   // namespace detail
-
-template <typename... Ts>
+export template <typename... Ts>
 struct Transitions : Ts... {
   using TransitionList =
-      detail::TransitionList<typename TransitionTraits<Ts>::Tr...>;
+      TransitionList<typename TransitionTraits<Ts>::Tr...>;
 };
 
 template <typename... Ts>
 Transitions(Ts...) -> Transitions<Ts...>;
 
-template <typename SL, typename EL>
+export template <typename SL, typename EL>
 struct StateChart;
 
-template <typename Sys, typename SC>
+export template <typename Sys, typename SC>
 class StateChartRunner;
 
 template <typename... Ss, typename... Es>
@@ -151,7 +150,7 @@ struct StateChart<States<Ss...>, Events<Es...>> {
 
       if constexpr (IsValidState<ReturnType>()) {
         state.template emplace<ReturnType>((*this)(s, e));
-      } else if constexpr (halstd::IsInstantiationOfVariadic<ReturnType,
+      } else if constexpr (hstd::IsInstantiationOfVariadic<ReturnType,
                                                              std::variant<>>) {
         auto result = (*this)(s, e);
         ([this]<typename... Rs>(const std::variant<Rs...>& result) {
@@ -159,11 +158,11 @@ struct StateChart<States<Ss...>, Events<Es...>> {
                         "Every option in a variant returned by an event "
                         "handler must be a valid state");
 
-          (..., ([this, &result]<typename R>(halstd::Marker<R>) {
+          (..., ([this, &result]<typename R>(hstd::Marker<R>) {
              if (std::holds_alternative<R>(result)) {
                state.template emplace<R>(std::move(std::get<R>(result)));
              }
-           })(halstd::Marker<Rs>()));
+           })(hstd::Marker<Rs>()));
         })(result);
       } else {
         static_assert(false, "Return type of event must be either a valid "
@@ -174,13 +173,13 @@ struct StateChart<States<Ss...>, Events<Es...>> {
     template <typename S>
       requires(... || std::is_same_v<S, Ss>)
     [[nodiscard]] static consteval std::size_t StateIndex() noexcept {
-      return *halstd::Types<Ss...>::template IndexOf<S>();
+      return *hstd::Types<Ss...>::template IndexOf<S>();
     }
 
     template <typename E>
       requires(... || std::is_same_v<E, Es>)
     [[nodiscard]] static consteval std::size_t EventIndex() noexcept {
-      return *halstd::Types<Es...>::template IndexOf<E>();
+      return *hstd::Types<Es...>::template IndexOf<E>();
     }
 
     template <typename E>
@@ -198,8 +197,8 @@ struct StateChart<States<Ss...>, Events<Es...>> {
         std::array<
             std::array<void (Chart::*)(const std::variant<Es...>&), NEvents>,
             NStates>& table) {
-      using StateList = halstd::Types<Ss...>;
-      using EventList = halstd::Types<Es...>;
+      using StateList = hstd::Types<Ss...>;
+      using EventList = hstd::Types<Es...>;
       if constexpr (TrList::template ContainsTransition<S, E>()) {
         // const auto SI = *;
         table[*StateList::template IndexOf<S>()]
@@ -239,7 +238,7 @@ class StateChartRunner {
  public:
   static constexpr auto JumpTable = SC::BuildTransitionTable();
 
-  StateChartRunner(halstd::Marker<Sys>, SC&& chart)
+  StateChartRunner(hstd::Marker<Sys>, SC&& chart)
       : chart{std::move(chart)} {}
 
   /**
@@ -281,7 +280,7 @@ class StateChartRunner {
       return false;
     };
 
-    return halstd::ExclusiveWithAtomicFlag(processing_event, inner)
+    return hstd::ExclusiveWithAtomicFlag(processing_event, inner)
         .value_or(false);
   }
 
@@ -324,7 +323,7 @@ class StateChartRunner {
         }
       };
 
-      halstd::ExclusiveWithAtomicFlag(processing_event, inner);
+      hstd::ExclusiveWithAtomicFlag(processing_event, inner);
     }
   }
 
@@ -354,27 +353,23 @@ class StateChartRunner {
   typename Sys::AtomicFlag processing_event{};
 };
 
-namespace detail {
-
 template <typename T>
 struct IsStateChartRunnerHelper : std::false_type {};
 
 template <typename S, typename T>
 struct IsStateChartRunnerHelper<StateChartRunner<S, T>> : std::true_type {};
 
-}   // namespace detail
-
 template <typename T>
-concept IsStateChartRunner = (detail::IsStateChartRunnerHelper<T>::value);
+concept IsStateChartRunner = (IsStateChartRunnerHelper<T>::value);
 
 /**
  * Visitor that returns whether a state chart is in the given state
  * @tparam T State to check
  * @return Visitor
  */
-template <typename T>
+export template <typename T>
 constexpr auto IsInState() noexcept {
-  return detail::IsInState<T>{};
+  return IsInStateImpl<T>{};
 }
 
 /**
@@ -387,7 +382,7 @@ constexpr auto IsInState() noexcept {
  */
 template <typename T>
 constexpr auto TryGetStateValue(std::invocable<const T&> auto fn) noexcept {
-  return detail::TryGetStateValue<T, std::decay_t<decltype(fn)>>{fn};
+  return TryGetStateValueImpl<T, std::decay_t<decltype(fn)>>{fn};
 }
 
 template <typename Src, typename Event, typename Dst>

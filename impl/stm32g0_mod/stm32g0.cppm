@@ -7,9 +7,11 @@ export module hal.stm32g0;
 export import :dma;
 export import :clocks;
 export import :pin;
+export import :pin_interrupt;
 export import :peripherals;
 export import :system;
 export import :uart;
+export import :tim;
 
 namespace stm32g0 {
 

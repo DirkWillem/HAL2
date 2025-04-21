@@ -3,27 +3,27 @@
 import hal.abstract;
 import hal.stm32g0;
 
-// template <unsigned P>
-// void HandlePinInterrupt() noexcept {
-//   using namespace stm32g0;
-//   using PinInt = PinInterrupt<PinInterruptImplMarker>;
-//
-//   if constexpr (hal::IsPeripheralInUse<PinInt>()) {
-//     if constexpr (PinInt::PinInterruptActive(P, hal::Edge::Rising)) {
-//       if (__HAL_GPIO_EXTI_GET_RISING_IT(GetHalPin(P))) {
-//         __HAL_GPIO_EXTI_CLEAR_RISING_IT(GetHalPin(P));
-//         PinInt::instance().HandleInterrupt<P, hal::Edge::Rising>();
-//       }
-//     }
-//
-//     if constexpr (PinInt::PinInterruptActive(P, hal::Edge::Falling)) {
-//       if (__HAL_GPIO_EXTI_GET_FALLING_IT(GetHalPin(P))) {
-//         __HAL_GPIO_EXTI_CLEAR_FALLING_IT(GetHalPin(P));
-//         PinInt::instance().HandleInterrupt<P, hal::Edge::Falling>();
-//       }
-//     }
-//   }
-// }
+template <unsigned P>
+void HandlePinInterrupt() noexcept {
+  using namespace stm32g0;
+  using PinInt = PinInterrupt<PinInterruptImplMarker>;
+
+  if constexpr (hal::IsPeripheralInUse<PinInt>()) {
+    if constexpr (PinInt::PinInterruptActive(P, hal::Edge::Rising)) {
+      if (__HAL_GPIO_EXTI_GET_RISING_IT(GetHalPin(P))) {
+        __HAL_GPIO_EXTI_CLEAR_RISING_IT(GetHalPin(P));
+        PinInt::instance().HandleInterrupt<P, hal::Edge::Rising>();
+      }
+    }
+
+    if constexpr (PinInt::PinInterruptActive(P, hal::Edge::Falling)) {
+      if (__HAL_GPIO_EXTI_GET_FALLING_IT(GetHalPin(P))) {
+        __HAL_GPIO_EXTI_CLEAR_FALLING_IT(GetHalPin(P));
+        PinInt::instance().HandleInterrupt<P, hal::Edge::Falling>();
+      }
+    }
+  }
+}
 
 // ReSharper disable CppNonInlineFunctionDefinitionInHeaderFile
 
@@ -150,90 +150,90 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
 //   HANDLE_SPI_RECEIVE_CALLBACK(Spi3);
 // }
 //
-// [[maybe_unused]] void TIM1_BRK_UP_TRG_COM_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(Tim1)
-// }
-//
-// [[maybe_unused]] void TIM1_CC_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(Tim1)
-// }
-//
-// [[maybe_unused]] void TIM2_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(Tim2)
-// }
-//
-// [[maybe_unused]] void TIM3_TIM4_IRQHandle() {
-//   HANDLE_PERIPHERAL_IRQ(Tim3)
-//   HANDLE_PERIPHERAL_IRQ(Tim4)
-// }
-//
-// [[maybe_unused]] void TIM6_DAC_LPTIM1_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(Tim6)
-// }
-//
-// [[maybe_unused]] void TIM7_LPTIM2_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(Tim7)
-// }
-//
-// [[maybe_unused]] void TIM14_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(Tim14)
-// }
-//
-// [[maybe_unused]] void TIM15_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(Tim15)
-// }
-//
-// [[maybe_unused]] void TIM16_FDCAN_IT0_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(Tim16)
-// }
-//
-// [[maybe_unused]] void TIM17_FDCAN_IT1_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(Tim17)
-// }
-//
-// #define HANDLE_TIM_PERIOD_ELAPSED_CB(Inst)                 \
-//   if constexpr (hal::IsPeripheralInUse<stm32g0::Inst>()) { \
-//     if (htim == &stm32g0::Inst::instance().htim) {         \
-//       stm32g0::Inst::instance().PeriodElapsed();           \
-//     }                                                      \
-//   }
-//
-// [[maybe_unused]] void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
-// {
-//   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim1)
-//   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim2)
-//   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim3)
-//   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim4)
-//   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim6)
-//   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim7)
-//   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim14)
-//   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim15)
-//   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim16)
-//   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim17)
-// }
-//
-// [[maybe_unused]] void EXTI0_1_IRQHandler() {
-//   HandlePinInterrupt<0>();
-//   HandlePinInterrupt<1>();
-// }
-//
-// [[maybe_unused]] void EXTI2_3_IRQHandler() {
-//   HandlePinInterrupt<2>();
-//   HandlePinInterrupt<3>();
-// }
-//
-// [[maybe_unused]] void EXTI4_15_IRQHandler() {
-//   HandlePinInterrupt<4>();
-//   HandlePinInterrupt<5>();
-//   HandlePinInterrupt<6>();
-//   HandlePinInterrupt<7>();
-//   HandlePinInterrupt<8>();
-//   HandlePinInterrupt<9>();
-//   HandlePinInterrupt<10>();
-//   HandlePinInterrupt<11>();
-//   HandlePinInterrupt<12>();
-//   HandlePinInterrupt<13>();
-//   HandlePinInterrupt<14>();
-//   HandlePinInterrupt<15>();
-// }
+[[maybe_unused]] void TIM1_BRK_UP_TRG_COM_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim1)
+}
+
+[[maybe_unused]] void TIM1_CC_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim1)
+}
+
+[[maybe_unused]] void TIM2_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim2)
+}
+
+[[maybe_unused]] void TIM3_TIM4_IRQHandle() {
+  HANDLE_PERIPHERAL_IRQ(Tim3)
+  HANDLE_PERIPHERAL_IRQ(Tim4)
+}
+
+[[maybe_unused]] void TIM6_DAC_LPTIM1_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim6)
+}
+
+[[maybe_unused]] void TIM7_LPTIM2_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim7)
+}
+
+[[maybe_unused]] void TIM14_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim14)
+}
+
+[[maybe_unused]] void TIM15_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim15)
+}
+
+[[maybe_unused]] void TIM16_FDCAN_IT0_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim16)
+}
+
+[[maybe_unused]] void TIM17_FDCAN_IT1_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(Tim17)
+}
+
+#define HANDLE_TIM_PERIOD_ELAPSED_CB(Inst)                 \
+  if constexpr (hal::IsPeripheralInUse<stm32g0::Inst>()) { \
+    if (htim == &stm32g0::Inst::instance().htim) {         \
+      stm32g0::Inst::instance().PeriodElapsed();           \
+    }                                                      \
+  }
+
+[[maybe_unused]] void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
+{
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim1)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim2)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim3)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim4)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim6)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim7)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim14)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim15)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim16)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim17)
+}
+
+[[maybe_unused]] void EXTI0_1_IRQHandler() {
+  HandlePinInterrupt<0>();
+  HandlePinInterrupt<1>();
+}
+
+[[maybe_unused]] void EXTI2_3_IRQHandler() {
+  HandlePinInterrupt<2>();
+  HandlePinInterrupt<3>();
+}
+
+[[maybe_unused]] void EXTI4_15_IRQHandler() {
+  HandlePinInterrupt<4>();
+  HandlePinInterrupt<5>();
+  HandlePinInterrupt<6>();
+  HandlePinInterrupt<7>();
+  HandlePinInterrupt<8>();
+  HandlePinInterrupt<9>();
+  HandlePinInterrupt<10>();
+  HandlePinInterrupt<11>();
+  HandlePinInterrupt<12>();
+  HandlePinInterrupt<13>();
+  HandlePinInterrupt<14>();
+  HandlePinInterrupt<15>();
+}
 }

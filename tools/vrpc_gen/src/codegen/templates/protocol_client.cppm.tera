@@ -1,0 +1,43 @@
+{% import "macros" as macros -%}
+module;
+
+#include <cstdint>
+#include <functional>
+#include <expected>
+
+export module {{module_name}}.{{ name }}.client;
+
+import hstd;
+
+import vrpc.common;
+
+export import {{module_name}}.{{ name }};
+
+namespace {{ package | package_to_namespace }} {
+
+{% for _, svc in services %}
+
+template<typename Impl>
+concept {{svc.name}}Client = requires(Impl& impl) {
+    typename Impl::Error;
+    { Impl::UsesAddressing } -> std::convertible_to<bool>;
+
+    {% for _, method in svc.methods %}
+    requires Impl::UsesAddressing || requires {
+        { impl.{{method.name}}(
+            std::declval<const {{ macros::msg_ref_class(msg=method.input_type) }}&>(),
+            std::declval<hstd::Callback<std::expected<std::reference_wrapper<const {{ macros::msg_ref_class(msg=method.output_type) }}>, typename Impl::Error>>&>()) };
+    };
+
+    requires !Impl::UsesAddressing || requires {
+            { impl.{{method.name}}(
+                std::declval<std::uint32_t>(),
+                std::declval<const {{ macros::msg_ref_class(msg=method.input_type) }}&>(),
+                std::declval<hstd::Callback<std::expected<std::reference_wrapper<const {{ macros::msg_ref_class(msg=method.output_type) }}>, typename Impl::Error>>&>()) };
+        };
+    {% endfor %}
+};
+
+{% endfor %}
+
+}

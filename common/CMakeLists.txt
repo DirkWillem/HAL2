@@ -39,6 +39,7 @@ target_sources(hstd
 
         halstd_module/atomic.cppm
         halstd_module/callback.cppm
+        halstd_module/crc.cppm
         halstd_module/chrono.cppm
         halstd_module/logic.cppm
         halstd_module/ratio.cppm
@@ -84,6 +85,16 @@ add_library(statechart INTERFACE
 target_include_directories(statechart INTERFACE ${CMAKE_CURRENT_LIST_DIR})
 target_link_libraries(statechart INTERFACE halstd)
 
+add_library(statechart_mod)
+target_sources(statechart_mod
+        PUBLIC
+        FILE_SET CXX_MODULES FILES
+        sc_mod/core.cppm
+        sc_mod/statechart_callback.cppm
+
+        sc_mod/statechart.cppm)
+target_link_libraries(statechart_mod PRIVATE hstd project_settings)
+
 target_link_libraries(math INTERFACE cmsis_dsp fp)
 target_compile_definitions(math INTERFACE HAL2_CMSIS_DSP_ENABLED)
 
@@ -92,3 +103,4 @@ target_include_directories(math INTERFACE
 
 add_subdirectory(sbs)
 add_subdirectory(vrpc)
+add_subdirectory(vrpc_mod)

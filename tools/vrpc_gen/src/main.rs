@@ -1,8 +1,9 @@
 use crate::codegen::{
-    format_generated_file, gen_service_header, gen_uart_service_client_header,
+    format_generated_file, gen_client_module, gen_protocol_core_module, gen_server_module,
+    gen_service_header, gen_uart_server_module, gen_uart_service_client_header,
     gen_uart_service_header,
 };
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use clap::{Parser, ValueEnum};
 use protobuf::Message;
 use regex;
@@ -16,8 +17,12 @@ mod codegen;
 #[derive(ValueEnum, Clone, Serialize, Debug)]
 enum GenType {
     Service,
+    CoreModule,
+    ServerModule,
+    ClientModule,
     UartServerService,
     UartServiceClient,
+    UartServerModule,
 }
 
 #[derive(Parser, Debug)]
@@ -32,6 +37,9 @@ struct Cli {
 
     #[arg(long)]
     gen: GenType,
+
+    #[arg(long)]
+    module_name: Option<String>,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -42,75 +50,74 @@ fn main() -> anyhow::Result<()> {
     proto_reader.parse_dir(&cli.src_dir)?;
     let descriptor_set = proto_reader.get_descriptor_set()?;
 
-    match cli.gen {
-        GenType::Service => {
-            for proto_file in &descriptor_set.proto_files {
-                let hdr_str = gen_service_header(&descriptor_set, &proto_file.relative_path)?;
+    for proto_file in &descriptor_set.proto_files {
+        let proto_name = proto_file.relative_path.strip_suffix(".proto").unwrap();
 
-                let out_dir_path = if proto_file.relative_path.is_empty() {
-                    cli.dst_dir.clone()
-                } else {
-                    format!("{}/{}", &cli.dst_dir, proto_file.relative_dir)
-                };
-                create_dir_all(out_dir_path)?;
+        let (file_name, file_contents) = match cli.gen {
+            GenType::Service => (
+                format!("{proto_name}.h"),
+                gen_service_header(&descriptor_set, &proto_file.relative_path)?,
+            ),
+            GenType::CoreModule => (
+                format!("{proto_name}.cppm"),
+                gen_protocol_core_module(
+                    &descriptor_set,
+                    &proto_file.relative_path,
+                    cli.module_name
+                        .as_ref()
+                        .ok_or(anyhow!("module name is required when generating a module"))?,
+                )?,
+            ),
+            GenType::ServerModule => (
+                format!("{proto_name}_server.cppm"),
+                gen_server_module(
+                    &descriptor_set,
+                    &proto_file.relative_path,
+                    cli.module_name
+                        .as_ref()
+                        .ok_or(anyhow!("module name is required when generating a module"))?,
+                )?,
+            ),
+            GenType::ClientModule => (
+                format!("{proto_name}_client.cppm"),
+                gen_client_module(
+                    &descriptor_set,
+                    &proto_file.relative_path,
+                    cli.module_name
+                        .as_ref()
+                        .ok_or(anyhow!("module name is required when generating a module"))?,
+                )?,
+            ),
+            GenType::UartServerService => (
+                format!("{proto_name}_uart_server_service.h"),
+                gen_uart_service_header(&descriptor_set, &proto_file.relative_path)?,
+            ),
+            GenType::UartServiceClient => (
+                format!("{proto_name}_uart_service_client.h"),
+                gen_uart_service_client_header(&descriptor_set, &proto_file.relative_path)?,
+            ),
+            GenType::UartServerModule => (
+                format!("{proto_name}_uart_server.cppm"),
+                gen_uart_server_module(
+                    &descriptor_set,
+                    &proto_file.relative_path,
+                    cli.module_name
+                        .as_ref()
+                        .ok_or(anyhow!("module name is required when generating a module"))?,
+                )?,
+            ),
+        };
 
-                let out_file_path = format!(
-                    "{}/{}.h",
-                    &cli.dst_dir,
-                    proto_file.relative_path.strip_suffix(".proto").unwrap()
-                );
+        let out_file_path = if proto_file.relative_path.is_empty() {
+            file_name
+        } else {
+            format!("{}/{}", &cli.dst_dir, file_name)
+        };
 
-                let mut out_file = File::create(out_file_path.clone())?;
-                out_file.write_all(&hdr_str.as_bytes())?;
+        let mut out_file = File::create(out_file_path.clone())?;
+        out_file.write_all(&file_contents.as_bytes())?;
 
-                format_generated_file(&out_file_path);
-            }
-        }
-        GenType::UartServerService => {
-            for proto_file in &descriptor_set.proto_files {
-                let hdr_str = gen_uart_service_header(&descriptor_set, &proto_file.relative_path)?;
-                let out_dir_path = if proto_file.relative_path.is_empty() {
-                    cli.dst_dir.clone()
-                } else {
-                    format!("{}/{}", &cli.dst_dir, proto_file.relative_dir)
-                };
-                create_dir_all(out_dir_path)?;
-
-                let out_file_path = format!(
-                    "{}/{}_uart_server_service.h",
-                    &cli.dst_dir,
-                    proto_file.relative_path.strip_suffix(".proto").unwrap()
-                );
-
-                let mut out_file = File::create(out_file_path.clone())?;
-                out_file.write_all(&hdr_str.as_bytes())?;
-
-                format_generated_file(&out_file_path);
-            }
-        }
-        GenType::UartServiceClient => {
-            for proto_file in &descriptor_set.proto_files {
-                let hdr_str =
-                    gen_uart_service_client_header(&descriptor_set, &proto_file.relative_path)?;
-                let out_dir_path = if proto_file.relative_path.is_empty() {
-                    cli.dst_dir.clone()
-                } else {
-                    format!("{}/{}", &cli.dst_dir, proto_file.relative_dir)
-                };
-                create_dir_all(out_dir_path)?;
-
-                let out_file_path = format!(
-                    "{}/{}_uart_service_client.h",
-                    &cli.dst_dir,
-                    proto_file.relative_path.strip_suffix(".proto").unwrap()
-                );
-
-                let mut out_file = File::create(out_file_path.clone())?;
-                out_file.write_all(&hdr_str.as_bytes())?;
-
-                format_generated_file(&out_file_path);
-            }
-        }
+        format_generated_file(&out_file_path);
     }
 
     Ok(())

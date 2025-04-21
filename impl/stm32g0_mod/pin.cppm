@@ -41,7 +41,7 @@ export using PinNum = uint8_t;
  * @param port Port to convert
  * @return Pointer to the GPIO port
  */
-static constexpr auto* GetHalPort(Port port) noexcept {
+export constexpr auto* GetHalPort(Port port) noexcept {
   switch (port) {
 #ifdef GPIOA
   case Port::A: return GPIOA;
@@ -71,7 +71,7 @@ static constexpr auto* GetHalPort(Port port) noexcept {
  * @param pin Pin number
  * @return HAL pin number
  */
-static constexpr uint16_t GetHalPin(PinNum pin) noexcept {
+export constexpr uint16_t GetHalPin(PinNum pin) noexcept {
   return 0b1U << pin;
 }
 

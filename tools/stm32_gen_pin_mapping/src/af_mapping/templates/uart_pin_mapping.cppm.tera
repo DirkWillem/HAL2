@@ -17,16 +17,16 @@ namespace {{ family }} {
 using UartPinMapping = hal::AFMapping<PinId, UartId>;
 
 /** TX pin mappings */
-{{ uart::pin_mappings(var_name="UartTxPinMappings", pins=uart_pins.tx) }}
+export {{ uart::pin_mappings(var_name="UartTxPinMappings", pins=uart_pins.tx) }}
 
 /** RX pin mappings */
-{{ uart::pin_mappings(var_name="UartRxPinMappings", pins=uart_pins.rx) }}
+export {{ uart::pin_mappings(var_name="UartRxPinMappings", pins=uart_pins.rx) }}
 
 /** RTS pin mappings */
-{{ uart::pin_mappings(var_name="UartRtsPinMappings", pins=uart_pins.rts) }}
+export {{ uart::pin_mappings(var_name="UartRtsPinMappings", pins=uart_pins.rts) }}
 
 /** CTS pin mappings */
-{{ uart::pin_mappings(var_name="UartCtsPinMappings", pins=uart_pins.cts) }}
+export {{ uart::pin_mappings(var_name="UartCtsPinMappings", pins=uart_pins.cts) }}
 
 }
 
