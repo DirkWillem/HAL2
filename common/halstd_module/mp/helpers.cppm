@@ -124,8 +124,15 @@ export template <typename TIn, typename TOut, std::size_t N>
 StaticMap(std::equality_comparable_with<TIn> auto value,
           std::array<std::pair<TIn, TOut>, N>     mapping) {
   for (const auto [in, out] : mapping) {
-    if (value == in) {
-      return out;
+    if constexpr (std::is_integral_v<TIn> && std::is_integral_v<TOut>
+                  && !std::is_same_v<TIn, TOut>) {
+      if (value == static_cast<TOut>(in)) {
+        return out;
+      }
+    } else {
+      if (value == in) {
+        return out;
+      }
     }
   }
 
