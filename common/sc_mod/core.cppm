@@ -380,12 +380,12 @@ constexpr auto IsInState() noexcept {
  * @param fn Function to apply to the state to obtain the extracted value
  * @return Visitor
  */
-template <typename T>
+export template <typename T>
 constexpr auto TryGetStateValue(std::invocable<const T&> auto fn) noexcept {
   return TryGetStateValueImpl<T, std::decay_t<decltype(fn)>>{fn};
 }
 
-template <typename Src, typename Event, typename Dst>
+export template <typename Src, typename Event, typename Dst>
 constexpr auto MakeTransition() noexcept {
   return [](Src, Event) { return Dst{}; };
 }

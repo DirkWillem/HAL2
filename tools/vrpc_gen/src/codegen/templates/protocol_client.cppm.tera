@@ -17,7 +17,7 @@ namespace {{ package | package_to_namespace }} {
 
 {% for _, svc in services %}
 
-template<typename Impl>
+export template<typename Impl>
 concept {{svc.name}}Client = requires(Impl& impl) {
     typename Impl::Error;
     { Impl::UsesAddressing } -> std::convertible_to<bool>;
@@ -31,7 +31,7 @@ concept {{svc.name}}Client = requires(Impl& impl) {
 
     requires !Impl::UsesAddressing || requires {
             { impl.{{method.name}}(
-                std::declval<std::uint32_t>(),
+                std::declval<std::decay_t<typename Impl::AddrType>>(),
                 std::declval<const {{ macros::msg_ref_class(msg=method.input_type) }}&>(),
                 std::declval<hstd::Callback<std::expected<std::reference_wrapper<const {{ macros::msg_ref_class(msg=method.output_type) }}>, typename Impl::Error>>&>()) };
         };

@@ -1,8 +1,4 @@
-use crate::codegen::{
-    format_generated_file, gen_client_module, gen_protocol_core_module, gen_server_module,
-    gen_service_header, gen_uart_server_module, gen_uart_service_client_header,
-    gen_uart_service_header,
-};
+use crate::codegen::{format_generated_file, gen_client_module, gen_protocol_core_module, gen_server_module, gen_service_header, gen_uart_client_module, gen_uart_server_module, gen_uart_service_client_header, gen_uart_service_header};
 use anyhow::{anyhow, Context};
 use clap::{Parser, ValueEnum};
 use protobuf::Message;
@@ -23,6 +19,7 @@ enum GenType {
     UartServerService,
     UartServiceClient,
     UartServerModule,
+    UartClientModule,
 }
 
 #[derive(Parser, Debug)]
@@ -99,6 +96,16 @@ fn main() -> anyhow::Result<()> {
             GenType::UartServerModule => (
                 format!("{proto_name}_uart_server.cppm"),
                 gen_uart_server_module(
+                    &descriptor_set,
+                    &proto_file.relative_path,
+                    cli.module_name
+                        .as_ref()
+                        .ok_or(anyhow!("module name is required when generating a module"))?,
+                )?,
+            ),
+            GenType::UartClientModule => (
+                format!("{proto_name}_uart_client.cppm"),
+                gen_uart_client_module(
                     &descriptor_set,
                     &proto_file.relative_path,
                     cli.module_name

@@ -14,6 +14,7 @@ function(GENERATE_VRPC_MODULE TARGET MODULE_NAME SRCDIR DSTDIR)
     set(GEN_SERVER_CPPMS OFF)
     set(GEN_CLIENT_CPPMS OFF)
     set(GEN_UART_SERVER_CPPMS OFF)
+    set(GEN_UART_CLIENT_CPPMS OFF)
 
     foreach (PROTO_ABS_PATH ${PROTOS})
         # Obtain file name components
@@ -78,7 +79,11 @@ function(GENERATE_VRPC_MODULE TARGET MODULE_NAME SRCDIR DSTDIR)
         endif ()
 
         if ("uart_client" IN_LIST GENERATE_VRPC_GEN_TYPES)
-            list(APPEND UART_CLIENT_HDRS "${DSTDIR_ABS}/${PROTO_BASE_PATH}_uart_service_client.h")
+            list(APPEND UART_CLIENT_CPPMS "${DSTDIR_ABS}/${PROTO_BASE_PATH}_uart_client.cppm")
+
+            if (NOT EXISTS "${DSTDIR_ABS}/${PROTO_BASE_PATH}_uart_client.cppm")
+                set(GEN_UART_CLIENT_CPPMS ON)
+            endif ()
         endif ()
 
         if (NOT EXISTS "${PROTO_HDR_ABS_PATH}")
@@ -145,6 +150,19 @@ function(GENERATE_VRPC_MODULE TARGET MODULE_NAME SRCDIR DSTDIR)
                 "${DSTDIR_ABS}")
     endif ()
 
+    if (GEN_UART_CLIENT_CPPMS)
+        add_custom_command(
+                OUTPUT ${UART_CLIENT_CPPMS}
+                DEPENDS ${PROTOS}
+                COMMAND
+                vrpc_gen
+                --gen uart-client-module
+                --module-name "${MODULE_NAME}"
+                --common-dir "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../vrpc/protos/common"
+                "${SRCDIR_ABS}"
+                "${DSTDIR_ABS}")
+    endif ()
+
     # Core library
     add_library(${TARGET} STATIC)
     target_sources(${TARGET}
@@ -174,9 +192,8 @@ function(GENERATE_VRPC_MODULE TARGET MODULE_NAME SRCDIR DSTDIR)
     target_sources(${TARGET}_client PUBLIC FILE_SET CXX_MODULES FILES ${CLIENT_CPPMS})
     target_link_libraries(${TARGET}_client PUBLIC ${TARGET})
 
+    # Uart server library
     if ("uart_server" IN_LIST GENERATE_VRPC_GEN_TYPES)
-        # Uart server library
-        message("UART server lib: ${TARGET}_uart_server, generate: ${GEN_UART_SERVER_CPPMS}, sources: ${UART_SERVER_CPPMS}")
         add_library(${TARGET}_uart_server)
         target_sources(${TARGET}_uart_server PUBLIC FILE_SET CXX_MODULES FILES ${UART_SERVER_CPPMS})
         target_link_libraries(${TARGET}_uart_server PUBLIC ${TARGET}_server vrpc_uart_common_mod hal_abstract)
@@ -184,6 +201,13 @@ function(GENERATE_VRPC_MODULE TARGET MODULE_NAME SRCDIR DSTDIR)
         if (NOT ${GENERATE_VRPC_NO_DEPEND_UART_SERVER})
             target_link_libraries(${TARGET}_uart_server PUBLIC vrpc_uart_server_mod)
         endif ()
+    endif ()
+
+    # Uart client library
+    if ("uart_client" IN_LIST GENERATE_VRPC_GEN_TYPES)
+        add_library(${TARGET}_uart_client)
+        target_sources(${TARGET}_uart_client PUBLIC FILE_SET CXX_MODULES FILES ${UART_CLIENT_CPPMS})
+        target_link_libraries(${TARGET}_uart_client PUBLIC ${TARGET}_client vrpc_uart_client_mod hal_abstract)
     endif ()
 endfunction()
 
@@ -262,3 +286,18 @@ target_sources(vrpc_uart_server_mod
 
 target_link_libraries(vrpc_uart_server_mod
         PUBLIC vrpc_protocol_uart_server vrpc_server_builtins vrpc_uart_common_mod  hal_abstract)
+
+
+add_library(vrpc_uart_client_mod)
+target_sources(vrpc_uart_client_mod
+        PUBLIC
+        FILE_SET CXX_MODULES
+        FILES
+        uart/client/client_base.cppm
+        uart/client/service_collection.cppm
+        uart/client/transport.cppm
+
+        uart/client/client.cppm)
+
+target_link_libraries(vrpc_uart_client_mod
+        PUBLIC vrpc_protocol_uart_server vrpc_server_builtins vrpc_uart_common_mod hal_abstract)

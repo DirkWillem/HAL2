@@ -1,0 +1,62 @@
+{% import "macros" as macros -%}
+{% import "service_client_macros" as client_macros -%}
+
+module;
+
+#include <cstdint>
+#include <expected>
+#include <optional>
+#include <utility>
+
+export module {{module_name}}.{{name}}.uart.client;
+
+import hstd;
+
+import hal.abstract;
+
+import vrpc.common;
+import vrpc.uart.client;
+
+export import {{module_name}}.{{name}}.client;
+
+namespace {{ package | package_to_namespace }}::uart {
+
+{% for _, svc in services %}
+
+export template<hal::AsyncUart Uart, hal::System Sys, vrpc::NetworkConfig NC, vrpc::uart::ClientTransportOptions O, std::size_t SlotId>
+class {{svc.name}}Client
+    : public vrpc::uart::ServiceClientBase<Uart, Sys, NC, O, SlotId, {{ client_macros::service_response_msgs(svc=svc) }}> {
+  public:
+   static constexpr auto UsesAddressing = vrpc::uart::ServiceClientBase<Uart, Sys, NC, O, SlotId, {{ client_macros::service_response_msgs(svc=svc) }}>::UsesAddressing;
+   using AddrType = std::uint32_t;
+   using Error =
+         typename vrpc::uart::ServiceClientBase<Uart, Sys, NC, O, SlotId,
+                                                {{ client_macros::service_response_msgs(svc=svc) }}>::Error;
+
+   explicit {{svc.name}}Client(
+       vrpc::uart::ClientTransport<Uart, Sys, NC, O>& transport)
+       : vrpc::uart::ServiceClientBase<Uart, Sys, NC, O, SlotId, {{ client_macros::service_response_msgs(svc=svc) }}>{transport} {}
+
+   {% for _, method in svc.methods %}
+   auto {{ method.name }}(
+       const {{ macros::msg_ref_class(msg=method.input_type) }}& request,
+       hstd::Callback<const {{ macros::msg_ref_class(msg=method.output_type) }}&>& callback,
+       std::optional<std::reference_wrapper<hstd::Callback<vrpc::uart::RequestError>>>
+                     err_callback = {}
+       ) noexcept requires (!UsesAddressing){
+     return this->Request({{ svc.id }}, {{ method.id }}, request, callback, err_callback);
+   }
+
+   auto {{ method.name }}(
+       uint32_t server_address,
+       const {{ macros::msg_ref_class(msg=method.input_type) }}& request,
+       hstd::Callback<std::expected<std::reference_wrapper<const {{ macros::msg_ref_class(msg=method.output_type) }}>, Error>>& callback) noexcept requires (UsesAddressing){
+     return this->Request(server_address, {{ svc.id }}, {{ method.id }}, request, callback);
+   }
+   {% endfor %}
+};
+
+{% endfor %}
+
+}
+

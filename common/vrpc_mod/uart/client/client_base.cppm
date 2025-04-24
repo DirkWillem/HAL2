@@ -1,12 +1,28 @@
-#pragma once
+module;
 
-#include "transport.h"
+#include <cstdint>
+#include <expected>
+#include <functional>
+#include <span>
+#include <utility>
+#include <variant>
+
+export module vrpc.uart.client:client_base;
+
+import hstd;
+
+import hal.abstract;
+
+import vrpc.common;
+import vrpc.uart.common;
+
+import :transport;
 
 namespace vrpc::uart {
 
-template <hal::AsyncUart Uart, hal::System Sys, NetworkConfig NC,
-          ClientTransportOptions O, std::size_t SlotId,
-          typename... ResponseMsgs>
+export template <hal::AsyncUart Uart, hal::System Sys, NetworkConfig NC,
+                 ClientTransportOptions O, std::size_t SlotId,
+                 typename... ResponseMsgs>
 class ServiceClientBase {
   using UartClient = ClientTransport<Uart, Sys, NC, O>;
 
@@ -27,7 +43,7 @@ class ServiceClientBase {
     requires(!UsesAddressing)
   void Request(
       uint32_t svc_id, uint32_t cmd_id, const Req& req,
-      halstd::Callback<std::expected<std::reference_wrapper<const Res>, Error>>&
+      hstd::Callback<std::expected<std::reference_wrapper<const Res>, Error>>&
           callback) noexcept {
     inner_callback = &callback;
     req_cb.RebindUnguarded(&ServiceClientBase::RequestCallback<Res>);
@@ -39,7 +55,7 @@ class ServiceClientBase {
     requires(UsesAddressing)
   void Request(
       uint32_t server_address, uint32_t svc_id, uint32_t cmd_id, const Req& req,
-      halstd::Callback<std::expected<std::reference_wrapper<const Res>, Error>>&
+      hstd::Callback<std::expected<std::reference_wrapper<const Res>, Error>>&
           callback) noexcept {
     inner_callback = &callback;
     req_cb.RebindUnguarded(&ServiceClientBase::RequestCallback<Res>);
@@ -53,8 +69,8 @@ class ServiceClientBase {
   void RequestCallback(
       std::expected<std::span<const std::byte>, vrpc::uart::RequestError>
           response) noexcept {
-    using SuccessCb = halstd::Callback<
-        std::expected<std::reference_wrapper<const Res>, Error>>;
+    using SuccessCb =
+        hstd::Callback<std::expected<std::reference_wrapper<const Res>, Error>>;
     if (!std::holds_alternative<const SuccessCb*>(inner_callback)) {
       return;
     }
@@ -78,16 +94,15 @@ class ServiceClientBase {
 
   ClientTransport<Uart, Sys, NC, O>& uart_client;
 
-  halstd::DynamicMethodCallback<
+  hstd::DynamicMethodCallback<
       ServiceClientBase,
       std::expected<std::span<const std::byte>, RequestError>>
       req_cb;
 
   std::variant<std::monostate,
-               const halstd::Callback<std::expected<
+               const hstd::Callback<std::expected<
                    std::reference_wrapper<const ResponseMsgs>, Error>>*...>
       inner_callback{std::monostate{}};
-  ;
 };
 
 }   // namespace vrpc::uart
