@@ -2,7 +2,7 @@
 
 #include "pin.h"
 
-#include <halstd/callback.h>
+#include <halstd_old/callback.h>
 
 namespace hal {
 

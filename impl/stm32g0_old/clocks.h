@@ -3,9 +3,9 @@
 #include <cassert>
 
 #include <constexpr_tools/static_mapping.h>
-#include <halstd/chrono_ex.h>
+#include <halstd_old/chrono_ex.h>
 
-#include <halstd/logic.h>
+#include <halstd_old/logic.h>
 
 #include <hal/clocks.h>
 

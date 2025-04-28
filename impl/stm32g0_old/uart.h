@@ -5,16 +5,16 @@
 
 #include <stm32g0xx_hal.h>
 
-#include <halstd/compile_time_assert.h>
-#include <halstd/spans.h>
+#include <halstd_old/compile_time_assert.h>
+#include <halstd_old/spans.h>
 
 #include <hal/peripheral.h>
 #include <hal/uart.h>
 
-#include <stm32g0/dma.h>
-#include <stm32g0/pin.h>
+#include <stm32g0_old/dma.h>
+#include <stm32g0_old/pin.h>
 
-#include <stm32g0/mappings/uart_pin_mapping.h>
+#include <stm32g0_old/mappings/uart_pin_mapping.h>
 
 extern "C" {
 

@@ -1,7 +1,12 @@
-#pragma once
+#include <stm32g0xx_hal.h>
 
-import hal.abstract;
-import hal.stm32g0;
+#include <hal/peripheral.h>
+
+#include <stm32g0_old/dma.h>
+#include <stm32g0_old/i2s.h>
+#include <stm32g0_old/pin_interrupt.h>
+#include <stm32g0_old/tim.h>
+#include <stm32g0_old/uart.h>
 
 template <unsigned P>
 void HandlePinInterrupt() noexcept {
@@ -29,9 +34,7 @@ void HandlePinInterrupt() noexcept {
 
 extern "C" {
 
-void HAL_IncTick();
-
-void SysTick_Handler() {
+[[maybe_unused]] void SysTick_Handler() {
   HAL_IncTick();
 }
 
@@ -92,14 +95,14 @@ void SysTick_Handler() {
   HANDLE_PERIPHERAL_IRQ(LpUart1)
 }
 
-// [[maybe_unused]] void SPI1_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(I2s1);
-// }
-//
-// [[maybe_unused]] void SPI2_3_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(I2s2);
-// }
-//
+[[maybe_unused]] void SPI1_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(I2s1);
+}
+
+[[maybe_unused]] void SPI2_3_IRQHandler() {
+  HANDLE_PERIPHERAL_IRQ(I2s2);
+}
+
 #define HANDLE_UART_RECEIVE_CALLBACK(Inst)                 \
   if constexpr (hal::IsPeripheralInUse<stm32g0::Inst>()) { \
     if (huart == &stm32g0::Inst::instance().huart) {       \
@@ -136,20 +139,20 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
   HANDLE_UART_TX_CALLBACK(LpUart1)
   HANDLE_UART_TX_CALLBACK(LpUart2)
 }
-//
-// #define HANDLE_SPI_RECEIVE_CALLBACK(Inst)                  \
-//   if constexpr (hal::IsPeripheralInUse<stm32g0::Inst>()) { \
-//     if (hspi == &stm32g0::Inst::instance().hspi) {         \
-//       stm32g0::Inst::instance().ReceiveComplete();         \
-//     }                                                      \
-//   }
-//
-// void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef* hspi) {
-//   HANDLE_SPI_RECEIVE_CALLBACK(Spi1);
-//   HANDLE_SPI_RECEIVE_CALLBACK(Spi2);
-//   HANDLE_SPI_RECEIVE_CALLBACK(Spi3);
-// }
-//
+
+#define HANDLE_SPI_RECEIVE_CALLBACK(Inst)                  \
+  if constexpr (hal::IsPeripheralInUse<stm32g0::Inst>()) { \
+    if (hspi == &stm32g0::Inst::instance().hspi) {         \
+      stm32g0::Inst::instance().ReceiveComplete();         \
+    }                                                      \
+  }
+
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef* hspi) {
+  HANDLE_SPI_RECEIVE_CALLBACK(Spi1);
+  HANDLE_SPI_RECEIVE_CALLBACK(Spi2);
+  HANDLE_SPI_RECEIVE_CALLBACK(Spi3);
+}
+
 [[maybe_unused]] void TIM1_BRK_UP_TRG_COM_IRQHandler() {
   HANDLE_PERIPHERAL_IRQ(Tim1)
 }
@@ -198,8 +201,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
     }                                                      \
   }
 
-[[maybe_unused]] void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
-{
+[[maybe_unused]] void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim1)
   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim2)
   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim3)

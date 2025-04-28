@@ -11,41 +11,24 @@ add_library(constexpr_tools INTERFACE
 target_include_directories(constexpr_tools INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
 
-add_library(halstd INTERFACE
-        halstd/mp/helpers.h
-        halstd/mp/type_helpers.h
-        halstd/mp/types.h
-        halstd/mp/values.h
-
-        halstd/atomic.h
-        halstd/atomic_helpers.h
-        halstd/callback.h
-        halstd/chrono_ex.h
-        halstd/compile_time_assert.h
-        halstd/logic.h
-        halstd/ratio_ex.h
-        halstd/spans.h)
-target_include_directories(halstd INTERFACE
-        ${CMAKE_CURRENT_LIST_DIR})
-
 
 add_library(hstd)
 target_sources(hstd
         PUBLIC
         FILE_SET CXX_MODULES FILES
-        halstd_module/mp/helpers.cppm
-        halstd_module/mp/types.cppm
-        halstd_module/mp/values.cppm
+        hstd/mp/helpers.cppm
+        hstd/mp/types.cppm
+        hstd/mp/values.cppm
 
-        halstd_module/atomic.cppm
-        halstd_module/callback.cppm
-        halstd_module/crc.cppm
-        halstd_module/chrono.cppm
-        halstd_module/logic.cppm
-        halstd_module/ratio.cppm
-        halstd_module/spans.cppm
+        hstd/atomic.cppm
+        hstd/callback.cppm
+        hstd/crc.cppm
+        hstd/chrono.cppm
+        hstd/logic.cppm
+        hstd/ratio.cppm
+        hstd/spans.cppm
 
-        halstd_module/halstd.cppm)
+        hstd/halstd.cppm)
 target_link_libraries(hstd PRIVATE project_settings)
 
 # Proxy library for CMSIS-DSP which allows disabling it under certain build conditions
@@ -79,21 +62,15 @@ add_library(math INTERFACE
         math/math_config.h)
 
 # Statechart library
-add_library(statechart INTERFACE
-        sc/statechart.h
-        sc/statechart_callback.h)
-target_include_directories(statechart INTERFACE ${CMAKE_CURRENT_LIST_DIR})
-target_link_libraries(statechart INTERFACE halstd)
-
-add_library(statechart_mod)
-target_sources(statechart_mod
+add_library(statechart)
+target_sources(statechart
         PUBLIC
         FILE_SET CXX_MODULES FILES
-        sc_mod/core.cppm
-        sc_mod/statechart_callback.cppm
+        sc/core.cppm
+        sc/statechart_callback.cppm
 
-        sc_mod/statechart.cppm)
-target_link_libraries(statechart_mod PRIVATE hstd project_settings)
+        sc/statechart.cppm)
+target_link_libraries(statechart PRIVATE hstd project_settings)
 
 target_link_libraries(math INTERFACE cmsis_dsp fp)
 target_compile_definitions(math INTERFACE HAL2_CMSIS_DSP_ENABLED)
@@ -103,4 +80,3 @@ target_include_directories(math INTERFACE
 
 add_subdirectory(sbs)
 add_subdirectory(vrpc)
-add_subdirectory(vrpc_mod)

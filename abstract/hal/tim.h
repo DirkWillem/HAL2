@@ -5,9 +5,9 @@
 #include <cstdint>
 #include <span>
 
-#include <halstd/callback.h>
-#include <halstd/chrono_ex.h>
-#include <halstd/mp/helpers.h>
+#include <halstd_old/callback.h>
+#include <halstd_old/chrono_ex.h>
+#include <halstd_old/mp/helpers.h>
 
 namespace hal {
 

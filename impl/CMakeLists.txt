@@ -15,112 +15,105 @@ function(add_stm32g0_hal VARIANT XMLFILE)
             "${VARIANT}"
             "uart-pin-mapping"
             "${XMLFILE}"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.h")
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g0_old/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.h")
 
     add_generated_file(
             stm32g0
             "${VARIANT}"
             "spi-i2s-pin-mapping"
             "${XMLFILE}"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/spi_i2s_pin_mapping.h")
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g0_old/generated/${VARIANT}/stm32g0/mappings/spi_i2s_pin_mapping.h")
 
     add_generated_file(
             stm32g0
             "${VARIANT}"
             "tim-pin-mapping"
             "${XMLFILE}"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.h")
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g0_old/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.h")
 
     # Add library
-    add_library("${VARIANT}_hal"
-            "stm32g0/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.h"
-            "stm32g0/generated/${VARIANT}/stm32g0/mappings/spi_i2s_pin_mapping.h"
-            "stm32g0/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.h"
+    add_library("${VARIANT}_hal_old"
+            "stm32g0_old/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.h"
+            "stm32g0_old/generated/${VARIANT}/stm32g0/mappings/spi_i2s_pin_mapping.h"
+            "stm32g0_old/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.h"
 
-            stm32g0/tim/channel.h
-            stm32g0/tim/common.cpp
-            stm32g0/tim/common.h
+            stm32g0_old/tim/channel.h
+            stm32g0_old/tim/common.cpp
+            stm32g0_old/tim/common.h
 
-            stm32g0/clocks.h
-            stm32g0/dma.h
-            stm32g0/dma.cpp
-            stm32g0/i2s.cpp
-            stm32g0/i2s.h
-            stm32g0/interrupts.h
-            stm32g0/peripheral_ids.h
-            stm32g0/pin.cpp
-            stm32g0/pin.h
-            stm32g0/pin_interrupt.cpp
-            stm32g0/pin_interrupt.h
-            stm32g0/spi.cpp
-            stm32g0/spi.h
-            stm32g0/system.cpp
-            stm32g0/system.h
-            stm32g0/tim.h
-            stm32g0/uart.cpp
-            stm32g0/uart.h)
+            stm32g0_old/clocks.h
+            stm32g0_old/dma.h
+            stm32g0_old/dma.cpp
+            stm32g0_old/i2s.cpp
+            stm32g0_old/i2s.h
+            stm32g0_old/interrupts.h
+            stm32g0_old/peripheral_ids.h
+            stm32g0_old/pin.cpp
+            stm32g0_old/pin.h
+            stm32g0_old/pin_interrupt.cpp
+            stm32g0_old/pin_interrupt.h
+            stm32g0_old/spi.cpp
+            stm32g0_old/spi.h
+            stm32g0_old/system.cpp
+            stm32g0_old/system.h
+            stm32g0_old/tim.h
+            stm32g0_old/uart.cpp
+            stm32g0_old/uart.h)
 
-    target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor" project_settings)
-    target_include_directories("${VARIANT}_hal" PUBLIC
+    target_link_libraries("${VARIANT}_hal_old" PUBLIC abstract_hal "${VARIANT}_vendor" project_settings)
+    target_include_directories("${VARIANT}_hal_old" PUBLIC
             "${CMAKE_CURRENT_LIST_DIR}"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}")
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g0_old/generated/${VARIANT}")
 
-    if (NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.cppm")
+    if (NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.cppm")
         add_generated_file(
                 stm32g0
                 "${VARIANT}"
                 "uart-pin-mapping-module"
                 "${XMLFILE}"
-                "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.cppm")
+                "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.cppm")
     endif()
 
-    if (NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.cppm")
+    if (NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.cppm")
         add_generated_file(
                 stm32g0
                 "${VARIANT}"
                 "tim-pin-mapping-module"
                 "${XMLFILE}"
-                "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.cppm")
+                "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.cppm")
     endif()
 
-    add_library("${VARIANT}_hal_mod")
-    target_sources("${VARIANT}_hal_mod"
+    add_library("${VARIANT}_hal")
+    target_sources("${VARIANT}_hal"
             PUBLIC
             FILE_SET CXX_MODULES
             FILES
-            "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.cppm"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.cppm"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.cppm"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.cppm"
 
-            stm32g0_mod/tim/channel.cppm
-            stm32g0_mod/tim/common.cppm
-            stm32g0_mod/tim/tim.cppm
+            stm32g0/tim/channel.cppm
+            stm32g0/tim/common.cppm
+            stm32g0/tim/tim.cppm
 
-            stm32g0_mod/clocks.cppm
-            stm32g0_mod/dma.cppm
-            stm32g0_mod/peripherals.cppm
-            stm32g0_mod/pin_interrupt.cppm
-            stm32g0_mod/pin.cppm
-            stm32g0_mod/system.cppm
-            stm32g0_mod/uart.cppm
+            stm32g0/clocks.cppm
+            stm32g0/dma.cppm
+            stm32g0/peripherals.cppm
+            stm32g0/pin_interrupt.cppm
+            stm32g0/pin.cppm
+            stm32g0/system.cppm
+            stm32g0/uart.cppm
 
-            stm32g0_mod/stm32g0.cppm
+            stm32g0/stm32g0.cppm
 
             PUBLIC
             FILE_SET pub_headers TYPE HEADERS
-            BASE_DIRS "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod"
+            BASE_DIRS "${CMAKE_CURRENT_LIST_DIR}/stm32g0"
             FILES
-            "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/pin_macros.h"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32g0_mod/interrupts.h"
-            PRIVATE
-            FILE_SET gen_headers TYPE HEADERS
-            BASE_DIRS "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}"
-            FILES
-            "stm32g0/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.h"
-            "stm32g0/generated/${VARIANT}/stm32g0/mappings/spi_i2s_pin_mapping.h"
-            "stm32g0/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.h"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/pin_macros.h"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/interrupts.h"
     )
 
-    target_link_libraries("${VARIANT}_hal_mod"
+    target_link_libraries("${VARIANT}_hal"
             PUBLIC
             "${VARIANT}_vendor"
 

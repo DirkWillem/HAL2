@@ -1,7 +1,7 @@
 #pragma once
 
-#include <halstd/callback.h>
-#include <halstd/mp/values.h>
+#include <halstd_old/callback.h>
+#include <halstd_old/mp/values.h>
 
 #include <hal/peripheral.h>
 #include <hal/pin_interrupts.h>

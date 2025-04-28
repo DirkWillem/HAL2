@@ -5,11 +5,11 @@
 #include <hal/dma.h>
 #include <hal/i2s.h>
 
-#include <stm32g0/dma.h>
-#include <stm32g0/pin.h>
-#include <stm32g0/spi.h>
+#include <stm32g0_old/dma.h>
+#include <stm32g0_old/pin.h>
+#include <stm32g0_old/spi.h>
 
-#include <stm32g0/mappings/spi_i2s_pin_mapping.h>
+#include <stm32g0_old/mappings/spi_i2s_pin_mapping.h>
 
 namespace stm32g0 {
 

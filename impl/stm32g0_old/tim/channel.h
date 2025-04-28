@@ -2,14 +2,14 @@
 
 #include <concepts>
 
-#include <halstd/chrono_ex.h>
-#include <halstd/mp/values.h>
+#include <halstd_old/chrono_ex.h>
+#include <halstd_old/mp/values.h>
 
 #include <stm32g0xx_hal.h>
 
-#include <stm32g0/dma.h>
-#include <stm32g0/mappings/tim_pin_mapping.h>
-#include <stm32g0/pin.h>
+#include <stm32g0_old/dma.h>
+#include <stm32g0_old/mappings/tim_pin_mapping.h>
+#include <stm32g0_old/pin.h>
 
 #include "common.h"
 

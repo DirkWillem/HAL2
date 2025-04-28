@@ -5,7 +5,7 @@
 #include <cstdint>
 #include <span>
 
-#include <halstd/callback.h>
+#include <halstd_old/callback.h>
 
 namespace hal {
 

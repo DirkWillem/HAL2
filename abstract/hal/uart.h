@@ -2,9 +2,9 @@
 
 #include <string_view>
 
-#include <halstd/logic.h>
+#include <halstd_old/logic.h>
 
-#include <halstd/callback.h>
+#include <halstd_old/callback.h>
 
 #include "peripheral.h"
 

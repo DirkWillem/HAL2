@@ -7,7 +7,7 @@
 
 #include <hal/dma.h>
 
-#include <stm32g0/peripheral_ids.h>
+#include <stm32g0_old/peripheral_ids.h>
 
 namespace stm32g0 {
 

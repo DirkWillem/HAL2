@@ -6,12 +6,12 @@
 
 #include <stm32g0xx_hal.h>
 
-#include <halstd/chrono_ex.h>
-#include <halstd/mp/values.h>
+#include <halstd_old/chrono_ex.h>
+#include <halstd_old/mp/values.h>
 
-#include <stm32g0/clocks.h>
-#include <stm32g0/dma.h>
-#include <stm32g0/peripheral_ids.h>
+#include <stm32g0_old/clocks.h>
+#include <stm32g0_old/dma.h>
+#include <stm32g0_old/peripheral_ids.h>
 
 #include "tim/channel.h"
 #include "tim/common.h"

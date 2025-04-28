@@ -5,14 +5,14 @@
 
 #include <stm32g0xx_hal.h>
 
-#include <halstd/logic.h>
+#include <halstd_old/logic.h>
 
 #include <hal/spi.h>
 
-#include <stm32g0/clocks.h>
-#include <stm32g0/dma.h>
+#include <stm32g0_old/clocks.h>
+#include <stm32g0_old/dma.h>
 
-#include <stm32g0/mappings/spi_i2s_pin_mapping.h>
+#include <stm32g0_old/mappings/spi_i2s_pin_mapping.h>
 
 namespace stm32g0 {
 

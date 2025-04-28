@@ -40,7 +40,7 @@ function(add_application_modules NAME)
             ${ADD_APPLICATION_LIBS}
             -Wl,--whole-archive
             stm32_system
-            ${ADD_APPLICATION_MCU}_hal_mod
+            ${ADD_APPLICATION_MCU}_hal
             ${ADD_APPLICATION_FULL_LIBS}
             -Wl,--no-whole-archive)
     target_include_directories("${NAME}_${ADD_APPLICATION_TARGET}" PRIVATE
