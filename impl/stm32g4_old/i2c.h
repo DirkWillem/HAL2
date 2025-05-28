@@ -5,15 +5,15 @@
 #include <constexpr_tools/spans.h>
 #include <halstd/chrono_ex.h>
 
-#include <stm32g4/internal/i2c_timing.h>
-#include <stm32g4/mappings/i2c_pin_mapping.h>
+#include <stm32g4_old/internal/i2c_timing.h>
+#include <stm32g4_old/mappings/i2c_pin_mapping.h>
 
 #include <hal/i2c.h>
 #include <hal/peripheral.h>
 
-#include <stm32g4/clocks.h>
-#include <stm32g4/dma.h>
-#include <stm32g4/pin.h>
+#include <stm32g4_old/clocks.h>
+#include <stm32g4_old/dma.h>
+#include <stm32g4_old/pin.h>
 
 namespace stm32g4 {
 

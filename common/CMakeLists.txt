@@ -25,6 +25,7 @@ target_sources(hstd
         hstd/crc.cppm
         hstd/chrono.cppm
         hstd/logic.cppm
+        hstd/math.cppm
         hstd/ratio.cppm
         hstd/spans.cppm
 

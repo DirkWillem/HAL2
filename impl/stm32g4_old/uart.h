@@ -8,10 +8,10 @@
 #include <hal/peripheral.h>
 #include <hal/uart.h>
 
-#include <stm32g4/dma.h>
-#include <stm32g4/pin.h>
+#include <stm32g4_old/dma.h>
+#include <stm32g4_old/pin.h>
 
-#include <stm32g4/mappings/uart_pin_mapping.h>
+#include <stm32g4_old/mappings/uart_pin_mapping.h>
 
 extern "C" {
 

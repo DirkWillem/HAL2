@@ -131,51 +131,101 @@ function(add_stm32g4_hal VARIANT XMLFILE)
             "${VARIANT}"
             "uart-pin-mapping"
             "${XMLFILE}"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/uart_pin_mapping.h")
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g4_old/generated/${VARIANT}/stm32g4/mappings/uart_pin_mapping.h")
     add_generated_file(
             stm32g4
             "${VARIANT}"
             "spi-i2s-pin-mapping"
             "${XMLFILE}"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/spi_i2s_pin_mapping.h")
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g4_old/generated/${VARIANT}/stm32g4/mappings/spi_i2s_pin_mapping.h")
     add_generated_file(
             stm32g4
             "${VARIANT}"
             "i2c-pin-mapping"
             "${XMLFILE}"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/i2c_pin_mapping.h")
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g4_old/generated/${VARIANT}/stm32g4/mappings/i2c_pin_mapping.h")
 
     # Add library
-    add_library("${VARIANT}_hal"
-            "stm32g4/generated/${VARIANT}/stm32g4/mappings/uart_pin_mapping.h"
-            "stm32g4/generated/${VARIANT}/stm32g4/mappings/spi_i2s_pin_mapping.h"
-            "stm32g4/generated/${VARIANT}/stm32g4/mappings/i2c_pin_mapping.h"
+    add_library("${VARIANT}_hal_old"
+            "stm32g4_old/generated/${VARIANT}/stm32g4/mappings/uart_pin_mapping.h"
+            "stm32g4_old/generated/${VARIANT}/stm32g4/mappings/spi_i2s_pin_mapping.h"
+            "stm32g4_old/generated/${VARIANT}/stm32g4/mappings/i2c_pin_mapping.h"
 
-            stm32g4/internal/i2c_timing.h
+            stm32g4_old/internal/i2c_timing.h
 
-            stm32g4/clocks.cpp
-            stm32g4/clocks.h
-            stm32g4/cordic.h
-            stm32g4/dma.cpp
-            stm32g4/dma.h
-            stm32g4/i2c.cpp
-            stm32g4/i2c.h
-            stm32g4/interrupts.h
-            stm32g4/peripheral_ids.h
-            stm32g4/pin.cpp
-            stm32g4/pin.h
-            stm32g4/spi.cpp
-            stm32g4/spi.h
-            stm32g4/system.cpp
-            stm32g4/system.h
-            stm32g4/uart.cpp
-            stm32g4/uart.h
+            stm32g4_old/clocks.cpp
+            stm32g4_old/clocks.h
+            stm32g4_old/cordic.h
+            stm32g4_old/dma.cpp
+            stm32g4_old/dma.h
+            stm32g4_old/i2c.cpp
+            stm32g4_old/i2c.h
+            stm32g4_old/interrupts.h
+            stm32g4_old/peripheral_ids.h
+            stm32g4_old/pin.cpp
+            stm32g4_old/pin.h
+            stm32g4_old/spi.cpp
+            stm32g4_old/spi.h
+            stm32g4_old/system.cpp
+            stm32g4_old/system.h
+            stm32g4_old/uart.cpp
+            stm32g4_old/uart.h
     )
 
-    target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor" project_settings)
-    target_include_directories("${VARIANT}_hal" PUBLIC
+    target_link_libraries("${VARIANT}_hal_old" PUBLIC abstract_hal "${VARIANT}_vendor" project_settings)
+    target_include_directories("${VARIANT}_hal_old" PUBLIC
             "${CMAKE_CURRENT_LIST_DIR}"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}")
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g4_old/generated/${VARIANT}")
+
+    if (NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/uart_pin_mapping.cppm")
+        add_generated_file(
+                stm32g4
+                "${VARIANT}"
+                "uart-pin-mapping-module"
+                "${XMLFILE}"
+                "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/uart_pin_mapping.cppm")
+    endif()
+
+    if (NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/tim_pin_mapping.cppm")
+        add_generated_file(
+                stm32g4
+                "${VARIANT}"
+                "tim-pin-mapping-module"
+                "${XMLFILE}"
+                "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/tim_pin_mapping.cppm")
+    endif()
+
+    add_library("${VARIANT}_hal")
+    target_sources("${VARIANT}_hal"
+            PUBLIC
+            FILE_SET CXX_MODULES
+            FILES
+#            "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/uart_pin_mapping.cppm"
+#            "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/tim_pin_mapping.cppm"
+
+            stm32g4/stm32g4.cppm
+
+            stm32g4/clocks.cppm
+            stm32g4/peripherals.cppm
+            stm32g4/pin.cppm
+            stm32g4/system.cppm
+
+            PUBLIC
+            FILE_SET pub_headers TYPE HEADERS
+            BASE_DIRS "${CMAKE_CURRENT_LIST_DIR}/stm32g4"
+            FILES
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g4/pin_macros.h"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g4/interrupts.h"
+    )
+
+    target_link_libraries("${VARIANT}_hal"
+            PUBLIC
+            "${VARIANT}_vendor"
+
+            PRIVATE
+            hstd
+            hal_abstract
+            project_settings)
 endfunction()
 
 

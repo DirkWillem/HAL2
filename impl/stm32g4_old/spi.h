@@ -8,12 +8,12 @@
 
 #include <hal/spi.h>
 
-#include <stm32g4/clocks.h>
-#include <stm32g4/dma.h>
-#include <stm32g4/peripheral_ids.h>
-#include <stm32g4/pin.h>
+#include <stm32g4_old/clocks.h>
+#include <stm32g4_old/dma.h>
+#include <stm32g4_old/peripheral_ids.h>
+#include <stm32g4_old/pin.h>
 
-#include <stm32g4/mappings/spi_i2s_pin_mapping.h>
+#include <stm32g4_old/mappings/spi_i2s_pin_mapping.h>
 
 namespace stm32g4 {
 

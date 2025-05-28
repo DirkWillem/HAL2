@@ -15,7 +15,7 @@
 #include <constexpr_tools/math.h>
 #include <halstd/chrono_ex.h>
 
-#include <stm32g4/peripheral_ids.h>
+#include <stm32g4_old/peripheral_ids.h>
 
 namespace stm32g4 {
 

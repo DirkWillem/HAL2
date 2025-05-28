@@ -9,5 +9,6 @@ export import :callback;
 export import :crc;
 export import :chrono;
 export import :logic;
+export import :math;
 export import :ratio;
 export import :spans;
