@@ -37,115 +37,89 @@ extern "C" {
   while (true) {}
 }
 
-// #define HANDLE_DMA_IRQ(Inst, Chan)                                          \
-//   if constexpr (hal::IsPeripheralInUse<                                     \
-//                     stm32g0::Dma<stm32g0::DmaImplMarker>>()) {              \
-//     if (stm32g0::Dma<stm32g0::DmaImplMarker>::ChannelInUse<Inst, Chan>()) { \
-//       stm32g0::Dma<stm32g0::DmaImplMarker>::instance()                      \
-//           .HandleInterrupt<Inst, Chan>();                                   \
-//     }                                                                       \
-//   }
-//
-// [[maybe_unused]] void DMA1_Channel1_IRQHandler() {
-//   HANDLE_DMA_IRQ(1, 1)
-// }
-//
-// [[maybe_unused]] void DMA1_Channel2_3_IRQHandler() {
-//   HANDLE_DMA_IRQ(1, 2)
-//   HANDLE_DMA_IRQ(1, 3)
-// }
-//
-// [[maybe_unused]] void DMA1_Ch4_7_DMA2_Ch1_5_DMAMUX1_OVR_IRQHandler() {
-//   HANDLE_DMA_IRQ(1, 4)
-//   HANDLE_DMA_IRQ(1, 5)
-//   HANDLE_DMA_IRQ(1, 6)
-//   HANDLE_DMA_IRQ(1, 7)
-//
-//   HANDLE_DMA_IRQ(2, 1)
-//   HANDLE_DMA_IRQ(2, 2)
-//   HANDLE_DMA_IRQ(2, 3)
-//   HANDLE_DMA_IRQ(2, 4)
-//   HANDLE_DMA_IRQ(2, 5)
-// }
-//
-// #define HANDLE_PERIPHERAL_IRQ(Periph)                        \
-//   if constexpr (hal::IsPeripheralInUse<stm32g0::Periph>()) { \
-//     stm32g0::Periph::instance().HandleInterrupt();           \
-//   }
-//
-// [[maybe_unused]] void USART1_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(Usart1)
-// }
-//
-// [[maybe_unused]] void USART2_LPUART2_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(Usart2)
-//   HANDLE_PERIPHERAL_IRQ(LpUart2)
-// }
-//
-// [[maybe_unused]] void USART3_4_5_6_LPUART1_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(Usart3)
-//   HANDLE_PERIPHERAL_IRQ(Usart4)
-//   HANDLE_PERIPHERAL_IRQ(Usart5)
-//   HANDLE_PERIPHERAL_IRQ(Usart6)
-//   HANDLE_PERIPHERAL_IRQ(LpUart1)
-// }
-//
-// [[maybe_unused]] void SPI1_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(I2s1);
-// }
-//
-// [[maybe_unused]] void SPI2_3_IRQHandler() {
-//   HANDLE_PERIPHERAL_IRQ(I2s2);
-// }
-//
-// #define HANDLE_UART_RECEIVE_CALLBACK(Inst)                 \
-//   if constexpr (hal::IsPeripheralInUse<stm32g0::Inst>()) { \
-//     if (huart == &stm32g0::Inst::instance().huart) {       \
-//       stm32g0::Inst::instance().ReceiveComplete(           \
-//           static_cast<std::size_t>(size));                 \
-//     }                                                      \
-//   }
-//
-// void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t size) {
-//   HANDLE_UART_RECEIVE_CALLBACK(Usart1)
-//   HANDLE_UART_RECEIVE_CALLBACK(Usart2)
-//   HANDLE_UART_RECEIVE_CALLBACK(Usart3)
-//   HANDLE_UART_RECEIVE_CALLBACK(Usart4)
-//   HANDLE_UART_RECEIVE_CALLBACK(Usart5)
-//   HANDLE_UART_RECEIVE_CALLBACK(Usart6)
-//   HANDLE_UART_RECEIVE_CALLBACK(LpUart1)
-//   HANDLE_UART_RECEIVE_CALLBACK(LpUart2)
-// }
-//
-// #define HANDLE_UART_TX_CALLBACK(Inst)                      \
-//   if constexpr (hal::IsPeripheralInUse<stm32g0::Inst>()) { \
-//     if (huart == &stm32g0::Inst::instance().huart) {       \
-//       stm32g0::Inst::instance().TransmitComplete();        \
-//     }                                                      \
-//   }
-//
-// void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
-//   HANDLE_UART_TX_CALLBACK(Usart1)
-//   HANDLE_UART_TX_CALLBACK(Usart2)
-//   HANDLE_UART_TX_CALLBACK(Usart3)
-//   HANDLE_UART_TX_CALLBACK(Usart4)
-//   HANDLE_UART_TX_CALLBACK(Usart5)
-//   HANDLE_UART_TX_CALLBACK(Usart6)
-//   HANDLE_UART_TX_CALLBACK(LpUart1)
-//   HANDLE_UART_TX_CALLBACK(LpUart2)
-// }
-//
-// #define HANDLE_SPI_RECEIVE_CALLBACK(Inst)                  \
-//   if constexpr (hal::IsPeripheralInUse<stm32g0::Inst>()) { \
-//     if (hspi == &stm32g0::Inst::instance().hspi) {         \
-//       stm32g0::Inst::instance().ReceiveComplete();         \
-//     }                                                      \
-//   }
-//
-// void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef* hspi) {
-//   HANDLE_SPI_RECEIVE_CALLBACK(Spi1);
-//   HANDLE_SPI_RECEIVE_CALLBACK(Spi2);
-//   HANDLE_SPI_RECEIVE_CALLBACK(Spi3);
+/**
+ * DMA Interrupts
+ */
+static_assert(hal::Peripheral<stm32g4::Dma<stm32g4::DmaImplMarker>>);
+
+#define DMA_IRQ_HANDLER(Inst, Chan)                                           \
+  void DMA##Inst##_Channel##Chan##_IRQHandler() {                             \
+    if constexpr (hal::IsPeripheralInUse<                                     \
+                      stm32g4::Dma<stm32g4::DmaImplMarker>>()) {              \
+      if (stm32g4::Dma<stm32g4::DmaImplMarker>::ChannelInUse<Inst, Chan>()) { \
+        stm32g4::Dma<stm32g4::DmaImplMarker>::instance()                      \
+            .HandleInterrupt<Inst, Chan>();                                   \
+      }                                                                       \
+    }                                                                         \
+  }
+
+DMA_IRQ_HANDLER(1, 1)
+DMA_IRQ_HANDLER(1, 2)
+DMA_IRQ_HANDLER(1, 3)
+DMA_IRQ_HANDLER(1, 4)
+DMA_IRQ_HANDLER(1, 5)
+DMA_IRQ_HANDLER(1, 6)
+DMA_IRQ_HANDLER(1, 7)
+DMA_IRQ_HANDLER(1, 8)
+
+DMA_IRQ_HANDLER(2, 1)
+DMA_IRQ_HANDLER(2, 2)
+DMA_IRQ_HANDLER(2, 3)
+DMA_IRQ_HANDLER(2, 4)
+DMA_IRQ_HANDLER(2, 5)
+DMA_IRQ_HANDLER(2, 6)
+DMA_IRQ_HANDLER(2, 7)
+DMA_IRQ_HANDLER(2, 8)
+
+/**
+ * UART Interrupts
+ */
+#define UART_IRQ_HANDLER(Name)                                     \
+  void Name##_IRQHandler() {                                       \
+    constexpr auto Inst = stm32g4::UartIdFromName(#Name);          \
+    if constexpr (hal::IsPeripheralInUse<stm32g4::Uart<Inst>>()) { \
+      stm32g4::Uart<Inst>::instance().HandleInterrupt();           \
+    }                                                              \
+  }
+
+UART_IRQ_HANDLER(USART1)
+UART_IRQ_HANDLER(USART2)
+UART_IRQ_HANDLER(USART3)
+UART_IRQ_HANDLER(UART4)
+UART_IRQ_HANDLER(UART5)
+UART_IRQ_HANDLER(LPUART1)
+
+#define HANDLE_UART_RECEIVE_CALLBACK(Inst)                 \
+  if constexpr (hal::IsPeripheralInUse<stm32g4::Inst>()) { \
+    if (huart == &stm32g4::Inst::instance().huart) {       \
+      stm32g4::Inst::instance().ReceiveComplete(           \
+          static_cast<std::size_t>(size));                 \
+    }                                                      \
+  }
+
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t size) {
+  HANDLE_UART_RECEIVE_CALLBACK(Usart1)
+  HANDLE_UART_RECEIVE_CALLBACK(Usart2)
+  HANDLE_UART_RECEIVE_CALLBACK(Usart3)
+  HANDLE_UART_RECEIVE_CALLBACK(Uart4)
+  HANDLE_UART_RECEIVE_CALLBACK(Uart5)
+  HANDLE_UART_RECEIVE_CALLBACK(LpUart1)
+}
+
+#define HANDLE_UART_TX_CALLBACK(Inst)                      \
+  if constexpr (hal::IsPeripheralInUse<stm32g4::Inst>()) { \
+    if (huart == &stm32g4::Inst::instance().huart) {       \
+      stm32g4::Inst::instance().TransmitComplete();        \
+    }                                                      \
+  }
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
+  HANDLE_UART_TX_CALLBACK(Usart1) HANDLE_UART_TX_CALLBACK(Usart2)
+      HANDLE_UART_TX_CALLBACK(Usart3) HANDLE_UART_TX_CALLBACK(Uart4)
+          HANDLE_UART_TX_CALLBACK(Uart5) HANDLE_UART_TX_CALLBACK(LpUart1)
+}
+
+;
 // }
 //
 // [[maybe_unused]] void TIM1_BRK_UP_TRG_COM_IRQHandler() {
@@ -196,7 +170,8 @@ extern "C" {
 //     }                                                      \
 //   }
 //
-// [[maybe_unused]] void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
+// [[maybe_unused]] void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
+// {
 //   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim1)
 //   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim2)
 //   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim3)

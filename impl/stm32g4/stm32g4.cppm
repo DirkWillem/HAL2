@@ -4,9 +4,12 @@ module;
 
 export module hal.stm32g4;
 
+export import :dma;
 export import :clocks;
+export import :peripherals;
 export import :pin;
 export import :system;
+export import :uart;
 
 namespace stm32g4 {
 
