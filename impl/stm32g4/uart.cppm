@@ -76,13 +76,14 @@ struct UartPinoutHelper<Id, C> {
                    "TX pin must be valid");
       hstd::Assert(hal::FindPinAFMapping(UartRxPinMappings, Id, rx).has_value(),
                    "RX pin must be valid");
+
+      tx_af = hal::FindPinAFMapping(UartTxPinMappings, Id, tx)->af;
+      rx_af = hal::FindPinAFMapping(UartRxPinMappings, Id, rx)->af;
     }
 
     void Initialize() const noexcept {
-      Pin::InitializeAlternate(
-          tx, hal::FindPinAFMapping(UartTxPinMappings, Id, tx)->af, pull_tx);
-      Pin::InitializeAlternate(
-          rx, hal::FindPinAFMapping(UartRxPinMappings, Id, rx)->af, pull_rx);
+      Pin::InitializeAlternate(tx, tx_af, pull_tx);
+      Pin::InitializeAlternate(rx, rx_af, pull_rx);
     }
 
     PinId tx;
@@ -90,6 +91,9 @@ struct UartPinoutHelper<Id, C> {
 
     hal::PinPull pull_tx;
     hal::PinPull pull_rx;
+
+    unsigned tx_af{0};
+    unsigned rx_af{0};
   };
 };
 
