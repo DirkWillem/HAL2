@@ -40,3 +40,6 @@
 [submodule "common/vrpc/protos"]
 	path = common/vrpc/protos
 	url = git@github.com:DirkWillem/vRPC-Common-Protocol.git
+[submodule "vendor/freertos"]
+	path = vendor/freertos
+	url = git@github.com:FreeRTOS/FreeRTOS-Kernel.git

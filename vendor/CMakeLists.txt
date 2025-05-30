@@ -187,6 +187,16 @@ function(add_stm32h7_dualcore_vendor_hal VARIANT BOOT_TYPE)
     endif ()
 endfunction()
 
+function(ADD_FREERTOS CORE PORT)
+    add_library(freertos_config INTERFACE)
+    target_include_directories(freertos_config SYSTEM INTERFACE freertos_conf)
+    target_compile_definitions(freertos_config INTERFACE projCOVERAGE_TEST=0 ${CORE})
+
+    set(FREERTOS_PORT ${PORT})
+
+    add_subdirectory(freertos)
+endfunction()
+
 if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
     # CMSIS core includes
     if (NOT TARGET cmsis_core_includes)
@@ -210,6 +220,16 @@ if ("${TARGET}" STREQUAL "arm-cortex-m4")
         target_link_libraries(CMSISDSP PUBLIC cmsis_core_includes)
     endif ()
 
+    # FreeRTOS
+    add_freertos(CORE_CM4 "GCC_ARM_CM4F")
+    target_link_libraries(freertos_kernel PUBLIC project_settings)
+    target_link_libraries(freertos_kernel_include INTERFACE project_settings)
+    target_link_libraries(freertos_kernel_port_headers INTERFACE project_settings)
+    target_link_libraries(freertos_kernel_port PUBLIC project_settings)
+
+
+
+    # HAL
     add_stm32g4_vendor_hal(stm32g474)
     add_stm32h7_dualcore_vendor_hal(stm32h755 dualcore_boot_cm4_cm7)
 endif ()

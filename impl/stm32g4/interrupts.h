@@ -3,6 +3,8 @@
 import hal.abstract;
 import hal.stm32g4;
 
+import rtos.check;
+
 /*template <unsigned P>
 void HandlePinInterrupt() noexcept {
   using namespace stm32g0;
@@ -16,7 +18,7 @@ void HandlePinInterrupt() noexcept {
       }
     }
 
-    if constexpr (PinInt::PinInterruptActive(P, hal::Edge::Falling)) {
+    if constexplpr (PinInt::PinInterruptActive(P, hal::Edge::Falling)) {
       if (__HAL_GPIO_EXTI_GET_FALLING_IT(GetHalPin(P))) {
         __HAL_GPIO_EXTI_CLEAR_FALLING_IT(GetHalPin(P));
         PinInt::instance().HandleInterrupt<P, hal::Edge::Falling>();
@@ -31,10 +33,30 @@ extern "C" {
 
 [[maybe_unused]] void SysTick_Handler() {
   HAL_IncTick();
+
+  if constexpr (rtos::IsRtosUsed<rtos::FreeRtos>()) {
+    extern void xPortSysTickHandler(void);
+    xPortSysTickHandler();
+  }
 }
 
 [[maybe_unused, noreturn]] void HardFault_Handler() {
   while (true) {}
+}
+
+// RTOS-Related interrupts
+void PendSV_Handler() {
+  if constexpr (rtos::IsRtosUsed<rtos::FreeRtos>()) {
+    extern void xPortPendSVHandler(void);
+    xPortPendSVHandler();
+  }
+}
+
+void SVC_Handler() {
+  if constexpr (rtos::IsRtosUsed<rtos::FreeRtos>()) {
+    extern void vPortSVCHandler(void);
+    vPortSVCHandler();
+  }
 }
 
 /**

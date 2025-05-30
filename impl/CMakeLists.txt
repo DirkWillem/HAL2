@@ -223,6 +223,7 @@ function(add_stm32g4_hal VARIANT XMLFILE)
     target_link_libraries("${VARIANT}_hal"
             PUBLIC
             "${VARIANT}_vendor"
+            rtos_check
 
             PRIVATE
             hstd
