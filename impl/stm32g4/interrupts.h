@@ -31,6 +31,8 @@ void HandlePinInterrupt() noexcept {
 
 extern "C" {
 
+void HAL_IncTick();
+
 [[maybe_unused]] void SysTick_Handler() {
   HAL_IncTick();
 

@@ -207,6 +207,14 @@ if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
         target_link_libraries(CMSISDSP PUBLIC cmsis_core_includes)
     endif ()
 
+    # FreeRTOS
+    add_freertos(CORE_CM0 "GCC_ARM_CM0")
+    target_link_libraries(freertos_kernel PUBLIC project_settings)
+    target_link_libraries(freertos_kernel_include INTERFACE project_settings)
+    target_link_libraries(freertos_kernel_port_headers INTERFACE project_settings)
+    target_link_libraries(freertos_kernel_port PUBLIC project_settings)
+
+    # HAL
     add_stm32g0_vendor_hal(stm32g0b1)
 endif ()
 
@@ -226,8 +234,6 @@ if ("${TARGET}" STREQUAL "arm-cortex-m4")
     target_link_libraries(freertos_kernel_include INTERFACE project_settings)
     target_link_libraries(freertos_kernel_port_headers INTERFACE project_settings)
     target_link_libraries(freertos_kernel_port PUBLIC project_settings)
-
-
 
     # HAL
     add_stm32g4_vendor_hal(stm32g474)

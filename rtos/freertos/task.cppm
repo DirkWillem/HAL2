@@ -12,7 +12,7 @@ import hstd;
 
 namespace rtos {
 
-inline constexpr auto MinStackSize = configMINIMAL_STACK_SIZE;
+export inline constexpr auto MinStackSize = configMINIMAL_STACK_SIZE;
 
 /**
  * Base for a FreeRTOS Task

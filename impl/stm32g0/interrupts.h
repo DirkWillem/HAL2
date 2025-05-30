@@ -3,6 +3,8 @@
 import hal.abstract;
 import hal.stm32g0;
 
+import rtos.check;
+
 template <unsigned P>
 void HandlePinInterrupt() noexcept {
   using namespace stm32g0;
@@ -31,13 +33,20 @@ extern "C" {
 
 void HAL_IncTick();
 
-void SysTick_Handler() {
+[[maybe_unused]] void SysTick_Handler() {
   HAL_IncTick();
+
+  if constexpr (rtos::IsRtosUsed<rtos::FreeRtos>()) {
+    extern void xPortSysTickHandler(void);
+    xPortSysTickHandler();
+  }
 }
 
 [[maybe_unused, noreturn]] void HardFault_Handler() {
   while (true) {}
 }
+
+// // RTOS-Related interrupts are handled in the FreeRTOS port
 
 #define HANDLE_DMA_IRQ(Inst, Chan)                                          \
   if constexpr (hal::IsPeripheralInUse<                                     \
@@ -198,8 +207,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
     }                                                      \
   }
 
-[[maybe_unused]] void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
-{
+[[maybe_unused]] void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim1)
   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim2)
   HANDLE_TIM_PERIOD_ELAPSED_CB(Tim3)
