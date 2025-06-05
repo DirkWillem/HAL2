@@ -12,6 +12,7 @@ target_sources(rtos_freertos
         FILE_SET CXX_MODULES FILES
         freertos/freertos.cppm
 
+        freertos/event_group.cppm
         freertos/system.cppm
         freertos/task.cppm
         freertos/time.cppm)
@@ -23,4 +24,12 @@ target_link_libraries(rtos_freertos
         project_settings
         hstd
         hal_abstract)
+
+
+add_library(rtos_concepts)
+target_sources(rtos_concepts
+        PUBLIC
+        FILE_SET CXX_MODULES FILES
+        concepts/rtos_concepts.cppm)
+target_link_libraries(rtos_concepts PRIVATE project_settings)
 

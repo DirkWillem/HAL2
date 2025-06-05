@@ -7,7 +7,7 @@ export module rtos.check;
 
 namespace rtos {
 
-export struct FreeRtos {};
+export struct FreeRtosMarker {};
 
 export template<typename T>
 struct RtosUsedMarker : std::false_type {};

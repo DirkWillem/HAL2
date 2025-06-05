@@ -36,14 +36,20 @@ void HAL_IncTick();
 [[maybe_unused]] void SysTick_Handler() {
   HAL_IncTick();
 
-  if constexpr (rtos::IsRtosUsed<rtos::FreeRtos>()) {
+  if constexpr (rtos::IsRtosUsed<rtos::FreeRtosMarker>()) {
     extern void xPortSysTickHandler(void);
     xPortSysTickHandler();
   }
 }
 
 [[maybe_unused, noreturn]] void HardFault_Handler() {
-  while (true) {}
+  // Now you have access to the faulting PC and other registers
+
+  // For debugging: You can output or store these values somewhere or halt
+  // here
+  while (1) {
+    // Optionally blink an LED or output via UART for debugging
+  }
 }
 
 // // RTOS-Related interrupts are handled in the FreeRTOS port

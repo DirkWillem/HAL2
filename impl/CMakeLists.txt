@@ -117,6 +117,7 @@ function(add_stm32g0_hal VARIANT XMLFILE)
             PUBLIC
             "${VARIANT}_vendor"
             rtos_check
+            rtos_concepts
 
             PRIVATE
             hstd

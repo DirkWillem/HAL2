@@ -30,7 +30,7 @@ endif()
 
 set(TOOLCHAIN_SUFFIX "")
 set(CLANG_TARGET_TRIPLE "armv6m-none-eabi")
-set(MACHINE_FLAGS -mcpu=cortex-m0 -mfloat-abi=soft)
+set(MACHINE_FLAGS -mcpu=cortex-m0plus -mfloat-abi=soft -mthumb)
 
 if (NOT "${CLANG_EXPLICIT_VERSION}" STREQUAL "")
 set(CLANG_VERSION_SUFFIX "-${CLANG_EXPLICIT_VERSION}")

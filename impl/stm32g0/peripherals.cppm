@@ -8,6 +8,7 @@ module;
 export module hal.stm32g0:peripherals;
 
 import hstd;
+import rtos.concepts;
 
 namespace stm32g0 {
 
@@ -177,5 +178,10 @@ I2sIdFromName(std::string_view name) noexcept {
 
   std::unreachable();
 }
+
+export template<rtos::concepts::Rtos OS>
+struct WithRtos {
+  using Rtos = OS;
+};
 
 }   // namespace stm32g0

@@ -28,7 +28,7 @@ export class OsClock {
 
   static constexpr auto is_steady = false;
 
-  [[nodiscard]] time_point now() {
+  [[nodiscard]] static time_point now() {
     return time_point{TicksToMs(xTaskGetTickCount())};
   }
 

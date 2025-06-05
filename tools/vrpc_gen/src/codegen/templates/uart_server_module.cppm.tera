@@ -99,6 +99,51 @@ class Uart{{svc.name}} :
     }
   }
 
+  vrpc::uart::HandleResult
+    HandleCommandRtos(uint32_t id, std::span<const std::byte> request_buf,
+                  std::span<std::byte> response_buf) {
+      switch (id) {
+      {%- for _, method in svc.methods %}
+      case {{ method.id }}: {
+        {{ macros::msg_ref_class(msg=method.input_type) }} request{};
+        if (!vrpc::ProtoDecode(request_buf, request)) {
+          return {
+              .state            = vrpc::uart::HandleState::ErrMalformedPayload,
+              .response_payload = {},
+          };
+        }
+
+        if constexpr ({{ svc.name }}{{ method.name }}Sync<Impl>) {
+          {{ macros::msg_ref_class(msg=method.output_type) }} response{};
+          impl.{{method.name}}(request, response);
+
+          const auto [enc_success, enc_data] = vrpc::ProtoEncode(
+              response, response_buf);
+
+          if (!enc_success) {
+            return {
+                .state            = vrpc::uart::HandleState::ErrEncodeFailure,
+                .response_payload = {},
+            };
+          }
+
+          return {
+              .state            = vrpc::uart::HandleState::Handled,
+              .response_payload = enc_data,
+          };
+        } else {
+          static_assert(false, "Unsupported method {{svc.name}}::{{method.name}} for RTOS");
+        }
+      }
+      {%- endfor %}
+      default:
+        return {
+            .state            = vrpc::uart::HandleState::ErrUnknownCommand,
+            .response_payload = {},
+        };
+      }
+    }
+
  private:
   Impl& impl;
 };

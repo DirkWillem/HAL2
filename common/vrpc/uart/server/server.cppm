@@ -62,7 +62,7 @@ class VrpcUartServerExtensions<O> {
   uint32_t address;
 };
 
-template <typename Impl>
+export template <typename Impl>
 concept ServiceImpl = requires(Impl& impl) {
   { Impl::ServiceId } -> std::convertible_to<uint32_t>;
 
@@ -88,7 +88,7 @@ struct UartService {
   UartImpl<Service> svc_uart;
 };
 
-template <ServiceImpl Service>
+export template <ServiceImpl Service>
 class ServiceRef {
  protected:
   explicit ServiceRef(Service& service) noexcept

@@ -19,6 +19,7 @@ function(add_application NAME)
             "${CMAKE_CURRENT_LIST_DIR}"
             "${CMAKE_CURRENT_LIST_DIR}/target/${ADD_APPLICATION_TARGET}")
 
+    target_link_options("${NAME}_${ADD_APPLICATION_TARGET}" PRIVATE "-Wl,-Map=${NAME}_${ADD_APPLICATION_TARGET}.map")
     add_custom_command(
             TARGET "${NAME}_${ADD_APPLICATION_TARGET}"
             POST_BUILD

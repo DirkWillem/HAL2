@@ -310,6 +310,16 @@ target_link_libraries(vrpc_uart_server
         PUBLIC vrpc_protocol_uart_server vrpc_server_builtins vrpc_uart_common  hal_abstract)
 
 
+add_library(vrpc_uart_rtos_server)
+target_sources(vrpc_uart_rtos_server
+        PUBLIC
+        FILE_SET CXX_MODULES
+        FILES
+        uart/rtos_server/rtos_server.cppm)
+target_link_libraries(vrpc_uart_rtos_server
+        PUBLIC vrpc_uart_server rtos_freertos)
+
+
 add_library(vrpc_uart_client)
 target_sources(vrpc_uart_client
         PUBLIC

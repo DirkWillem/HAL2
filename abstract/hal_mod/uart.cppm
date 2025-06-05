@@ -1,5 +1,7 @@
 module;
 
+#include <chrono>
+#include <optional>
 #include <span>
 #include <string_view>
 
@@ -20,9 +22,7 @@ export enum class UartParity { Even, Odd, None };
 export enum class UartStopBits { Half, One, OneAndHalf, Two };
 
 export template <typename Impl>
-concept UartBase = Peripheral<Impl> && IsPeripheralInUse<Impl>() && requires {
-  { Impl::OperatingMode } -> std::convertible_to<UartOperatingMode>;
-};
+concept UartBase = Peripheral<Impl> && IsPeripheralInUse<Impl>();
 
 export template <typename Impl>
 concept AsyncUart = UartBase<Impl> && requires(Impl& impl) {
@@ -39,6 +39,22 @@ concept AsyncUart = UartBase<Impl> && requires(Impl& impl) {
 
   impl.RegisterUartTransmitCallback(std::declval<hstd::Callback<>&>());
   impl.ClearUartTransmitCallback();
+};
+
+export template <typename Impl>
+concept RtosUart = UartBase<Impl> && requires(Impl& impl) {
+  {
+    impl.Write(std::declval<std::string_view>(),
+               std::declval<std::chrono::milliseconds>())
+  } -> std::convertible_to<bool>;
+  {
+    impl.Write(std::declval<std::span<const std::byte>>(),
+               std::declval<std::chrono::milliseconds>())
+  } -> std::convertible_to<bool>;
+  {
+    impl.Receive(std::declval<std::span<std::byte>>(),
+                 std::declval<std::chrono::milliseconds>())
+  } -> std::convertible_to<std::optional<std::span<std::byte>>>;
 };
 
 export template <typename Impl>
