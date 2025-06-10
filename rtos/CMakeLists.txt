@@ -13,6 +13,7 @@ target_sources(rtos_freertos
         freertos/freertos.cppm
 
         freertos/event_group.cppm
+        freertos/queue.cppm
         freertos/system.cppm
         freertos/task.cppm
         freertos/time.cppm)

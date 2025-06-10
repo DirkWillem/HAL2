@@ -9,6 +9,7 @@ module;
 export module rtos.freertos;
 
 export import :event_group;
+export import :queue;
 export import :system;
 export import :task;
 export import :time;
