@@ -268,11 +268,35 @@ constexpr auto operator""_us(unsigned long long int v) {
 
 }   // namespace literals
 
+#if __cpp_lib_chrono >= 201907L
 /**
  * Concept that wraps the std::chrono::is_clock condition
  */
 template <typename C>
-concept Clock = std::chrono::is_clock_v<C>;
+concept Clock = std::chrono::is_clock<C>;
+#else
+template<class>
+struct is_clock : std::false_type {};
+
+template<class T>
+    requires
+        requires
+{
+  typename T::rep;
+  typename T::period;
+  typename T::duration;
+  typename T::time_point;
+  T::is_steady; // type is not checked
+  T::now();     // return type is not checked
+}
+struct is_clock<T> : std::true_type {};
+
+/**
+ * Concept that wraps the std::chrono::is_clock condition
+ */
+template<typename C>
+concept Clock = is_clock<C>::value;
+#endif
 
 /**
  * Concept that describes a system clock that can block the current thread

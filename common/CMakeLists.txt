@@ -23,6 +23,7 @@ target_sources(hstd
         hstd/atomic.cppm
         hstd/callback.cppm
         hstd/crc.cppm
+        hstd/endian.cppm
         hstd/chrono.cppm
         hstd/logic.cppm
         hstd/math.cppm

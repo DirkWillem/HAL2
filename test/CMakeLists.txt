@@ -1,5 +1,3 @@
-generate_vrpc(rad_svcs proto generated
-        GEN_TYPES uart)
 
 if (NOT TARGET GTest::gtest)
     include(FetchContent)
@@ -12,70 +10,51 @@ if (NOT TARGET GTest::gtest)
     FetchContent_MakeAvailable(googletest)
 endif ()
 
-# Test Proto files
-generate_vrpc(
-        test_protos common/vrpc/protos common/vrpc/generated
-        GEN_TYPES uart)
+add_library(test_helpers)
+target_sources(test_helpers
+        PUBLIC
+        FILE_SET CXX_MODULES
+        FILES
+        helpers/helpers.cppm
+        helpers/matchers.cppm
 
-add_library(hal_test_helpers STATIC
-        helpers/event_loop.h
+        helpers/buffer.cppm)
 
-        doubles/hal/fake_clock.h
-        doubles/hal/fake_pin.h
-        doubles/hal/mock_clock.cpp
-        doubles/hal/mock_clock.h)
-target_link_libraries(hal_test_helpers PUBLIC
-        abstract_hal
+target_link_libraries(test_helpers PUBLIC
+        hstd
+        project_settings
+
+        GTest::gtest
         GTest::gmock)
+
 
 # Test source files
 set(HAL2_TEST_SRCS
-        doubles/hal/fake_uart.h
-        doubles/hal/mock_system.h
-        doubles/hal/mock_system.cpp
-        doubles/hal/mock_uart.h
-
-        helpers/buffer_builder.cpp
-        helpers/buffer_builder.h
-        helpers/matchers.h
-        helpers/proto_helpers.h
-
-        common/ct/test_crc.cpp
-        common/ct/test_math.cpp
-        common/ct/test_static_string.cpp
-
-        common/fp/test_q.cpp
-        common/fp/test_uq.cpp
-
-        common/math/test_functions_power.cpp
-        common/math/test_functions_trigonometric.cpp
-        common/math/test_interpolation_bilinear.cpp
-
-        common/vrpc/uart_calculator_service.h
-        common/vrpc/test_vrpc_uart_server.cpp
-        common/vrpc/test_vrpc_uart_decoder.cpp
-        common/vrpc/test_vrpc_uart_integration.cpp)
+        modbus/test_encoding_rtu_decoder.cpp
+        modbus/test_encoding_rtu_encoder.cpp)
 
 
 add_library(hal2_tests_lib STATIC ${HAL2_TEST_SRCS})
 link_library_hdronly(hal2_tests_lib PUBLIC GTest::gtest)
 link_library_hdronly(hal2_tests_lib PUBLIC GTest::gmock)
-target_link_libraries(hal2_tests_lib PUBLIC abstract_hal fp test_protos hal_test_helpers)
+target_link_libraries(hal2_tests_lib PUBLIC abstract_hal fp test_protos hal_test_helpers test_helpers)
 target_include_directories(hal2_tests_lib PUBLIC "${CMAKE_CURRENT_LIST_DIR}")
 
 add_executable(hal2_tests ${HAL2_TEST_SRCS})
 target_link_libraries(hal2_tests PUBLIC
-        abstract_hal
-        fp
-        vrpc_uart
-        test_protos
-        math
+        modbus_encoding_rtu
+
+        hstd
 
         GTest::gmock
-        GTest::gtest_main)
+        GTest::gtest_main
+
+        test_helpers)
 target_include_directories(hal2_tests PUBLIC "${CMAKE_CURRENT_LIST_DIR}")
+target_compile_options(hal2_tests PUBLIC -g3)
 
-
-add_executable(playground main.cpp)
-target_link_libraries(playground PUBLIC math rad_svcs)
-target_compile_options(playground PUBLIC -g3)
+if(APPLE)
+    target_link_options(hal2_tests PRIVATE
+            -L/opt/homebrew/opt/llvm/lib/c++ # TODO: non-hardcoded path
+    )
+endif()

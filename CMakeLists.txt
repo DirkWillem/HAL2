@@ -5,6 +5,7 @@ add_subdirectory(common)
 add_subdirectory(vendor)
 add_subdirectory(abstract)
 add_subdirectory(rtos)
+add_subdirectory(modbus)
 add_subdirectory(impl)
 
 if ("${TARGET}" STREQUAL "")
