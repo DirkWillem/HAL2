@@ -53,6 +53,79 @@ export class Encoder {
     return Written();
   }
 
+  /** Encodes a MODBUS Read Discrete Inputs request frame */
+  constexpr std::span<const std::byte>
+  operator()(const ReadDiscreteInputsRequest& frame) noexcept {
+    Write(address);
+    Write(frame.FC);
+    Write(frame.starting_addr);
+    Write(frame.num_inputs);
+    WriteCrc();
+
+    return Written();
+  }
+
+  /** Encodes a MODBUS Read Discrete Inputs response frame */
+  constexpr std::span<const std::byte>
+  operator()(const ReadDiscreteInputsResponse& frame) noexcept {
+    Write(address);
+    Write(frame.FC);
+    Write(static_cast<uint8_t>(frame.inputs.size()));
+    Write(frame.inputs);
+    WriteCrc();
+
+    return Written();
+  }
+
+  /** Encodes a MODBUS Read Holding Registers request frame */
+  constexpr std::span<const std::byte>
+  operator()(const ReadHoldingRegistersRequest& frame) noexcept {
+    Write(address);
+    Write(frame.FC);
+    Write(frame.starting_addr);
+    Write(frame.num_holding_registers);
+    WriteCrc();
+
+    return Written();
+  }
+
+  /** Encodes a MODBUS Read Holding Registers response frame */
+  constexpr std::span<const std::byte>
+  operator()(const ReadHoldingRegistersResponse<FrameVariant::Encode>&
+                 frame) noexcept {
+    Write(address);
+    Write(frame.FC);
+    Write(static_cast<uint8_t>(frame.registers.size() * sizeof(uint16_t)));
+    Write(frame.registers);
+    WriteCrc();
+
+    return Written();
+  }
+
+  /** Encodes a MODBUS Read Input Registers request frame */
+  constexpr std::span<const std::byte>
+  operator()(const ReadInputRegistersRequest& frame) noexcept {
+    Write(address);
+    Write(frame.FC);
+    Write(frame.starting_addr);
+    Write(frame.num_input_registers);
+    WriteCrc();
+
+    return Written();
+  }
+
+  /** Encodes a MODBUS Read Input Registers response frame */
+  constexpr std::span<const std::byte> operator()(
+      const ReadInputRegistersResponse<FrameVariant::Encode>& frame) noexcept {
+    Write(address);
+    Write(frame.FC);
+    Write(static_cast<uint8_t>(frame.registers.size() * sizeof(uint16_t)));
+    Write(frame.registers);
+    WriteCrc();
+
+    return Written();
+  }
+
  private:
   constexpr void Write(auto v) noexcept
     requires std::is_enum_v<std::decay_t<decltype(v)>>
@@ -68,13 +141,23 @@ export class Encoder {
     offset += sizeof(tmp);
   }
 
-  template <hstd::ByteLike T>
-  constexpr void Write(std::span<const T> data) noexcept {
-    const auto sz = data.size();
-    std::memcpy(destination.subspan(offset, sz).data(),
-                hstd::ReinterpretSpan<std::byte>(data).data(), sz);
+  template <typename T>
+    requires std::is_trivially_copyable_v<T>
+  constexpr void Write(std::span<T> data) noexcept {
+    if constexpr (sizeof(T) > 1 && std::is_unsigned_v<T>) {
+      for (std::size_t i = 0; i < data.size(); ++i) {
+        const auto tmp = hstd::ConvertToEndianness<std::endian::big>(data[i]);
+        std::memcpy(
+            destination.subspan(offset + i * sizeof(T), sizeof(T)).data(), &tmp,
+            sizeof(T));
+      }
+    } else {
+      const auto sz = data.size() * sizeof(T);
+      std::memcpy(destination.subspan(offset, sz).data(),
+                  hstd::ReinterpretSpan<std::byte>(data).data(), sz);
+    }
 
-    offset += sz;
+    offset += data.size_bytes();
   }
 
   constexpr void WriteCrc() noexcept {

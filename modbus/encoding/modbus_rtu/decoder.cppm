@@ -18,6 +18,7 @@ export enum class DecodeError {
   IncompleteCommand,
   InvalidCrc,
   TooMuchData,
+  ByteCountNotAMultipleOfDataSize,
   UnknownError,
 };
 
@@ -27,11 +28,13 @@ struct LengthPrefixedBytes {
 };
 
 export class Decoder {
+  static constexpr auto FV = FrameVariant::Decode;
+
  public:
   constexpr explicit Decoder(std::span<const std::byte> buffer)
       : buffer{buffer} {}
 
-  constexpr std::expected<RequestFrame<FrameVariant::Decode>, DecodeError>
+  constexpr std::expected<RequestFrame<FV>, DecodeError>
   DecodeRequest() noexcept {
     // Minimal frame length is 4 bytes (address, function code, 2 CRC bytes)
     if (buffer.size() < 4) {
@@ -45,11 +48,24 @@ export class Decoder {
       return DecodeRequestPayload<ReadCoilsRequest>([this](auto& req) {
         return DecodeVars(req.starting_addr, req.num_coils);
       });
+    case FunctionCode::ReadDiscreteInputs:
+      return DecodeRequestPayload<ReadDiscreteInputsRequest>([this](auto& req) {
+        return DecodeVars(req.starting_addr, req.num_inputs);
+      });
+    case FunctionCode::ReadHoldingRegisters:
+      return DecodeRequestPayload<ReadHoldingRegistersRequest>(
+          [this](auto& req) {
+            return DecodeVars(req.starting_addr, req.num_holding_registers);
+          });
+    case FunctionCode::ReadInputRegisters:
+      return DecodeRequestPayload<ReadInputRegistersRequest>([this](auto& req) {
+        return DecodeVars(req.starting_addr, req.num_input_registers);
+      });
     default: return std::unexpected(DecodeError::InvalidFunctionCode);
     }
   }
 
-  constexpr std::expected<ResponseFrame<FrameVariant::Decode>, DecodeError>
+  constexpr std::expected<ResponseFrame<FV>, DecodeError>
   DecodeResponse() noexcept {
     // Minimal frame length is 4 bytes (address, function code, 2 CRC bytes)
     if (buffer.size() < 4) {
@@ -77,13 +93,27 @@ export class Decoder {
             .bytes  = &res.coils,
         });
       });
+    case FunctionCode::ReadDiscreteInputs:
+      return DecodeResponsePayload<ReadDiscreteInputsResponse>(
+          [this](auto& res) {
+            return DecodeVars(LengthPrefixedBytes{
+                .length = nullptr,
+                .bytes  = &res.inputs,
+            });
+          });
+    case FunctionCode::ReadHoldingRegisters:
+      return DecodeResponsePayload<ReadHoldingRegistersResponse<FV>>(
+          [this](auto& res) { return DecodeVars(res.registers); });
+    case FunctionCode::ReadInputRegisters:
+      return DecodeResponsePayload<ReadInputRegistersResponse<FV>>(
+          [this](auto& res) { return DecodeVars(res.registers); });
     default: return std::unexpected(DecodeError::InvalidFunctionCode);
     }
   }
 
  private:
   template <typename T>
-  constexpr std::expected<RequestFrame<FrameVariant::Decode>, DecodeError>
+  constexpr std::expected<RequestFrame<FV>, DecodeError>
   DecodeRequestPayload(std::invocable<T&> auto decode) noexcept
     requires std::convertible_to<
         std::invoke_result_t<std::decay_t<decltype(decode)>, T&>,
@@ -93,7 +123,7 @@ export class Decoder {
   }
 
   template <typename T>
-  constexpr std::expected<ResponseFrame<FrameVariant::Decode>, DecodeError>
+  constexpr std::expected<ResponseFrame<FV>, DecodeError>
   DecodeResponsePayload(std::invocable<T&> auto decode) noexcept
     requires std::convertible_to<
         std::invoke_result_t<std::decay_t<decltype(decode)>, T&>,
@@ -103,7 +133,7 @@ export class Decoder {
   }
 
   template <template <FrameVariant> typename Frame, typename T>
-  constexpr std::expected<Frame<FrameVariant::Decode>, DecodeError>
+  constexpr std::expected<Frame<FV>, DecodeError>
   DecodePayload(std::invocable<T&> auto decode) noexcept
     requires std::convertible_to<
         std::invoke_result_t<std::decay_t<decltype(decode)>, T&>,
@@ -133,15 +163,15 @@ export class Decoder {
     // Construct received frame
     const auto addr = static_cast<uint8_t>(buffer[0]);
 
-    return Frame<FrameVariant::Decode>{
-        .payload = {request},
+    return Frame<FV>{
+        .pdu     = {request},
         .address = addr,
     };
   }
 
   template <typename... Ts>
   std::optional<DecodeError> DecodeVars(Ts&&... vars) noexcept {
-    auto buffer = PayloadBuffer();
+    auto buffer = FrameDataBuffer();
 
     std::optional<DecodeError> err{};
     if (!(DecodeVar(buffer, err, std::forward<Ts>(vars)) && ...)) {
@@ -205,7 +235,26 @@ export class Decoder {
     return true;
   }
 
-  std::span<const std::byte> PayloadBuffer() noexcept {
+  template <typename T, std::endian E>
+  bool DecodeVar(std::span<const std::byte>&                  buffer,
+                 [[maybe_unused]] std::optional<DecodeError>& err,
+                 hstd::BitCastSpan<T, std::byte, E>&          array) {
+    if (buffer.size() < 1) {
+      return false;
+    }
+
+    const auto byte_count = static_cast<uint8_t>(buffer[0]);
+    if (buffer.size() < byte_count + 1) {
+      return false;
+    }
+
+    array  = Array<FV, T>(buffer.subspan(1, byte_count));
+    buffer = buffer.subspan(byte_count + 1);
+
+    return true;
+  }
+
+  std::span<const std::byte> FrameDataBuffer() noexcept {
     return buffer.subspan(2, buffer.size() - 4);
   }
 

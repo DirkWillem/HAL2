@@ -11,6 +11,9 @@ import testing.helpers;
 
 using namespace ::testing;
 
+using namespace modbus;
+using namespace modbus::encoding::rtu;
+
 class ModbusRtuDecoder : public Test {
  public:
   void SetUp() override {
@@ -126,11 +129,10 @@ TEST_F(ModbusRtuDecoder, ErrorResponse) {
 
   const auto frame = decode_result.value();
   ASSERT_EQ(frame.address, 0xEE);
-  ASSERT_THAT(frame.payload,
-              VariantWith<modbus::ErrorResponse>(
-                  AllOf(Field(&modbus::ErrorResponse::function_code, 0x81),
-                        Field(&modbus::ErrorResponse::exception_code,
-                              modbus::ExceptionCode::IllegalDataValue))));
+  ASSERT_THAT(frame.pdu, VariantWith<modbus::ErrorResponse>(AllOf(
+                             Field(&modbus::ErrorResponse::function_code, 0x81),
+                             Field(&modbus::ErrorResponse::exception_code,
+                                   modbus::ExceptionCode::IllegalDataValue))));
 }
 
 TEST_F(ModbusRtuDecoder, ReadCoilsRequest) {
@@ -146,7 +148,7 @@ TEST_F(ModbusRtuDecoder, ReadCoilsRequest) {
 
   const auto frame = decode_result.value();
   ASSERT_EQ(frame.address, 0x05);
-  ASSERT_THAT(frame.payload,
+  ASSERT_THAT(frame.pdu,
               VariantWith<modbus::ReadCoilsRequest>(
                   AllOf(Field(&modbus::ReadCoilsRequest::starting_addr, 0x0013),
                         Field(&modbus::ReadCoilsRequest::num_coils, 0x0016))));
@@ -165,9 +167,9 @@ TEST_F(ModbusRtuDecoder, ReadCoilsResponseSingleCoil) {
 
   const auto frame = decode_result.value();
   ASSERT_EQ(frame.address, 0x06);
-  ASSERT_THAT(frame.payload, VariantWith<modbus::ReadCoilsResponse>(AllOf(
-                                 Field(&modbus::ReadCoilsResponse::coils,
-                                       ElementsAre(std::byte{0b0000'0001})))));
+  ASSERT_THAT(frame.pdu, VariantWith<modbus::ReadCoilsResponse>(AllOf(
+                             Field(&modbus::ReadCoilsResponse::coils,
+                                   ElementsAre(std::byte{0b0000'0001})))));
 }
 
 TEST_F(ModbusRtuDecoder, ReadCoilsResponseMultipleCoils) {
@@ -184,9 +186,150 @@ TEST_F(ModbusRtuDecoder, ReadCoilsResponseMultipleCoils) {
 
   const auto frame = decode_result.value();
   ASSERT_EQ(frame.address, 0x06);
-  ASSERT_THAT(
-      frame.payload,
-      VariantWith<modbus::ReadCoilsResponse>(AllOf(
-          Field(&modbus::ReadCoilsResponse::coils,
-                ElementsAre(std::byte{0b1111'0000}, std::byte{0b1010'0101})))));
+  ASSERT_THAT(frame.pdu, VariantWith<modbus::ReadCoilsResponse>(
+                             Field(&modbus::ReadCoilsResponse::coils,
+                                   ElementsAre(std::byte{0b1111'0000},
+                                               std::byte{0b1010'0101}))));
+}
+
+TEST_F(ModbusRtuDecoder, ReadDiscreteInputsRequest) {
+  const auto decode_result = DecodeRequest(FrameBuilder()
+                                               .Write<uint8_t>(0x12)
+                                               .Write<uint8_t>(0x02)
+                                               .Write<uint16_t>(0x0025)
+                                               .Write<uint16_t>(0x0017)
+                                               .WriteCrc16()
+                                               .Bytes());
+
+  ASSERT_TRUE(decode_result.has_value());
+
+  using Pdu        = ReadDiscreteInputsRequest;
+  const auto frame = decode_result.value();
+  ASSERT_EQ(frame.address, 0x12);
+  ASSERT_THAT(frame.pdu,
+              VariantWith<Pdu>(AllOf(Field(&Pdu::starting_addr, 0x0025),
+                                     Field(&Pdu::num_inputs, 0x0017))));
+}
+
+TEST_F(ModbusRtuDecoder, ReadDiscreteInputsResponse) {
+  const auto decode_result = DecodeResponse(FrameBuilder()
+                                                .Write<uint8_t>(0x06)
+                                                .Write<uint8_t>(0x02)
+                                                .Write<uint8_t>(2)
+                                                .Write<uint8_t>(0b1111'0000)
+                                                .Write<uint8_t>(0b1010'0101)
+                                                .WriteCrc16()
+                                                .Bytes());
+
+  ASSERT_TRUE(decode_result.has_value());
+
+  using Pdu        = ReadDiscreteInputsResponse;
+  const auto frame = decode_result.value();
+  ASSERT_EQ(frame.address, 0x06);
+  ASSERT_THAT(frame.pdu,
+              VariantWith<Pdu>(
+                  Field(&Pdu::inputs, ElementsAre(std::byte{0b1111'0000},
+                                                  std::byte{0b1010'0101}))));
+}
+
+TEST_F(ModbusRtuDecoder, ReadHoldingRegistersRequest) {
+  const auto decode_result = DecodeRequest(FrameBuilder()
+                                               .Write<uint8_t>(0x12)
+                                               .Write<uint8_t>(0x03)
+                                               .Write<uint16_t>(0x0A04)
+                                               .Write<uint16_t>(0x0005)
+                                               .WriteCrc16()
+                                               .Bytes());
+
+  ASSERT_TRUE(decode_result.has_value());
+
+  using Pdu        = ReadHoldingRegistersRequest;
+  const auto frame = decode_result.value();
+  ASSERT_EQ(frame.address, 0x12);
+  ASSERT_THAT(frame.pdu, VariantWith<Pdu>(AllOf(
+                             Field(&Pdu::starting_addr, 0x0A04),
+                             Field(&Pdu::num_holding_registers, 0x0005))));
+}
+
+TEST_F(ModbusRtuDecoder, ReadHoldingRegistersResponseSingleRegister) {
+  const auto decode_result = DecodeResponse(FrameBuilder()
+                                                .Write<uint8_t>(0x06)
+                                                .Write<uint8_t>(0x03)
+                                                .Write<uint8_t>(2)
+                                                .Write<uint16_t>(0xBAAB)
+                                                .WriteCrc16()
+                                                .Bytes());
+
+  ASSERT_TRUE(decode_result.has_value());
+
+  using Frame      = ReadHoldingRegistersResponse<FrameVariant::Decode>;
+  const auto frame = decode_result.value();
+
+  ASSERT_EQ(frame.address, 0x06);
+  ASSERT_THAT(frame.pdu,
+              VariantWith<Frame>(
+                  Field(&Frame::registers, ElementsAre(uint16_t{0xBAAB}))));
+}
+
+TEST_F(ModbusRtuDecoder, ReadHoldingRegistersResponseMultipleRegisters) {
+  const auto decode_result = DecodeResponse(FrameBuilder()
+                                                .Write<uint8_t>(0x06)
+                                                .Write<uint8_t>(0x03)
+                                                .Write<uint8_t>(6)
+                                                .Write<uint16_t>(0xBAAB)
+                                                .Write<uint16_t>(0x1234)
+                                                .Write<uint16_t>(0xEBAF)
+                                                .WriteCrc16()
+                                                .Bytes());
+
+  ASSERT_TRUE(decode_result.has_value());
+
+  using Pdu        = ReadHoldingRegistersResponse<FrameVariant::Decode>;
+  const auto frame = decode_result.value();
+
+  ASSERT_EQ(frame.address, 0x06);
+  ASSERT_THAT(frame.pdu, VariantWith<Pdu>(Field(
+                             &Pdu::registers,
+                             ElementsAre(uint16_t{0xBAAB}, uint16_t{0x1234},
+                                         uint16_t{0xEBAF}))));
+}
+
+TEST_F(ModbusRtuDecoder, ReadInputRegistersRequest) {
+  const auto decode_result = DecodeRequest(FrameBuilder()
+                                               .Write<uint8_t>(0x12)
+                                               .Write<uint8_t>(0x04)
+                                               .Write<uint16_t>(0xAA00)
+                                               .Write<uint16_t>(0x0100)
+                                               .WriteCrc16()
+                                               .Bytes());
+
+  ASSERT_TRUE(decode_result.has_value());
+
+  using Pdu        = ReadInputRegistersRequest;
+  const auto frame = decode_result.value();
+  ASSERT_EQ(frame.address, 0x12);
+  ASSERT_THAT(frame.pdu, VariantWith<Pdu>(
+                             AllOf(Field(&Pdu::starting_addr, 0xAA00),
+                                   Field(&Pdu::num_input_registers, 0x0100))));
+}
+
+TEST_F(ModbusRtuDecoder, ReadInputRegistersResponse) {
+  const auto decode_result = DecodeResponse(FrameBuilder()
+                                                .Write<uint8_t>(0x06)
+                                                .Write<uint8_t>(0x04)
+                                                .Write<uint8_t>(4)
+                                                .Write<uint16_t>(0xBAAB)
+                                                .Write<uint16_t>(0x1234)
+                                                .WriteCrc16()
+                                                .Bytes());
+
+  ASSERT_TRUE(decode_result.has_value());
+
+  using Pdu        = ReadInputRegistersResponse<FrameVariant::Decode>;
+  const auto frame = decode_result.value();
+
+  ASSERT_EQ(frame.address, 0x06);
+  ASSERT_THAT(frame.pdu, VariantWith<Pdu>(Field(
+                             &Pdu::registers,
+                             ElementsAre(uint16_t{0xBAAB}, uint16_t{0x1234}))));
 }
