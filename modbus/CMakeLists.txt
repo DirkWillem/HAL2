@@ -1,17 +1,27 @@
-add_library(modbus_encoding)
-target_sources(modbus_encoding PUBLIC
-    FILE_SET CXX_MODULES
-    FILES
-    encoding/common/encoding.cppm)
-target_link_libraries(modbus_encoding PUBLIC hstd project_settings)
+add_library(modbus_core)
+target_sources(modbus_core PUBLIC
+        FILE_SET CXX_MODULES
+        FILES
+        core/core.cppm
+
+        core/pdu.cppm)
+target_link_libraries(modbus_core PUBLIC hstd project_settings)
 
 
 add_library(modbus_encoding_rtu)
 target_sources(modbus_encoding_rtu PUBLIC
         FILE_SET CXX_MODULES
         FILES
-        encoding/modbus_rtu/modbus_rtu.cppm
+        encoding/rtu/rtu.cppm
 
-        encoding/modbus_rtu/decoder.cppm
-        encoding/modbus_rtu/encoder.cppm)
-target_link_libraries(modbus_encoding_rtu PUBLIC modbus_encoding)
+        encoding/rtu/decoder.cppm
+        encoding/rtu/encoder.cppm
+        encoding/rtu/frames.cppm)
+target_link_libraries(modbus_encoding_rtu PUBLIC modbus_core)
+
+
+add_library(modbus_server)
+target_sources(modbus_server PUBLIC
+        FILE_SET CXX_MODULES
+        FILES
+        server/server.cppm)

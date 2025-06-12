@@ -9,7 +9,9 @@ export module modbus.encoding.rtu:decoder;
 
 import hstd;
 
-import modbus.encoding;
+import modbus.core;
+
+import :frames;
 
 namespace modbus::encoding::rtu {
 

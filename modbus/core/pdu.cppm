@@ -6,7 +6,7 @@ module;
 #include <type_traits>
 #include <variant>
 
-export module modbus.encoding;
+export module modbus.core:pdu;
 
 import hstd;
 
@@ -68,12 +68,6 @@ using RequestPdu =
     std::variant<ReadCoilsRequest, ReadDiscreteInputsRequest,
                  ReadHoldingRegistersRequest, ReadInputRegistersRequest>;
 
-export template <FrameVariant FV>
-struct RequestFrame {
-  RequestPdu<FV> pdu;
-  uint8_t        address;
-};
-
 export struct ErrorResponse {
   uint8_t       function_code;
   ExceptionCode exception_code;
@@ -120,11 +114,5 @@ using ResponsePdu =
     std::variant<ErrorResponse, ReadCoilsResponse, ReadDiscreteInputsResponse,
                  ReadHoldingRegistersResponse<FV>,
                  ReadInputRegistersResponse<FV>>;
-
-export template <FrameVariant FV>
-struct ResponseFrame {
-  ResponsePdu<FV> pdu;
-  uint8_t         address;
-};
 
 }   // namespace modbus

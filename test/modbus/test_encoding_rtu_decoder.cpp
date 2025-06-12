@@ -4,7 +4,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-import modbus.encoding;
+import modbus.core;
 import modbus.encoding.rtu;
 
 import testing.helpers;
