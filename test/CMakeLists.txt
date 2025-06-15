@@ -31,7 +31,10 @@ target_link_libraries(test_helpers PUBLIC
 # Test source files
 set(HAL2_TEST_SRCS
         modbus/test_encoding_rtu_decoder.cpp
-        modbus/test_encoding_rtu_encoder.cpp)
+        modbus/test_encoding_rtu_encoder.cpp
+        modbus/test_modbus_server.cpp
+        modbus/test_modbus_server_frames.cpp
+        modbus/test_storage_coil_discrete_input.cpp)
 
 
 add_library(hal2_tests_lib STATIC ${HAL2_TEST_SRCS})
@@ -43,6 +46,8 @@ target_include_directories(hal2_tests_lib PUBLIC "${CMAKE_CURRENT_LIST_DIR}")
 add_executable(hal2_tests ${HAL2_TEST_SRCS})
 target_link_libraries(hal2_tests PUBLIC
         modbus_encoding_rtu
+        modbus_core
+        modbus_server
 
         hstd
 

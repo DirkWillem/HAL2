@@ -139,4 +139,24 @@ StaticMap(std::equality_comparable_with<TIn> auto value,
   std::unreachable();
 }
 
+export template <std::size_t N>
+struct StaticString {
+  constexpr StaticString(const char (&str)[N]) noexcept {
+    for (std::size_t i = 0; i < N; ++i) {
+      value[i] = str[i];
+    }
+  }
+
+  constexpr auto operator<=>(const StaticString&) const noexcept = default;
+
+  explicit(false) constexpr operator std::string_view() const noexcept {
+    return std::string_view{value.data(), N};
+  }
+
+  std::array<char, N> value;
+};
+
+export template <std::size_t N>
+StaticString(const char (&)[N]) -> StaticString<N>;
+
 }   // namespace hstd

@@ -24,4 +24,7 @@ add_library(modbus_server)
 target_sources(modbus_server PUBLIC
         FILE_SET CXX_MODULES
         FILES
-        server/server.cppm)
+        server/server.cppm
+
+        server/coil.cppm)
+target_link_libraries(modbus_server PUBLIC modbus_core)

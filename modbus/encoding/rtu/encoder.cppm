@@ -128,6 +128,30 @@ export class Encoder {
     return Written();
   }
 
+  /** Encodes a MODBUS Write Single Coil request frame */
+  constexpr std::span<const std::byte>
+  operator()(const WriteSingleCoilRequest& frame) noexcept {
+    Write(address);
+    Write(frame.FC);
+    Write(frame.coil_addr);
+    Write(frame.new_state);
+    WriteCrc();
+
+    return Written();
+  }
+
+  /** Encodes a MODBUS Write Single Coil request frame */
+  constexpr std::span<const std::byte>
+  operator()(const WriteSingleCoilResponse& frame) noexcept {
+    Write(address);
+    Write(frame.FC);
+    Write(frame.coil_addr);
+    Write(frame.new_state);
+    WriteCrc();
+
+    return Written();
+  }
+
  private:
   constexpr void Write(auto v) noexcept
     requires std::is_enum_v<std::decay_t<decltype(v)>>

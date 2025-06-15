@@ -17,6 +17,7 @@ export enum class FunctionCode : uint8_t {
   ReadDiscreteInputs   = 0x02,
   ReadHoldingRegisters = 0x03,
   ReadInputRegisters   = 0x04,
+  WriteSingleCoil      = 0x05,
   ErrorResponseBase    = 0x80,
 };
 
@@ -36,6 +37,11 @@ export enum class ExceptionCode : uint8_t {
   MemoryParityError                  = 0x08,
   GatewayPathUnavailable             = 0x0A,
   GatewayTargetDeviceFailedToRespond = 0x0B,
+};
+
+export enum class CoilState : uint16_t {
+  Disabled = 0x0000,
+  Enabled  = 0xFF00,
 };
 
 export struct ReadCoilsRequest {
@@ -63,10 +69,17 @@ export struct ReadInputRegistersRequest {
   uint16_t              num_input_registers;
 };
 
+export struct WriteSingleCoilRequest {
+  static constexpr auto FC = FunctionCode::WriteSingleCoil;
+  uint16_t              coil_addr;
+  CoilState             new_state;
+};
+
 export template <FrameVariant FV>
 using RequestPdu =
     std::variant<ReadCoilsRequest, ReadDiscreteInputsRequest,
-                 ReadHoldingRegistersRequest, ReadInputRegistersRequest>;
+                 ReadHoldingRegistersRequest, ReadInputRegistersRequest,
+                 WriteSingleCoilRequest>;
 
 export struct ErrorResponse {
   uint8_t       function_code;
@@ -81,6 +94,10 @@ export constexpr ErrorResponse MakeErrorResponse(FunctionCode  fc,
           + static_cast<uint8_t>(fc)),
       .exception_code = ec,
   };
+}
+
+export constexpr ErrorResponse IllegalDataValue(FunctionCode fc) {
+  return MakeErrorResponse(fc, ExceptionCode::IllegalDataValue);
 }
 
 export struct ReadCoilsResponse {
@@ -109,10 +126,16 @@ struct ReadInputRegistersResponse {
   Array<FV, uint16_t> registers;
 };
 
+export struct WriteSingleCoilResponse {
+  static constexpr auto FC = FunctionCode::WriteSingleCoil;
+  uint16_t              coil_addr;
+  CoilState             new_state;
+};
+
 export template <FrameVariant FV>
 using ResponsePdu =
     std::variant<ErrorResponse, ReadCoilsResponse, ReadDiscreteInputsResponse,
                  ReadHoldingRegistersResponse<FV>,
-                 ReadInputRegistersResponse<FV>>;
+                 ReadInputRegistersResponse<FV>, WriteSingleCoilResponse>;
 
 }   // namespace modbus

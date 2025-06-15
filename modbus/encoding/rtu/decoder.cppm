@@ -63,6 +63,10 @@ export class Decoder {
       return DecodeRequestPayload<ReadInputRegistersRequest>([this](auto& req) {
         return DecodeVars(req.starting_addr, req.num_input_registers);
       });
+    case FunctionCode::WriteSingleCoil:
+      return DecodeRequestPayload<WriteSingleCoilRequest>([this](auto& req) {
+        return DecodeVars(req.coil_addr, req.new_state);
+      });
     default: return std::unexpected(DecodeError::InvalidFunctionCode);
     }
   }
@@ -109,6 +113,10 @@ export class Decoder {
     case FunctionCode::ReadInputRegisters:
       return DecodeResponsePayload<ReadInputRegistersResponse<FV>>(
           [this](auto& res) { return DecodeVars(res.registers); });
+    case FunctionCode::WriteSingleCoil:
+      return DecodeResponsePayload<WriteSingleCoilResponse>([this](auto& res) {
+        return DecodeVars(res.coil_addr, res.new_state);
+      });
     default: return std::unexpected(DecodeError::InvalidFunctionCode);
     }
   }

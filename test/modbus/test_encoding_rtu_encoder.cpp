@@ -224,7 +224,7 @@ TEST_F(ModbusRtuEncoder, ReadInputRegistersRequest) {
   const auto encoded_frame = EncodeRequest({
       .pdu =
           ReadInputRegistersRequest{
-              .starting_addr         = 0x0016,
+              .starting_addr       = 0x0016,
               .num_input_registers = 0x0019,
           },
       .address = 0x11,
@@ -259,6 +259,42 @@ TEST_F(ModbusRtuEncoder, ReadInputRegistersResponse) {
                                        .Write<uint16_t>(0x1234)
                                        .Write<uint16_t>(0xAABB)
                                        .Write<uint16_t>(0xBEEF)
+                                       .WriteCrc16()
+                                       .Bytes();
+
+  ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
+}
+
+TEST_F(ModbusRtuEncoder, WriteSingleCoilRequest) {
+  const auto encoded_frame = EncodeRequest({
+      .pdu     = WriteSingleCoilRequest{.coil_addr = 0x0020,
+                                        .new_state = CoilState::Enabled},
+      .address = 0x10,
+  });
+
+  const auto encoded_frame_check = CheckBuilder()
+                                       .Write<uint8_t>(0x10)
+                                       .Write<uint8_t>(0x05)
+                                       .Write<uint16_t>(0x0020)
+                                       .Write<uint16_t>(0xFF00)
+                                       .WriteCrc16()
+                                       .Bytes();
+
+  ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
+}
+
+TEST_F(ModbusRtuEncoder, WriteSingleCoilResponse) {
+  const auto encoded_frame = EncodeResponse({
+      .pdu     = WriteSingleCoilResponse{.coil_addr = 0x0030,
+                                        .new_state = CoilState::Enabled},
+      .address = 0x10,
+  });
+
+  const auto encoded_frame_check = CheckBuilder()
+                                       .Write<uint8_t>(0x10)
+                                       .Write<uint8_t>(0x05)
+                                       .Write<uint16_t>(0x0030)
+                                       .Write<uint16_t>(0xFF00)
                                        .WriteCrc16()
                                        .Bytes();
 

@@ -333,3 +333,41 @@ TEST_F(ModbusRtuDecoder, ReadInputRegistersResponse) {
                              &Pdu::registers,
                              ElementsAre(uint16_t{0xBAAB}, uint16_t{0x1234}))));
 }
+
+TEST_F(ModbusRtuDecoder, WriteSingleCoilRequest) {
+  const auto decode_result = DecodeRequest(FrameBuilder()
+                                               .Write<uint8_t>(0x10)
+                                               .Write<uint8_t>(0x05)
+                                               .Write<uint16_t>(0x0020)
+                                               .Write<uint16_t>(0xFF00)
+                                               .WriteCrc16()
+                                               .Bytes());
+
+  ASSERT_TRUE(decode_result.has_value());
+
+  const auto frame = decode_result.value();
+  using Pdu        = WriteSingleCoilRequest;
+  ASSERT_EQ(frame.address, 0x10);
+  ASSERT_THAT(frame.pdu, VariantWith<Pdu>(AllOf(
+                             Field(&Pdu::coil_addr, 0x0020),
+                             Field(&Pdu::new_state, CoilState::Enabled))));
+}
+
+TEST_F(ModbusRtuDecoder, WriteSingleCoilResponse) {
+  const auto decode_result = DecodeResponse(FrameBuilder()
+                                               .Write<uint8_t>(0x10)
+                                               .Write<uint8_t>(0x05)
+                                               .Write<uint16_t>(0x0030)
+                                               .Write<uint16_t>(0xFF00)
+                                               .WriteCrc16()
+                                               .Bytes());
+
+  ASSERT_TRUE(decode_result.has_value());
+
+  const auto frame = decode_result.value();
+  using Pdu        = WriteSingleCoilResponse;
+  ASSERT_EQ(frame.address, 0x10);
+  ASSERT_THAT(frame.pdu, VariantWith<Pdu>(AllOf(
+                             Field(&Pdu::coil_addr, 0x0030),
+                             Field(&Pdu::new_state, CoilState::Enabled))));
+}
