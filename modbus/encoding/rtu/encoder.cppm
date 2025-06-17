@@ -152,6 +152,32 @@ export class Encoder {
     return Written();
   }
 
+  /** Encodes a MODBUS Write Multiple Coils request frame */
+  constexpr std::span<const std::byte>
+  operator()(const WriteMultipleCoilsRequest& frame) noexcept {
+    Write(address);
+    Write(frame.FC);
+    Write(frame.start_addr);
+    Write(frame.num_coils);
+    Write(static_cast<uint8_t>(frame.values.size()));
+    Write(frame.values);
+    WriteCrc();
+
+    return Written();
+  }
+
+  /** Encodes a MODBUS Write Multiple Coils response frame */
+  constexpr std::span<const std::byte>
+  operator()(const WriteMultipleCoilsResponse& frame) noexcept {
+    Write(address);
+    Write(frame.FC);
+    Write(frame.start_addr);
+    Write(frame.num_coils);
+    WriteCrc();
+
+    return Written();
+  }
+
  private:
   constexpr void Write(auto v) noexcept
     requires std::is_enum_v<std::decay_t<decltype(v)>>

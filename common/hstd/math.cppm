@@ -3,6 +3,7 @@ module;
 #include <concepts>
 #include <cstdint>
 #include <limits>
+#include <memory>
 
 export module hstd:math;
 
@@ -52,13 +53,18 @@ using UintN_t = IntN_t<false, Bits>;
  * @param n Number of ones to return
  * @return n ones
  */
-export template <std::unsigned_integral T>
+export template <typename T>
+  requires std::unsigned_integral<T> || std::is_same_v<T, std::byte>
 constexpr T Ones(std::size_t n) noexcept {
-  if (n >= std::numeric_limits<T>::digits) {
-    return std::numeric_limits<T>::max();
-  }
+  if constexpr (std::is_same_v<T, std::byte>) {
+    return std::byte{Ones<uint8_t>(n)};
+  } else {
+    if (n >= std::numeric_limits<T>::digits) {
+      return std::numeric_limits<T>::max();
+    }
 
-  return (T{0b1U} << n) - 1;
+    return (T{0b1U} << n) - 1;
+  }
 }
 
 }   // namespace hstd

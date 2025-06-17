@@ -286,7 +286,7 @@ TEST_F(ModbusRtuEncoder, WriteSingleCoilRequest) {
 TEST_F(ModbusRtuEncoder, WriteSingleCoilResponse) {
   const auto encoded_frame = EncodeResponse({
       .pdu     = WriteSingleCoilResponse{.coil_addr = 0x0030,
-                                        .new_state = CoilState::Enabled},
+                                         .new_state = CoilState::Enabled},
       .address = 0x10,
   });
 
@@ -295,6 +295,47 @@ TEST_F(ModbusRtuEncoder, WriteSingleCoilResponse) {
                                        .Write<uint8_t>(0x05)
                                        .Write<uint16_t>(0x0030)
                                        .Write<uint16_t>(0xFF00)
+                                       .WriteCrc16()
+                                       .Bytes();
+
+  ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
+}
+
+TEST_F(ModbusRtuEncoder, WriteMultipleCoilsRequest) {
+  std::array<std::byte, 2> coils{std::byte{0b1111'0000},
+                                 std::byte{0b1010'0101}};
+
+  const auto encoded_frame = EncodeRequest({
+      .pdu     = WriteMultipleCoilsRequest{.start_addr = 0x0020,
+                                           .num_coils  = 13,
+                                           .values     = {coils}},
+      .address = 0x06,
+  });
+
+  const auto encoded_frame_check = CheckBuilder()
+                                       .Write<uint8_t>(0x06)
+                                       .Write<uint8_t>(0x0F)
+                                       .Write<uint16_t>(0x0020)
+                                       .Write<uint16_t>(13)
+                                       .Write<uint8_t>(2)
+                                       .Write<uint8_t>(0b1111'0000)
+                                       .Write<uint8_t>(0b1010'0101)
+                                       .WriteCrc16()
+                                       .Bytes();
+
+  ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
+}
+
+TEST_F(ModbusRtuEncoder, WriteMultipleCoilsResponse) {
+  const auto encoded_frame = EncodeResponse(
+      {.pdu = WriteMultipleCoilsResponse{.start_addr = 0x0020, .num_coils = 13},
+       .address = 0x65});
+
+  const auto encoded_frame_check = CheckBuilder()
+                                       .Write<uint8_t>(0x65)
+                                       .Write<uint8_t>(0x0F)
+                                       .Write<uint16_t>(0x0020)
+                                       .Write<uint16_t>(13)
                                        .WriteCrc16()
                                        .Bytes();
 

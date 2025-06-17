@@ -186,32 +186,32 @@ class Server<hstd::Types<UC...>> : private CoilImpl<UC>... {
 
     /**
      * Handles a Read Coils request
-     * @param request Reuest to handle
+     * @param req Request to handle
      */
-    void operator()(const ReadCoilsRequest& request) noexcept {
-      constexpr auto SW      = sizeof(uint32_t);
-      auto&          res     = response.emplace<ReadCoilsResponse>();
-      const auto     n_words = DivCeil<uint16_t, 32>(request.num_coils);
+    void operator()(const ReadCoilsRequest& req) noexcept {
+      auto&      res     = response.emplace<ReadCoilsResponse>();
+      const auto n_bytes = DivCeil<uint16_t, 8>(req.num_coils);
 
-      auto n_to_read = static_cast<uint32_t>(request.num_coils);
-      for (uint32_t i = 0; i < n_words; i++) {
-        const auto n_bits_i = std::min(n_to_read, uint32_t{32});
-        const auto result   = server.ReadCoils<uint32_t>(
-            request.starting_addr + i * 32, n_bits_i);
+      for (uint32_t i = 0; i < n_bytes; i++) {
+        const auto n_bits_i = std::min(8U, req.num_coils - i * 8);
+        const auto result   = server.template ReadCoils<uint8_t>(
+            req.starting_addr + i * 8, n_bits_i);
 
         if (result) {
-          const auto v = *result;
-          std::memcpy(buffer.subspan(i * SW, SW).data(), &v, SW);
+          buffer[i] = static_cast<std::byte>(*result);
         } else {
-          response = MakeErrorResponse(ReadCoilsRequest::FC, result.error());
+          response = MakeErrorResponse(req.FC, result.error());
           return;
         }
       }
 
-      const auto n_bytes = DivCeil<uint16_t, 8>(request.num_coils);
-      res.coils          = buffer.subspan(0, n_bytes);
+      res.coils = buffer.subspan(0, n_bytes);
     }
 
+    /**
+     * Handles a MODBUS Write Single Coil request
+     * @param req Request to handle
+     */
     void operator()(const WriteSingleCoilRequest& req) noexcept {
       using enum CoilState;
 
@@ -226,9 +226,35 @@ class Server<hstd::Types<UC...>> : private CoilImpl<UC>... {
         response = WriteSingleCoilResponse{.coil_addr = req.coil_addr,
                                            .new_state = req.new_state};
       } else {
-        response =
-            MakeErrorResponse(WriteSingleCoilRequest::FC, result.error());
+        response = MakeErrorResponse(req.FC, result.error());
       }
+    }
+
+    /**
+     * Handles a MODBUS write multiple coils request
+     * @param req Request to handle
+     */
+    void operator()(const WriteMultipleCoilsRequest& req) noexcept {
+      // Validate that the number of coils to write matches the amount of bytes
+      if (req.num_coils < 8 * (req.values.size() - 1) + 1
+          || req.num_coils > req.values.size() * 8) {
+        response = IllegalDataValue(WriteMultipleCoilsRequest::FC);
+        return;
+      }
+
+      // Write coils
+      const auto result =
+          server.WriteCoils(req.start_addr, req.num_coils, req.values);
+      if (!result.has_value()) {
+        response = MakeErrorResponse(req.FC, result.error());
+        return;
+      }
+
+      // Create response
+      response = WriteMultipleCoilsResponse{
+          .start_addr = req.start_addr,
+          .num_coils  = req.num_coils,
+      };
     }
 
     void operator()(const auto&) noexcept {}
@@ -267,6 +293,68 @@ class Server<hstd::Types<UC...>> : private CoilImpl<UC>... {
     }
 
     return std::unexpected(ExceptionCode::IllegalDataAddress);
+  }
+
+  /**
+   * Writes to multiple coils
+   * @param start_addr Start address to write coils. Should be byte-aligned
+   * @param n_coils Number of coils to write
+   * @param data Data to write
+   * @return true when successful, or exception code upon failure
+   */
+  constexpr std::expected<bool, ExceptionCode>
+  WriteCoils(uint16_t start_addr, uint16_t n_coils,
+             std::span<const std::byte> data) noexcept {
+    // For now, only byte-aligned multiple writes are supported
+    if (start_addr % 8 != 0) {
+      return std::unexpected(ExceptionCode::ServerDeviceFailure);
+    }
+
+    const auto end_addr = start_addr + n_coils;
+
+    bool any_written = false;
+
+    for (const auto& e : CoilsTable) {
+      if (start_addr < e.end_addr && end_addr >= e.start_addr) {
+        const auto start_byte = e.start_addr / 8;
+        const auto end_byte   = std::max(start_byte + 1, e.end_addr / 8);
+
+        for (auto i = 0; i < (end_byte - start_byte); i++) {
+          const auto byte_start_addr = start_byte * 8 + i * 8;
+          const auto byte_end_addr   = start_addr + 8;
+
+          auto byte_mask = hstd::Ones<std::byte>(8);
+
+          if (byte_start_addr < e.start_addr) {
+            const auto remove_start = e.start_addr - byte_start_addr;
+            byte_mask &= ~hstd::Ones<std::byte>(remove_start);
+          }
+
+          if (byte_end_addr > e.end_addr) {
+            const auto remove_end = byte_end_addr - e.end_addr;
+            byte_mask &=
+                ~(hstd::Ones<std::byte>(remove_end) << (8 - remove_end));
+          }
+
+          const auto word_mask  = static_cast<uint32_t>(byte_mask) << (i * 8);
+          const auto word_value = static_cast<uint8_t>(data[i]) << (i * 8);
+
+          const auto result = (this->*e.write)(word_mask, word_value);
+
+          if (!result.has_value()) {
+            return result;
+          }
+
+          any_written = true;
+        }
+      }
+    }
+
+    if (!any_written) {
+      return std::unexpected(ExceptionCode::IllegalDataAddress);
+    }
+
+    return true;
   }
 
   /**

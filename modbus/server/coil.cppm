@@ -71,6 +71,8 @@ struct CoilSet {
   static constexpr auto             EndAddress   = A + C;
   static constexpr auto             Count        = C;
   static constexpr std::string_view Name         = N;
+
+  static_assert(A % 8 == 0, "Coil set starting addresses must be byte-aligned");
 };
 
 export template <uint16_t A, uint16_t C, hstd::StaticString N>

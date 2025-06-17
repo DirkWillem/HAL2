@@ -355,12 +355,12 @@ TEST_F(ModbusRtuDecoder, WriteSingleCoilRequest) {
 
 TEST_F(ModbusRtuDecoder, WriteSingleCoilResponse) {
   const auto decode_result = DecodeResponse(FrameBuilder()
-                                               .Write<uint8_t>(0x10)
-                                               .Write<uint8_t>(0x05)
-                                               .Write<uint16_t>(0x0030)
-                                               .Write<uint16_t>(0xFF00)
-                                               .WriteCrc16()
-                                               .Bytes());
+                                                .Write<uint8_t>(0x10)
+                                                .Write<uint8_t>(0x05)
+                                                .Write<uint16_t>(0x0030)
+                                                .Write<uint16_t>(0xFF00)
+                                                .WriteCrc16()
+                                                .Bytes());
 
   ASSERT_TRUE(decode_result.has_value());
 
@@ -370,4 +370,50 @@ TEST_F(ModbusRtuDecoder, WriteSingleCoilResponse) {
   ASSERT_THAT(frame.pdu, VariantWith<Pdu>(AllOf(
                              Field(&Pdu::coil_addr, 0x0030),
                              Field(&Pdu::new_state, CoilState::Enabled))));
+}
+
+TEST_F(ModbusRtuDecoder, WriteMultipleCoilsRequest) {
+  const auto decode_result = DecodeRequest(FrameBuilder()
+                                               .Write<uint8_t>(0x06)
+                                               .Write<uint8_t>(0x0F)
+                                               .Write<uint16_t>(0x0020)
+                                               .Write<uint16_t>(13)
+                                               .Write<uint8_t>(2)
+                                               .Write<uint8_t>(0b1111'0000)
+                                               .Write<uint8_t>(0b1010'0101)
+                                               .WriteCrc16()
+                                               .Bytes());
+
+  ASSERT_TRUE(decode_result.has_value());
+
+  const auto frame = decode_result.value();
+  using Pdu        = WriteMultipleCoilsRequest;
+  ASSERT_EQ(frame.address, 0x06);
+  ASSERT_THAT(frame.pdu,
+              VariantWith<Pdu>(AllOf(
+                  Field(&Pdu::start_addr, 0x0020),
+                  Field(&Pdu::num_coils, 13),
+                  Field(&Pdu::values, ElementsAre(std::byte{0b1111'0000},
+                                                  std::byte{0b1010'0101})))));
+}
+
+
+TEST_F(ModbusRtuDecoder, WriteMultipleCoilsResponse) {
+  const auto decode_result = DecodeResponse(FrameBuilder()
+                                               .Write<uint8_t>(0x06)
+                                               .Write<uint8_t>(0x0F)
+                                               .Write<uint16_t>(0x0030)
+                                               .Write<uint16_t>(13)
+                                               .WriteCrc16()
+                                               .Bytes());
+
+  ASSERT_TRUE(decode_result.has_value());
+
+  const auto frame = decode_result.value();
+  using Pdu        = WriteMultipleCoilsResponse;
+  ASSERT_EQ(frame.address, 0x06);
+  ASSERT_THAT(frame.pdu,
+              VariantWith<Pdu>(AllOf(
+                  Field(&Pdu::start_addr, 0x0030),
+                  Field(&Pdu::num_coils, 13))));
 }

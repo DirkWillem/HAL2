@@ -15,9 +15,13 @@ using namespace modbus::server;
 
 using Coil1      = modbus::server::InMemCoil<0x0000, "Coil1">;
 using Coil2      = modbus::server::InMemCoil<0x0001, "Coil2">;
-using CoilGroup1 = modbus::server::InMemCoilSet<0x0004, 4, "Coils">;
+using Coil4      = modbus::server::InMemCoil<0x0004, "Coil4">;
+using Coil7      = modbus::server::InMemCoil<0x0007, "Coil7">;
+using CoilGroup1 = modbus::server::InMemCoilSet<0x0008, 4, "Coils">;
+using CoilGroup2 = modbus::server::InMemCoilSet<0x0020, 16, "Coils2">;
 
-using Srv = modbus::server::Server<hstd::Types<Coil2, Coil1, CoilGroup1>>;
+using Srv = modbus::server::Server<
+    hstd::Types<Coil2, Coil1, Coil4, Coil7, CoilGroup1, CoilGroup2>>;
 
 class ModbusServerFrames : public Test {
  public:
@@ -118,4 +122,62 @@ TEST_F(ModbusServerFrames, WriteSingleCoilInvalidAddress) {
                             AllOf(Field(&Pdu::function_code, 0x85),
                                   Field(&Pdu::exception_code,
                                         ExceptionCode::IllegalDataAddress))));
+}
+
+TEST_F(ModbusServerFrames, WriteMultipleCoils) {
+  std::array<std::byte, 2> coils{std::byte{0b11110000}, std::byte{0b10100101}};
+
+  // Handle frame
+  const auto response = HandleFrame(WriteMultipleCoilsRequest{
+      .start_addr = 0x0020,
+      .num_coils  = 16,
+      .values     = coils,
+  });
+
+  // Validate response
+  using Pdu = WriteMultipleCoilsResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(AllOf(Field(&Pdu::start_addr, 0x0020),
+                                               Field(&Pdu::num_coils, 16))));
+
+  // Validate that coils are written
+  ASSERT_THAT(server().ReadCoils<uint16_t>(0x20, 16),
+              Optional(0b10100101'11110000));
+}
+
+TEST_F(ModbusServerFrames, WriteMultipleCoilsToInvalidAddress) {
+  std::array<std::byte, 2> coils{std::byte{0b11110000}, std::byte{0b10100101}};
+
+  // Handle frame
+  const auto response = HandleFrame(WriteMultipleCoilsRequest{
+      .start_addr = 0x2000,
+      .num_coils  = 16,
+      .values     = coils,
+  });
+
+  // Validate response
+  using Pdu = ErrorResponse;
+  ASSERT_THAT(response,
+              VariantWith<Pdu>(AllOf(Field(&Pdu::function_code, 0x8F),
+                                     Field(&Pdu::exception_code,
+                                           ExceptionCode::IllegalDataAddress))));
+}
+
+
+TEST_F(ModbusServerFrames,
+       WriteMultipleCoilsMismatchBetweenValuesAndCoilCount) {
+  std::array<std::byte, 2> coils{};
+
+  // Handle frame
+  const auto response = HandleFrame(WriteMultipleCoilsRequest{
+      .start_addr = 0x0020,
+      .num_coils  = 24,
+      .values     = coils,
+  });
+
+  // Validate response
+  using Pdu = ErrorResponse;
+  ASSERT_THAT(response,
+              VariantWith<Pdu>(AllOf(Field(&Pdu::function_code, 0x8F),
+                                     Field(&Pdu::exception_code,
+                                           ExceptionCode::IllegalDataValue))));
 }
