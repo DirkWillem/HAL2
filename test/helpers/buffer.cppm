@@ -17,7 +17,7 @@ export struct BufferBuilderSettings {
   uint16_t default_crc16_init = 0x0000;
 };
 
-export template <std::endian E>
+export template <std::endian E, std::endian CE = E>
 class BufferBuilder {
  public:
   explicit BufferBuilder(std::span<std::byte>  buffer,
@@ -26,13 +26,13 @@ class BufferBuilder {
       , buffer{buffer}
       , settings{settings} {}
 
-  template <std::unsigned_integral T>
+  template <std::unsigned_integral T, std::endian VE = E>
   auto& Write(T value) {
     if (buffer.size() < sizeof(T)) {
       throw std::runtime_error{"Value is too large to write to buffer"};
     }
 
-    const auto tmp = hstd::ConvertToEndianness<E>(value);
+    const auto tmp = hstd::ConvertToEndianness<VE>(value);
 
     std::memcpy(buffer.data(), &tmp, sizeof(T));
     buffer = buffer.subspan(sizeof(T));
@@ -46,7 +46,7 @@ class BufferBuilder {
         hstd::Crc16(original_buffer.subspan(offset, BytesWritten() - offset),
                     poly.value_or(settings.default_crc16_poly),
                     init.value_or(settings.default_crc16_init));
-    Write(crc);
+    Write<uint16_t, CE>(crc);
     return *this;
   }
 

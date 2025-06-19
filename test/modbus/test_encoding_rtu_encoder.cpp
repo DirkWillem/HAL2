@@ -40,11 +40,11 @@ class ModbusRtuEncoder : public Test {
           "Can only create one check buffer per test case"};
     }
 
-    check_buffer_builder =
-        std::make_unique<helpers::BufferBuilder<std::endian::big>>(
-            check_buffer,
-            helpers::BufferBuilderSettings{.default_crc16_poly = 0xA001,
-                                           .default_crc16_init = 0xFFFF});
+    check_buffer_builder = std::make_unique<
+        helpers::BufferBuilder<std::endian::big, std::endian::little>>(
+        check_buffer,
+        helpers::BufferBuilderSettings{.default_crc16_poly = 0xA001,
+                                       .default_crc16_init = 0xFFFF});
     return *check_buffer_builder;
   }
 
@@ -52,7 +52,7 @@ class ModbusRtuEncoder : public Test {
   std::array<std::byte, 256> buffer{};
 
   std::array<std::byte, 256> check_buffer{};
-  std::unique_ptr<helpers::BufferBuilder<std::endian::big>>
+  std::unique_ptr<helpers::BufferBuilder<std::endian::big, std::endian::little>>
       check_buffer_builder{nullptr};
 };
 

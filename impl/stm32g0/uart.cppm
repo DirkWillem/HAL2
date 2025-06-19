@@ -408,7 +408,7 @@ class UartImpl
             UartImplBase<OM, Rest...>::RxDoneBit);
 
     if (UartImplBase<OM, Rest...>::event_group
-            .Wait(UartImplBase<OM, Rest...>::TxDoneBit, timeout)
+            .Wait(UartImplBase<OM, Rest...>::RxDoneBit, timeout)
             .has_value()) {
       return UartImplBase<OM, Rest...>::rx_data;
     } else {

@@ -38,18 +38,18 @@ class ModbusRtuDecoder : public Test {
           "Can only create one check buffer per test case"};
     }
 
-    req_buffer_builder =
-        std::make_unique<helpers::BufferBuilder<std::endian::big>>(
-            req_buffer,
-            helpers::BufferBuilderSettings{.default_crc16_poly = 0xA001,
-                                           .default_crc16_init = 0xFFFF});
+    req_buffer_builder = std::make_unique<
+        helpers::BufferBuilder<std::endian::big, std::endian::little>>(
+        req_buffer,
+        helpers::BufferBuilderSettings{.default_crc16_poly = 0xA001,
+                                       .default_crc16_init = 0xFFFF});
     return *req_buffer_builder;
   }
 
  protected:
-  std::array<std::byte, 256>                                req_buffer{};
-  std::unique_ptr<helpers::BufferBuilder<std::endian::big>> req_buffer_builder{
-      nullptr};
+  std::array<std::byte, 256> req_buffer{};
+  std::unique_ptr<helpers::BufferBuilder<std::endian::big, std::endian::little>>
+      req_buffer_builder{nullptr};
 };
 
 TEST_F(ModbusRtuDecoder, TooLittleDataForAnyFrame) {
@@ -391,29 +391,25 @@ TEST_F(ModbusRtuDecoder, WriteMultipleCoilsRequest) {
   ASSERT_EQ(frame.address, 0x06);
   ASSERT_THAT(frame.pdu,
               VariantWith<Pdu>(AllOf(
-                  Field(&Pdu::start_addr, 0x0020),
-                  Field(&Pdu::num_coils, 13),
+                  Field(&Pdu::start_addr, 0x0020), Field(&Pdu::num_coils, 13),
                   Field(&Pdu::values, ElementsAre(std::byte{0b1111'0000},
                                                   std::byte{0b1010'0101})))));
 }
 
-
 TEST_F(ModbusRtuDecoder, WriteMultipleCoilsResponse) {
   const auto decode_result = DecodeResponse(FrameBuilder()
-                                               .Write<uint8_t>(0x06)
-                                               .Write<uint8_t>(0x0F)
-                                               .Write<uint16_t>(0x0030)
-                                               .Write<uint16_t>(13)
-                                               .WriteCrc16()
-                                               .Bytes());
+                                                .Write<uint8_t>(0x06)
+                                                .Write<uint8_t>(0x0F)
+                                                .Write<uint16_t>(0x0030)
+                                                .Write<uint16_t>(13)
+                                                .WriteCrc16()
+                                                .Bytes());
 
   ASSERT_TRUE(decode_result.has_value());
 
   const auto frame = decode_result.value();
   using Pdu        = WriteMultipleCoilsResponse;
   ASSERT_EQ(frame.address, 0x06);
-  ASSERT_THAT(frame.pdu,
-              VariantWith<Pdu>(AllOf(
-                  Field(&Pdu::start_addr, 0x0030),
-                  Field(&Pdu::num_coils, 13))));
+  ASSERT_THAT(frame.pdu, VariantWith<Pdu>(AllOf(Field(&Pdu::start_addr, 0x0030),
+                                                Field(&Pdu::num_coils, 13))));
 }

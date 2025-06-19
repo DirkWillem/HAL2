@@ -1,6 +1,8 @@
 module;
 
 #include <bit>
+#include <cstdint>
+#include <cstring>
 #include <memory>
 #include <span>
 #include <utility>
@@ -185,8 +187,9 @@ export class Encoder {
     Write(std::to_underlying(v));
   }
 
+  template <std::endian E = std::endian::big>
   constexpr void Write(std::unsigned_integral auto v) noexcept {
-    const auto tmp = hstd::ConvertToEndianness<std::endian::big>(v);
+    const auto tmp = hstd::ConvertToEndianness<E>(v);
     std::memcpy(destination.subspan(offset, sizeof(tmp)).data(), &tmp,
                 sizeof(tmp));
 
@@ -213,7 +216,8 @@ export class Encoder {
   }
 
   constexpr void WriteCrc() noexcept {
-    Write(hstd::Crc16(destination.subspan(0, offset), 0xA001, 0xFFFF));
+    Write<std::endian::little>(
+        hstd::Crc16(destination.subspan(0, offset), 0xA001, 0xFFFF));
   }
 
   constexpr std::span<const std::byte> Written() noexcept {

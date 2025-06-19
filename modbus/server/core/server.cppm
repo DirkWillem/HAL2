@@ -2,7 +2,10 @@ module;
 
 #include <algorithm>
 #include <array>
+#include <cstdint>
 #include <expected>
+#include <functional>
+#include <span>
 #include <tuple>
 #include <utility>
 #include <variant>
@@ -189,23 +192,25 @@ class Server<hstd::Types<UC...>> : private CoilImpl<UC>... {
      * @param req Request to handle
      */
     void operator()(const ReadCoilsRequest& req) noexcept {
-      auto&      res     = response.emplace<ReadCoilsResponse>();
       const auto n_bytes = DivCeil<uint16_t, 8>(req.num_coils);
+
+      bool any_read = false;
 
       for (uint32_t i = 0; i < n_bytes; i++) {
         const auto n_bits_i = std::min(8U, req.num_coils - i * 8);
-        const auto result   = server.template ReadCoils<uint8_t>(
-            req.starting_addr + i * 8, n_bits_i);
+        const auto result = server.ReadCoils<uint8_t>(req.starting_addr + i * 8,
+                                                      n_bits_i, any_read);
 
         if (result) {
           buffer[i] = static_cast<std::byte>(*result);
+          any_read  = true;
         } else {
           response = MakeErrorResponse(req.FC, result.error());
           return;
         }
       }
 
-      res.coils = buffer.subspan(0, n_bytes);
+      response = ReadCoilsResponse{.coils = buffer.subspan(0, n_bytes)};
     }
 
     /**
@@ -342,7 +347,7 @@ class Server<hstd::Types<UC...>> : private CoilImpl<UC>... {
           const auto result = (this->*e.write)(word_mask, word_value);
 
           if (!result.has_value()) {
-            return result;
+            return std::unexpected(result.error());
           }
 
           any_written = true;
@@ -386,12 +391,14 @@ class Server<hstd::Types<UC...>> : private CoilImpl<UC>... {
    * @tparam T Bit type to return the coil values in
    * @param start_address Address of the first coil to read
    * @param count Number of coils to read
+   * @param ignore_none_found Whether to still succeed if no coils were found
    * @return Read coil values, or exception code upon failure
    */
   template <std::unsigned_integral T>
     requires(sizeof(T) <= sizeof(uint32_t))
   constexpr std::expected<T, ExceptionCode>
-  ReadCoils(uint32_t start_address, uint32_t count) const noexcept {
+  ReadCoils(uint32_t start_address, uint32_t count,
+            bool ignore_none_found = false) const noexcept {
     const auto end_address = start_address + count;
 
     bool any_read = false;
@@ -432,7 +439,7 @@ class Server<hstd::Types<UC...>> : private CoilImpl<UC>... {
       }
     }
 
-    if (!any_read) {
+    if (!any_read && !ignore_none_found) {
       return std::unexpected(ExceptionCode::IllegalDataAddress);
     } else {
       return result;
@@ -447,5 +454,18 @@ class Server<hstd::Types<UC...>> : private CoilImpl<UC>... {
  private:
   std::array<std::byte, 256> buffer{};
 };
+
+namespace concepts {
+
+template <typename T>
+inline constexpr bool IsServer = false;
+
+template <typename UC>
+inline constexpr bool IsServer<Server<UC>> = true;
+
+export template <typename T>
+concept Server = IsServer<T>;
+
+}   // namespace concepts
 
 }   // namespace modbus::server

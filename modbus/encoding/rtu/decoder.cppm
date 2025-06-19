@@ -1,6 +1,8 @@
 module;
 
 #include <bit>
+#include <cstdint>
+#include <cstring>
 #include <expected>
 #include <optional>
 #include <span>
@@ -33,6 +35,10 @@ export class Decoder {
   static constexpr auto FV = FrameVariant::Decode;
 
  public:
+  using ReqFrame = RequestFrame<FV>;
+  using ResFrame = ResponseFrame<FV>;
+  using Error    = DecodeError;
+
   constexpr explicit Decoder(std::span<const std::byte> buffer)
       : buffer{buffer} {}
 
@@ -175,7 +181,6 @@ export class Decoder {
         buffer.subspan(buffer.size() - sizeof(crc_recv), sizeof(crc_recv))
             .data(),
         sizeof(crc_recv));
-    crc_recv = hstd::ConvertFromEndianness<std::endian::big>(crc_recv);
 
     if (crc_calc != crc_recv) {
       return std::unexpected(DecodeError::InvalidCrc);

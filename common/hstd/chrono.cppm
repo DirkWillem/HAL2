@@ -273,7 +273,7 @@ constexpr auto operator""_us(unsigned long long int v) {
  * Concept that wraps the std::chrono::is_clock condition
  */
 template <typename C>
-concept Clock = std::chrono::is_clock<C>;
+concept Clock = std::chrono::is_clock_v<C>;
 #else
 template<class>
 struct is_clock : std::false_type {};

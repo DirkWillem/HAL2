@@ -1,6 +1,7 @@
 module;
 
 #include <bit>
+#include <cstring>
 #include <iterator>
 #include <span>
 #include <string_view>
@@ -91,7 +92,7 @@ std::span<const TOut> ReinterpretSpan(std::span<TIn> in) noexcept {
   };
 }
 
-template <ByteLike TOut>
+export template <ByteLike TOut>
 /**
  * Returns a byte view over the data contained in a string view
  * @tparam TOut Output type, must be a type that is able to access the raw
