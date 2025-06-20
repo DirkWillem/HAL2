@@ -18,6 +18,7 @@ export enum class FunctionCode : uint8_t {
   ReadHoldingRegisters = 0x03,
   ReadInputRegisters   = 0x04,
   WriteSingleCoil      = 0x05,
+  WriteSingleRegister  = 0x06,
   WriteMultipleCoils   = 0x0F,
   ErrorResponseBase    = 0x80,
 };
@@ -76,6 +77,13 @@ export struct WriteSingleCoilRequest {
   CoilState             new_state;
 };
 
+export struct WriteSingleRegisterRequest {
+  static constexpr auto FC = FunctionCode::WriteSingleRegister;
+
+  uint16_t register_addr;
+  uint16_t new_value;
+};
+
 export struct WriteMultipleCoilsRequest {
   static constexpr auto FC = FunctionCode::WriteMultipleCoils;
 
@@ -88,7 +96,8 @@ export template <FrameVariant FV>
 using RequestPdu =
     std::variant<ReadCoilsRequest, ReadDiscreteInputsRequest,
                  ReadHoldingRegistersRequest, ReadInputRegistersRequest,
-                 WriteSingleCoilRequest, WriteMultipleCoilsRequest>;
+                 WriteSingleCoilRequest, WriteSingleRegisterRequest,
+                 WriteMultipleCoilsRequest>;
 
 export struct ErrorResponse {
   uint8_t       function_code;
@@ -140,6 +149,13 @@ export struct WriteSingleCoilResponse {
   CoilState             new_state;
 };
 
+export struct WriteSingleRegisterResponse {
+  static constexpr auto FC = FunctionCode::WriteSingleRegister;
+
+  uint16_t register_addr;
+  uint16_t new_value;
+};
+
 export struct WriteMultipleCoilsResponse {
   static constexpr auto FC = FunctionCode::WriteMultipleCoils;
 
@@ -151,6 +167,7 @@ export template <FrameVariant FV>
 using ResponsePdu =
     std::variant<ErrorResponse, ReadCoilsResponse, ReadDiscreteInputsResponse,
                  ReadHoldingRegistersResponse, ReadInputRegistersResponse<FV>,
-                 WriteSingleCoilResponse, WriteMultipleCoilsResponse>;
+                 WriteSingleCoilResponse, WriteSingleRegisterResponse,
+                 WriteMultipleCoilsResponse>;
 
 }   // namespace modbus

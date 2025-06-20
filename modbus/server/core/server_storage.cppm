@@ -111,11 +111,20 @@ struct HoldingRegImpl {
   std::expected<bool, ExceptionCode> Write(std::span<const std::byte> data,
                                            std::size_t                offset,
                                            std::size_t size) noexcept {
-    return WriteRegister(storage, data, offset, size);
+    if constexpr (E != std::endian::native) {
+      std::array<std::byte, sizeof(typename HR::Data)> swapped_buf{};
+      std::memcpy(swapped_buf.data(), data.data(), size);
+      SwapEndianness<typename HR::Storage>(swapped_buf, offset, size);
+
+      return WriteRegister(storage, data, offset, size);
+    } else {
+      return WriteRegister(storage, data, offset, size);
+    }
   }
 
-  static void SwapEndianness(std::span<std::byte> data) noexcept {
-    SwapRegisterEndianness<typename HR::Storage>(data);
+  static void SwapEndianness(std::span<std::byte> data, std::size_t offset,
+                             std::size_t size) noexcept {
+    SwapRegisterEndianness<typename HR::Storage>(data, offset, size);
   }
 
   typename HR::Storage storage;
@@ -137,7 +146,8 @@ class ServerStorage<hstd::Types<UC...>, hstd::Types<UHR...>>
       ServerStorage::*)(std::size_t offset, std::size_t size) const;
   using RegWriteFn = std::expected<bool, ExceptionCode> (ServerStorage::*)(
       std::span<const std::byte> data, std::size_t offset, std::size_t value);
-  using SwapEndiannessFn = void (*)(std::span<std::byte> data);
+  using SwapEndiannessFn = void (*)(std::span<std::byte> data,
+                                    std::size_t offset, std::size_t size);
 
   static constexpr auto NCoils = sizeof...(UC);
 
@@ -452,7 +462,7 @@ class ServerStorage<hstd::Types<UC...>, hstd::Types<UHR...>>
           std::memcpy(dst.data(), (*read_result).data(), count);
 
           if constexpr (E != std::endian::native) {
-            (*e.swap_endianness)(dst);
+            (*e.swap_endianness)(dst, entry_offset, count);
           }
         } else {
           return std::unexpected(read_result.error());

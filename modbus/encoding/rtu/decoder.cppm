@@ -74,6 +74,11 @@ export class Decoder {
       return DecodeRequestPayload<WriteSingleCoilRequest>([this](auto& req) {
         return DecodeVars(req.coil_addr, req.new_state);
       });
+    case FunctionCode::WriteSingleRegister:
+      return DecodeRequestPayload<WriteSingleRegisterRequest>(
+          [this](auto& req) {
+            return DecodeVars(req.register_addr, req.new_value);
+          });
     case FunctionCode::WriteMultipleCoils:
       return DecodeRequestPayload<WriteMultipleCoilsRequest>([this](auto& req) {
         return DecodeVars(
@@ -135,6 +140,11 @@ export class Decoder {
       return DecodeResponsePayload<WriteSingleCoilResponse>([this](auto& res) {
         return DecodeVars(res.coil_addr, res.new_state);
       });
+    case FunctionCode::WriteSingleRegister:
+      return DecodeResponsePayload<WriteSingleRegisterResponse>(
+          [this](auto& res) {
+            return DecodeVars(res.register_addr, res.new_value);
+          });
     case FunctionCode::WriteMultipleCoils:
       return DecodeResponsePayload<WriteMultipleCoilsResponse>(
           [this](auto& res) {

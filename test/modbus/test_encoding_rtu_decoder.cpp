@@ -18,6 +18,9 @@ using namespace modbus::encoding::rtu;
 
 using namespace hstd::operators;
 
+using ReqFrame = RequestFrame<FrameVariant::Decode>;
+using ResFrame = ResponseFrame<FrameVariant::Decode>;
+
 class ModbusRtuDecoder : public Test {
  public:
   void SetUp() override {
@@ -373,6 +376,44 @@ TEST_F(ModbusRtuDecoder, WriteSingleCoilResponse) {
   ASSERT_THAT(frame.pdu, VariantWith<Pdu>(AllOf(
                              Field(&Pdu::coil_addr, 0x0030),
                              Field(&Pdu::new_state, CoilState::Enabled))));
+}
+
+TEST_F(ModbusRtuDecoder, WriteSingleRegisterRequest) {
+  const auto decode_result = DecodeRequest(FrameBuilder()
+                                               .Write<uint8_t>(0x10)
+                                               .Write<uint8_t>(0x06)
+                                               .Write<uint16_t>(0x0010)
+                                               .Write<uint16_t>(0x1234)
+                                               .WriteCrc16()
+                                               .Bytes());
+
+  using Pdu = WriteSingleRegisterRequest;
+
+  ASSERT_THAT(decode_result,
+              Optional(AllOf(Field(&ReqFrame::address, 0x10),
+                             Field(&ReqFrame::pdu,
+                                   VariantWith<Pdu>(AllOf(
+                                       Field(&Pdu::register_addr, 0x0010),
+                                       Field(&Pdu::new_value, 0x1234)))))));
+}
+
+TEST_F(ModbusRtuDecoder, WriteSingleRegisterResponse) {
+  const auto decode_result = DecodeResponse(FrameBuilder()
+                                                .Write<uint8_t>(0x10)
+                                                .Write<uint8_t>(0x06)
+                                                .Write<uint16_t>(0x0010)
+                                                .Write<uint16_t>(0x1234)
+                                                .WriteCrc16()
+                                                .Bytes());
+
+  using Pdu = WriteSingleRegisterResponse;
+
+  ASSERT_THAT(decode_result,
+              Optional(AllOf(Field(&ResFrame::address, 0x10),
+                             Field(&ResFrame::pdu,
+                                   VariantWith<Pdu>(AllOf(
+                                       Field(&Pdu::register_addr, 0x0010),
+                                       Field(&Pdu::new_value, 0x1234)))))));
 }
 
 TEST_F(ModbusRtuDecoder, WriteMultipleCoilsRequest) {

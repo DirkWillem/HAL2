@@ -266,6 +266,42 @@ TEST_F(ModbusRtuEncoder, ReadInputRegistersResponse) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
+TEST_F(ModbusRtuEncoder, WriteSingleRegisterRequest) {
+  const auto encoded_frame = EncodeRequest({
+      .pdu     = WriteSingleRegisterRequest{.register_addr = 0x0010,
+                                            .new_value     = 0x1234},
+      .address = 0x12,
+  });
+
+  const auto encoded_frame_check = CheckBuilder()
+                                       .Write<uint8_t>(0x12)
+                                       .Write<uint8_t>(0x06)
+                                       .Write<uint16_t>(0x0010)
+                                       .Write<uint16_t>(0x1234)
+                                       .WriteCrc16()
+                                       .Bytes();
+
+  ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
+}
+
+TEST_F(ModbusRtuEncoder, WriteSingleRegisterResponse) {
+  const auto encoded_frame = EncodeResponse({
+      .pdu     = WriteSingleRegisterResponse{.register_addr = 0x0010,
+                                             .new_value     = 0x1234},
+      .address = 0x12,
+  });
+
+  const auto encoded_frame_check = CheckBuilder()
+                                       .Write<uint8_t>(0x12)
+                                       .Write<uint8_t>(0x06)
+                                       .Write<uint16_t>(0x0010)
+                                       .Write<uint16_t>(0x1234)
+                                       .WriteCrc16()
+                                       .Bytes();
+
+  ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
+}
+
 TEST_F(ModbusRtuEncoder, WriteSingleCoilRequest) {
   const auto encoded_frame = EncodeRequest({
       .pdu     = WriteSingleCoilRequest{.coil_addr = 0x0020,

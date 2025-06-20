@@ -110,8 +110,13 @@ WriteRegister(S& storage, std::span<const std::byte> data, std::size_t offset,
 
 export template <typename S>
   requires PlainMemoryRegisterStorage<S, S>
-void SwapRegisterEndianness(std::span<std::byte> data) {
+void SwapRegisterEndianness(std::span<std::byte> data, std::size_t offset,
+                            std::size_t size) {
   using D = std::remove_cvref_t<S>;
+
+  if (!IsAlignedRegisterAccess<D>(offset, size)) {
+    return;
+  }
 
   if constexpr (hstd::IsArray<D>) {
     using ET = typename D::value_type;

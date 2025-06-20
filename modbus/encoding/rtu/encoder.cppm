@@ -95,8 +95,7 @@ export class Encoder {
 
   /** Encodes a MODBUS Read Holding Registers response frame */
   constexpr std::span<const std::byte>
-  operator()(const ReadHoldingRegistersResponse&
-                 frame) noexcept {
+  operator()(const ReadHoldingRegistersResponse& frame) noexcept {
     Write(address);
     Write(frame.FC);
     Write(static_cast<uint8_t>(frame.registers.size_bytes()));
@@ -149,6 +148,28 @@ export class Encoder {
     Write(frame.FC);
     Write(frame.coil_addr);
     Write(frame.new_state);
+    WriteCrc();
+
+    return Written();
+  }
+
+  constexpr std::span<const std::byte>
+  operator()(const WriteSingleRegisterRequest& frame) noexcept {
+    Write(address);
+    Write(frame.FC);
+    Write(frame.register_addr);
+    Write(frame.new_value);
+    WriteCrc();
+
+    return Written();
+  }
+
+  constexpr std::span<const std::byte>
+  operator()(const WriteSingleRegisterResponse& frame) noexcept {
+    Write(address);
+    Write(frame.FC);
+    Write(frame.register_addr);
+    Write(frame.new_value);
     WriteCrc();
 
     return Written();
