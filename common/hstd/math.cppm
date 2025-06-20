@@ -67,4 +67,26 @@ constexpr T Ones(std::size_t n) noexcept {
   }
 }
 
+namespace operators {
+
+export constexpr uint8_t operator""_u8(unsigned long long int x) noexcept {
+  return static_cast<uint8_t>(x);
+}
+
+export constexpr std::byte operator""_b(unsigned long long int x) noexcept {
+  return static_cast<std::byte>(x);
+}
+
+export constexpr uint16_t operator""_u16(unsigned long long int x) noexcept {
+  return static_cast<uint16_t>(x);
+}
+
+export constexpr uint32_t operator""_u32(unsigned long long int x) noexcept {
+  return static_cast<uint32_t>(x);
+}
+
+
+
+}
+
 }   // namespace hstd

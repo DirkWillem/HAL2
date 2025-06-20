@@ -121,11 +121,10 @@ export struct ReadDiscreteInputsResponse {
   std::span<const std::byte> inputs;
 };
 
-export template <FrameVariant FV>
-struct ReadHoldingRegistersResponse {
+export struct ReadHoldingRegistersResponse {
   static constexpr auto FC = FunctionCode::ReadHoldingRegisters;
 
-  Array<FV, uint16_t> registers;
+  std::span<const std::byte> registers;
 };
 
 export template <FrameVariant FV>
@@ -151,8 +150,7 @@ export struct WriteMultipleCoilsResponse {
 export template <FrameVariant FV>
 using ResponsePdu =
     std::variant<ErrorResponse, ReadCoilsResponse, ReadDiscreteInputsResponse,
-                 ReadHoldingRegistersResponse<FV>,
-                 ReadInputRegistersResponse<FV>, WriteSingleCoilResponse,
-                 WriteMultipleCoilsResponse>;
+                 ReadHoldingRegistersResponse, ReadInputRegistersResponse<FV>,
+                 WriteSingleCoilResponse, WriteMultipleCoilsResponse>;
 
 }   // namespace modbus

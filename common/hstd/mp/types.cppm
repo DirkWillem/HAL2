@@ -39,7 +39,7 @@ struct FindIndexHelper<I, TSearch> {
   static constexpr std::optional<std::size_t> Result = std::nullopt;
 };
 
-}   // namespace halstd
+}   // namespace hstd
 
 export namespace hstd {
 
@@ -87,7 +87,7 @@ struct Types {
   using SingleType = std::conditional_t<AreEqual, NthType<0>, void>;
 };
 
-}   // namespace halstd
+}   // namespace hstd
 
 namespace hstd {
 
@@ -131,7 +131,7 @@ struct IsInstantiationOfVariadicHelper : std::false_type {};
 template <template <typename...> typename T, typename... Ts, typename... Us>
 struct IsInstantiationOfVariadicHelper<T<Ts...>, T<Us...>> : std::true_type {};
 
-}   // namespace halstd
+}   // namespace hstd
 
 export namespace hstd {
 
@@ -182,4 +182,17 @@ using VariantOf = TransmuteVariadic<UniqueTypes<Ts...>, std::variant<>>;
 static_assert(std::is_same_v<VariantOf<bool, int, bool, int, int>,
                              std::variant<bool, int>>);
 
-}   // namespace halstd
+template <typename T>
+inline constexpr bool IsTypes = false;
+
+template <typename... Ts>
+inline constexpr bool IsTypes<Types<Ts...>> = true;
+
+namespace concepts {
+
+template <typename T>
+concept Types = IsTypes<T>;
+
+}
+
+}   // namespace hstd

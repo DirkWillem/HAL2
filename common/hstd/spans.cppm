@@ -76,7 +76,7 @@ std::span<TOut> ReinterpretSpanMut(std::span<TIn> in) noexcept {
   };
 }
 
-export template <ByteLike TOut, typename TIn>
+export template <ByteLike TOut, typename TIn, std::size_t E>
 /**
  * Returns a byte view over the data contained in a span
  * @tparam TOut Output type, must be a type that is able to access the raw
@@ -85,7 +85,7 @@ export template <ByteLike TOut, typename TIn>
  * @param in Input span
  * @return Byte view over the passed span
  */
-std::span<const TOut> ReinterpretSpan(std::span<TIn> in) noexcept {
+std::span<const TOut> ReinterpretSpan(std::span<TIn, E> in) noexcept {
   return std::span{
       reinterpret_cast<const TOut*>(in.data()),
       in.size() * (sizeof(TIn) / sizeof(TOut)),
@@ -104,7 +104,12 @@ std::span<const TOut> ReinterpretSpan(std::string_view in) noexcept {
   return std::span{reinterpret_cast<const TOut*>(in.data()), in.size()};
 }
 
-export template <ByteLike TOut, typename TIn>
+export template <ByteLike TOut = std::byte, typename TIn>
+std::span<const TOut> ByteViewOver(const TIn& in) {
+  return std::span{reinterpret_cast<const TOut*>(&in), sizeof(in)};
+}
+
+export template <ByteLike TOut = std::byte, typename TIn>
 std::span<TOut> MutByteViewOver(TIn& in) {
   return std::span{reinterpret_cast<TOut*>(&in), sizeof(in)};
 }

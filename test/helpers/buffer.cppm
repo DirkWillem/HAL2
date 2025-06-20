@@ -39,6 +39,19 @@ class BufferBuilder {
     return *this;
   }
 
+  template <std::endian VE = E>
+  auto& Write(float value) {
+    if (buffer.size() < sizeof(float)) {
+      throw std::runtime_error{"Value is too large to write to buffer"};
+    }
+
+    const auto tmp = hstd::ConvertToEndianness<VE>(value);
+
+    std::memcpy(buffer.data(), &tmp, sizeof(float));
+    buffer = buffer.subspan(sizeof(float));
+    return *this;
+  }
+
   BufferBuilder& WriteCrc16(std::optional<uint16_t> poly   = {},
                             std::optional<uint16_t> init   = {},
                             std::size_t             offset = 0) noexcept {

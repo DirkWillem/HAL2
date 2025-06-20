@@ -4,6 +4,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+import hstd;
+
 import modbus.core;
 import modbus.encoding.rtu;
 
@@ -13,6 +15,8 @@ using namespace ::testing;
 
 using namespace modbus;
 using namespace modbus::encoding::rtu;
+
+using namespace hstd::operators;
 
 class ModbusRtuDecoder : public Test {
  public:
@@ -262,13 +266,12 @@ TEST_F(ModbusRtuDecoder, ReadHoldingRegistersResponseSingleRegister) {
 
   ASSERT_TRUE(decode_result.has_value());
 
-  using Frame      = ReadHoldingRegistersResponse<FrameVariant::Decode>;
+  using Frame      = ReadHoldingRegistersResponse;
   const auto frame = decode_result.value();
 
   ASSERT_EQ(frame.address, 0x06);
-  ASSERT_THAT(frame.pdu,
-              VariantWith<Frame>(
-                  Field(&Frame::registers, ElementsAre(uint16_t{0xBAAB}))));
+  ASSERT_THAT(frame.pdu, VariantWith<Frame>(Field(
+                             &Frame::registers, ElementsAre(0xBA_b, 0xAB_b))));
 }
 
 TEST_F(ModbusRtuDecoder, ReadHoldingRegistersResponseMultipleRegisters) {
@@ -284,14 +287,14 @@ TEST_F(ModbusRtuDecoder, ReadHoldingRegistersResponseMultipleRegisters) {
 
   ASSERT_TRUE(decode_result.has_value());
 
-  using Pdu        = ReadHoldingRegistersResponse<FrameVariant::Decode>;
+  using Pdu        = ReadHoldingRegistersResponse;
   const auto frame = decode_result.value();
 
   ASSERT_EQ(frame.address, 0x06);
-  ASSERT_THAT(frame.pdu, VariantWith<Pdu>(Field(
-                             &Pdu::registers,
-                             ElementsAre(uint16_t{0xBAAB}, uint16_t{0x1234},
-                                         uint16_t{0xEBAF}))));
+  ASSERT_THAT(frame.pdu,
+              VariantWith<Pdu>(
+                  Field(&Pdu::registers, ElementsAre(0xBA_b, 0xAB_b, 0x12_b,
+                                                     0x34_b, 0xEB_b, 0xAF_b))));
 }
 
 TEST_F(ModbusRtuDecoder, ReadInputRegistersRequest) {

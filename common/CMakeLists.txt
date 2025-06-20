@@ -17,6 +17,7 @@ target_sources(hstd
         PUBLIC
         FILE_SET CXX_MODULES FILES
         hstd/mp/helpers.cppm
+        hstd/mp/stl_types.cppm
         hstd/mp/types.cppm
         hstd/mp/values.cppm
 

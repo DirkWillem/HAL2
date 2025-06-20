@@ -95,11 +95,11 @@ export class Encoder {
 
   /** Encodes a MODBUS Read Holding Registers response frame */
   constexpr std::span<const std::byte>
-  operator()(const ReadHoldingRegistersResponse<FrameVariant::Encode>&
+  operator()(const ReadHoldingRegistersResponse&
                  frame) noexcept {
     Write(address);
     Write(frame.FC);
-    Write(static_cast<uint8_t>(frame.registers.size() * sizeof(uint16_t)));
+    Write(static_cast<uint8_t>(frame.registers.size_bytes()));
     Write(frame.registers);
     WriteCrc();
 

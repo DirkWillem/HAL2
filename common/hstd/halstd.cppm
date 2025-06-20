@@ -1,6 +1,7 @@
 export module hstd;
 
 export import :mp.helpers;
+export import :mp.stl_types;
 export import :mp.types;
 export import :mp.values;
 

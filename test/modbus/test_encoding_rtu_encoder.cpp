@@ -4,6 +4,8 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+import hstd;
+
 import modbus.core;
 import modbus.encoding.rtu;
 
@@ -12,6 +14,8 @@ import testing.helpers;
 using namespace testing;
 using namespace modbus;
 using namespace modbus::encoding::rtu;
+
+using namespace hstd::operators;
 
 class ModbusRtuEncoder : public Test {
  public:
@@ -197,13 +201,10 @@ TEST_F(ModbusRtuEncoder, ReadHoldingRegistersRequest) {
 }
 
 TEST_F(ModbusRtuEncoder, ReadHoldingRegistersResponse) {
-  std::array<uint16_t, 3> registers{0x1234, 0xAABB, 0xBEEF};
+  std::array registers{0x12_b, 0x34_b, 0xAA_b, 0xBB_b, 0xBE_b, 0xEF_b};
 
   const auto encoded_frame = EncodeResponse({
-      .pdu =
-          ReadHoldingRegistersResponse<FrameVariant::Encode>{
-              .registers = registers,
-          },
+      .pdu     = ReadHoldingRegistersResponse{.registers = registers},
       .address = 0x11,
   });
 

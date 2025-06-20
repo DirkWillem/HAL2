@@ -36,7 +36,9 @@ target_sources(modbus_server PUBLIC
         FILES
         server/core/server.cppm
 
-        server/core/coil.cppm)
+        server/core/coil.cppm
+        server/core/holding_register.cppm
+        server/core/server_storage.cppm)
 target_link_libraries(modbus_server PUBLIC modbus_core)
 
 # - FreeRTOS Implementation

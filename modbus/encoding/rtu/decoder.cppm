@@ -29,6 +29,7 @@ export enum class DecodeError {
 struct LengthPrefixedBytes {
   uint8_t*                    length;
   std::span<const std::byte>* bytes;
+  std::size_t                 element_size = 1;
 };
 
 export class Decoder {
@@ -120,8 +121,13 @@ export class Decoder {
             });
           });
     case FunctionCode::ReadHoldingRegisters:
-      return DecodeResponsePayload<ReadHoldingRegistersResponse<FV>>(
-          [this](auto& res) { return DecodeVars(res.registers); });
+      return DecodeResponsePayload<ReadHoldingRegistersResponse>(
+          [this](auto& res) {
+            return DecodeVars(LengthPrefixedBytes{
+                .length = nullptr,
+                .bytes  = &res.registers,
+            });
+          });
     case FunctionCode::ReadInputRegisters:
       return DecodeResponsePayload<ReadInputRegistersResponse<FV>>(
           [this](auto& res) { return DecodeVars(res.registers); });
@@ -245,7 +251,7 @@ export class Decoder {
       return false;
     }
 
-    const auto count = static_cast<uint8_t>(buffer[0]);
+    const auto count = static_cast<uint8_t>(buffer[0]) * bytes.element_size;
 
     if (bytes.length != nullptr) {
       *bytes.length = count;

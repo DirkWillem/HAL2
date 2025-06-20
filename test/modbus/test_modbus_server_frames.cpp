@@ -1,3 +1,4 @@
+#include <bit>
 #include <memory>
 
 #include <gmock/gmock.h>
@@ -7,6 +8,8 @@ import hstd;
 
 import modbus.core;
 import modbus.server;
+
+import testing.helpers;
 
 using namespace testing;
 
@@ -20,8 +23,23 @@ using Coil7      = modbus::server::InMemCoil<0x0007, "Coil7">;
 using CoilGroup1 = modbus::server::InMemCoilSet<0x0008, 4, "Coils">;
 using CoilGroup2 = modbus::server::InMemCoilSet<0x0020, 16, "Coils2">;
 
+using U16HR1 = InMemHoldingRegister<0x0000, uint16_t, "U16 HR 1">;
+using U16HR2 = InMemHoldingRegister<0x0001, uint16_t, "U16 HR 2">;
+
+using U16ArrayHR =
+    InMemHoldingRegister<0x0004, std::array<uint16_t, 4>, "U16 Array HR">;
+
+using F32HR1 = InMemHoldingRegister<0x0010, float, "F32 HR 1">;
+using F32HR2 = InMemHoldingRegister<0x0012, float, "F32 HR 2">;
+
+using F32ArrayHR =
+    InMemHoldingRegister<0x0018, std::array<float, 4>, "F32 Array HR">;
+
 using Srv = modbus::server::Server<
-    hstd::Types<Coil2, Coil1, Coil4, Coil7, CoilGroup1, CoilGroup2>>;
+    hstd::Types<Coil2, Coil1, Coil4, Coil7, CoilGroup1, CoilGroup2>,
+    hstd::Types<U16HR1, U16HR2, U16ArrayHR, F32HR1, F32HR2, F32ArrayHR>>;
+
+using namespace hstd::operators;
 
 class ModbusServerFrames : public Test {
  public:
@@ -156,12 +174,11 @@ TEST_F(ModbusServerFrames, WriteMultipleCoilsToInvalidAddress) {
 
   // Validate response
   using Pdu = ErrorResponse;
-  ASSERT_THAT(response,
-              VariantWith<Pdu>(AllOf(Field(&Pdu::function_code, 0x8F),
-                                     Field(&Pdu::exception_code,
-                                           ExceptionCode::IllegalDataAddress))));
+  ASSERT_THAT(response, VariantWith<Pdu>(
+                            AllOf(Field(&Pdu::function_code, 0x8F),
+                                  Field(&Pdu::exception_code,
+                                        ExceptionCode::IllegalDataAddress))));
 }
-
 
 TEST_F(ModbusServerFrames,
        WriteMultipleCoilsMismatchBetweenValuesAndCoilCount) {
@@ -180,4 +197,97 @@ TEST_F(ModbusServerFrames,
               VariantWith<Pdu>(AllOf(Field(&Pdu::function_code, 0x8F),
                                      Field(&Pdu::exception_code,
                                            ExceptionCode::IllegalDataValue))));
+}
+
+TEST_F(ModbusServerFrames, ReadHoldingRegistersSingleRegister) {
+  // Write sample value
+  server().WriteHoldingRegister(0x1234_u16, 0x0001);
+
+  // Handle frame
+  const auto response = HandleFrame(ReadHoldingRegistersRequest{
+      .starting_addr         = 0x0001,
+      .num_holding_registers = 1,
+  });
+
+  // Validate response
+  using Pdu = ReadHoldingRegistersResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(Field(&Pdu::registers,
+                                               ElementsAre(0x12_b, 0x34_b))));
+}
+
+TEST_F(ModbusServerFrames, ReadHoldingRegisterMultipleRegisters) {
+  server().WriteHoldingRegister(0x1234_u16, 0x0004);
+  server().WriteHoldingRegister(0x5678_u16, 0x0005);
+
+  // Handle frame
+  const auto response = HandleFrame(ReadHoldingRegistersRequest{
+      .starting_addr         = 0x0004,
+      .num_holding_registers = 2,
+  });
+
+  // Validate response
+  using Pdu = ReadHoldingRegistersResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(Field(
+                            &Pdu::registers,
+                            ElementsAre(0x12_b, 0x34_b, 0x56_b, 0x78_b))));
+}
+
+TEST_F(ModbusServerFrames, ReadHoldingRegisterReadFloat) {
+  // Write sample value
+  const auto v = 123.456F;
+  server().WriteHoldingRegister(v, 0x0010);
+
+  // Handle frame
+  const auto response = HandleFrame(ReadHoldingRegistersRequest{
+      .starting_addr         = 0x0010,
+      .num_holding_registers = 2,
+  });
+
+  // Validate response
+  std::array<std::byte, 4> v_check;
+  helpers::BufferBuilder<std::endian::big>{v_check}.Write(v);
+
+  using Pdu = ReadHoldingRegistersResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(
+                            Field(&Pdu::registers, ElementsAreArray(v_check))));
+}
+
+TEST_F(ModbusServerFrames, ReadHoldingRegisterReadFloats) {
+  // Write sample value
+  std::array<float, 4> arr{1.2F, 3.4F, 5.6F, 7.8F};
+  for (std::size_t i = 0; i < arr.size(); ++i) {
+    server().WriteHoldingRegister(arr[i], 0x0018 + i * 2);
+  }
+
+  // Handle frame
+  const auto response = HandleFrame(ReadHoldingRegistersRequest{
+      .starting_addr         = 0x0018,
+      .num_holding_registers = 8,
+  });
+
+  // Validate response
+  std::array<std::byte, arr.size() * sizeof(float)> v_check;
+  helpers::BufferBuilder<std::endian::big>          bb{v_check};
+  for (const auto v : arr) {
+    bb.Write(v);
+  }
+
+  using Pdu = ReadHoldingRegistersResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(
+                            Field(&Pdu::registers, ElementsAreArray(v_check))));
+}
+
+TEST_F(ModbusServerFrames, ReadHoldingRegisterUnalignedRead) {
+  // Handle frame
+  const auto response = HandleFrame(ReadHoldingRegistersRequest{
+      .starting_addr         = 0x0010,
+      .num_holding_registers = 1,
+  });
+
+  // Validate response
+  using Pdu = ErrorResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(
+                            AllOf(Field(&Pdu::function_code, 0x83),
+                                  Field(&Pdu::exception_code,
+                                        ExceptionCode::ServerDeviceFailure))));
 }
