@@ -98,6 +98,24 @@ class Server : public ServerStorage<Cs, HRs> {
     }
 
     /**
+     * Handles a MODBUS Write Single Register request
+     * @param req Request to handle
+     */
+    void operator()(const WriteSingleRegisterRequest& req) noexcept {
+      const auto result =
+          server.WriteHoldingRegister(req.new_value, req.register_addr);
+
+      if (result) {
+        response = WriteSingleRegisterResponse{
+            .register_addr = req.register_addr,
+            .new_value     = req.new_value,
+        };
+      } else {
+        response = MakeErrorResponse(req.FC, result.error());
+      }
+    }
+
+    /**
      * Handles a MODBUS write multiple coils request
      * @param req Request to handle
      */

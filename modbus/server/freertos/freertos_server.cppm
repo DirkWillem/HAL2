@@ -2,6 +2,7 @@ module;
 
 #include <array>
 #include <chrono>
+#include <variant>
 
 export module modbus.server.freertos;
 

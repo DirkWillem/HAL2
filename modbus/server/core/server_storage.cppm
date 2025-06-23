@@ -438,7 +438,7 @@ class ServerStorage<hstd::Types<UC...>, hstd::Types<UHR...>>
   template <std::endian E = std::endian::native>
   std::expected<std::span<const std::byte>, ExceptionCode>
   ReadHoldingRegisters(std::span<std::byte> into, uint16_t start_addr,
-                       uint16_t num_regs) {
+                       uint16_t num_regs) const noexcept {
     const uint16_t end_addr = start_addr + num_regs;
     const auto     n_bytes  = num_regs * sizeof(uint16_t);
 
@@ -479,6 +479,21 @@ class ServerStorage<hstd::Types<UC...>, hstd::Types<UHR...>>
     }
 
     return into.subspan(0, n_bytes);
+  }
+
+  template <typename T, std::endian E = std::endian::native>
+    requires(sizeof(T) % sizeof(uint16_t) == 0)
+  std::expected<T, ExceptionCode>
+  ReadHoldingRegister(uint16_t addr) const noexcept {
+    std::array<std::byte, sizeof(T)> dst_buf{};
+    const auto                       read_result =
+        ReadHoldingRegisters(dst_buf, addr, sizeof(T) / sizeof(uint16_t));
+
+    if (read_result.has_value()) {
+      return std::bit_cast<T>(dst_buf);
+    } else {
+      return std::unexpected(read_result.error());
+    }
   }
 
   std::expected<bool, ExceptionCode>

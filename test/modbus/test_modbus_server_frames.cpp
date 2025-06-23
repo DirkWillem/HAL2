@@ -291,3 +291,30 @@ TEST_F(ModbusServerFrames, ReadHoldingRegisterUnalignedRead) {
                                   Field(&Pdu::exception_code,
                                         ExceptionCode::ServerDeviceFailure))));
 }
+
+TEST_F(ModbusServerFrames, WriteSingleRegisterOk) {
+  const auto response = HandleFrame(
+      WriteSingleRegisterRequest{.register_addr = 0x0001, .new_value = 0x1234});
+
+  // Validate response
+  using Pdu = WriteSingleRegisterResponse;
+  ASSERT_THAT(response,
+              VariantWith<Pdu>(AllOf(Field(&Pdu::register_addr, 0x0001),
+                                     Field(&Pdu::new_value, 0x1234))));
+
+  // Validate that value was written
+  const auto value = server().ReadHoldingRegister<uint16_t>(0x0001);
+  ASSERT_THAT(value, Optional(0x1234_u16));
+}
+
+TEST_F(ModbusServerFrames, WriteSingleRegisterInvalidAddress) {
+  const auto response = HandleFrame(
+      WriteSingleRegisterRequest{.register_addr = 0xEEEE, .new_value = 0x1234});
+
+  // Validate that value was written
+  using Pdu = ErrorResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(
+                            AllOf(Field(&Pdu::function_code, 0x86),
+                                  Field(&Pdu::exception_code,
+                                        ExceptionCode::IllegalDataAddress))));
+}
