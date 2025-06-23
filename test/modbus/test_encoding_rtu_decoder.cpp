@@ -457,3 +457,46 @@ TEST_F(ModbusRtuDecoder, WriteMultipleCoilsResponse) {
   ASSERT_THAT(frame.pdu, VariantWith<Pdu>(AllOf(Field(&Pdu::start_addr, 0x0030),
                                                 Field(&Pdu::num_coils, 13))));
 }
+
+TEST_F(ModbusRtuDecoder, WriteMultipleRegistersRequest) {
+  const auto decode_result = DecodeRequest(FrameBuilder()
+                                               .Write<uint8_t>(0x07)
+                                               .Write<uint8_t>(0x10)
+                                               .Write<uint16_t>(0x00A0)
+                                               .Write<uint16_t>(2)
+                                               .Write<uint8_t>(4)
+                                               .Write<uint16_t>(0x1234)
+                                               .Write<uint16_t>(0x5678)
+                                               .WriteCrc16()
+                                               .Bytes());
+
+  using Pdu = WriteMultipleRegistersRequest;
+  ASSERT_THAT(
+      decode_result,
+      Optional(AllOf(
+          Field(&ReqFrame::address, 0x07),
+          Field(&ReqFrame::pdu,
+                VariantWith<Pdu>(AllOf(
+                    Field(&Pdu::start_addr, 0x00A0),
+                    Field(&Pdu::num_registers, 2),
+                    Field(&Pdu::values,
+                          ElementsAre(0x12_b, 0x34_b, 0x56_b, 0x78_b))))))));
+}
+
+TEST_F(ModbusRtuDecoder, WriteMultipleRegistersResponse) {
+  const auto decode_result = DecodeResponse(FrameBuilder()
+                                                .Write<uint8_t>(0x07)
+                                                .Write<uint8_t>(0x10)
+                                                .Write<uint16_t>(0x00A0)
+                                                .Write<uint16_t>(2)
+                                                .WriteCrc16()
+                                                .Bytes());
+
+  using Pdu = WriteMultipleRegistersResponse;
+  ASSERT_THAT(decode_result,
+              Optional(AllOf(
+                  Field(&ResFrame::address, 0x07),
+                  Field(&ResFrame::pdu, VariantWith<Pdu>(AllOf(
+                                            Field(&Pdu::start_addr, 0x00A0),
+                                            Field(&Pdu::num_registers, 2)))))));
+}

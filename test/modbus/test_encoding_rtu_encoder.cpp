@@ -378,3 +378,51 @@ TEST_F(ModbusRtuEncoder, WriteMultipleCoilsResponse) {
 
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
+
+TEST_F(ModbusRtuEncoder, WriteMultipleRegistersRequest) {
+  std::array<std::byte, 4> values{0x12_b, 0x34_b, 0x56_b, 0x78_b};
+
+  const auto encoded_frame = EncodeRequest({
+      .pdu =
+          WriteMultipleRegistersRequest{
+              .start_addr    = 0x00A0,
+              .num_registers = 2,
+              .values        = values,
+          },
+      .address = 0x07,
+  });
+
+  const auto encoded_frame_check = CheckBuilder()
+                                       .Write<uint8_t>(0x07)
+                                       .Write<uint8_t>(0x10)
+                                       .Write<uint16_t>(0x00A0)
+                                       .Write<uint16_t>(2)
+                                       .Write<uint8_t>(4)
+                                       .Write<uint16_t>(0x1234)
+                                       .Write<uint16_t>(0x5678)
+                                       .WriteCrc16()
+                                       .Bytes();
+
+  ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
+}
+
+TEST_F(ModbusRtuEncoder, WriteMultipleRegistersResponse) {
+  const auto encoded_frame = EncodeResponse({
+      .pdu =
+          WriteMultipleRegistersResponse{
+              .start_addr    = 0x00A0,
+              .num_registers = 2,
+          },
+      .address = 0x07,
+  });
+
+  const auto encoded_frame_check = CheckBuilder()
+                                       .Write<uint8_t>(0x07)
+                                       .Write<uint8_t>(0x10)
+                                       .Write<uint16_t>(0x00A0)
+                                       .Write<uint16_t>(2)
+                                       .WriteCrc16()
+                                       .Bytes();
+
+  ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
+}

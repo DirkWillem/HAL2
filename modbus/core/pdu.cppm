@@ -13,14 +13,15 @@ import hstd;
 namespace modbus {
 
 export enum class FunctionCode : uint8_t {
-  ReadCoils            = 0x01,
-  ReadDiscreteInputs   = 0x02,
-  ReadHoldingRegisters = 0x03,
-  ReadInputRegisters   = 0x04,
-  WriteSingleCoil      = 0x05,
-  WriteSingleRegister  = 0x06,
-  WriteMultipleCoils   = 0x0F,
-  ErrorResponseBase    = 0x80,
+  ReadCoils              = 0x01,
+  ReadDiscreteInputs     = 0x02,
+  ReadHoldingRegisters   = 0x03,
+  ReadInputRegisters     = 0x04,
+  WriteSingleCoil        = 0x05,
+  WriteSingleRegister    = 0x06,
+  WriteMultipleCoils     = 0x0F,
+  WriteMultipleRegisters = 0x10,
+  ErrorResponseBase      = 0x80,
 };
 
 export enum class FrameVariant { Encode, Decode };
@@ -92,12 +93,20 @@ export struct WriteMultipleCoilsRequest {
   std::span<const std::byte> values;
 };
 
+export struct WriteMultipleRegistersRequest {
+  static constexpr auto FC = FunctionCode::WriteMultipleRegisters;
+
+  uint16_t                   start_addr;
+  uint16_t                   num_registers;
+  std::span<const std::byte> values;
+};
+
 export template <FrameVariant FV>
 using RequestPdu =
     std::variant<ReadCoilsRequest, ReadDiscreteInputsRequest,
                  ReadHoldingRegistersRequest, ReadInputRegistersRequest,
                  WriteSingleCoilRequest, WriteSingleRegisterRequest,
-                 WriteMultipleCoilsRequest>;
+                 WriteMultipleCoilsRequest, WriteMultipleRegistersRequest>;
 
 export struct ErrorResponse {
   uint8_t       function_code;
@@ -163,11 +172,18 @@ export struct WriteMultipleCoilsResponse {
   uint16_t num_coils;
 };
 
+export struct WriteMultipleRegistersResponse {
+  static constexpr auto FC = FunctionCode::WriteMultipleRegisters;
+
+  uint16_t start_addr;
+  uint16_t num_registers;
+};
+
 export template <FrameVariant FV>
 using ResponsePdu =
     std::variant<ErrorResponse, ReadCoilsResponse, ReadDiscreteInputsResponse,
                  ReadHoldingRegistersResponse, ReadInputRegistersResponse<FV>,
                  WriteSingleCoilResponse, WriteSingleRegisterResponse,
-                 WriteMultipleCoilsResponse>;
+                 WriteMultipleCoilsResponse, WriteMultipleRegistersResponse>;
 
 }   // namespace modbus

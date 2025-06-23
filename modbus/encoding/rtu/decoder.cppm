@@ -85,6 +85,13 @@ export class Decoder {
             req.start_addr, req.num_coils,
             LengthPrefixedBytes{.length = nullptr, .bytes = &req.values});
       });
+    case FunctionCode::WriteMultipleRegisters:
+      return DecodeRequestPayload<WriteMultipleRegistersRequest>(
+          [this](auto& req) {
+            return DecodeVars(
+                req.start_addr, req.num_registers,
+                LengthPrefixedBytes{.length = nullptr, .bytes = &req.values});
+          });
     default: return std::unexpected(DecodeError::InvalidFunctionCode);
     }
   }
@@ -149,6 +156,11 @@ export class Decoder {
       return DecodeResponsePayload<WriteMultipleCoilsResponse>(
           [this](auto& res) {
             return DecodeVars(res.start_addr, res.num_coils);
+          });
+    case FunctionCode::WriteMultipleRegisters:
+      return DecodeResponsePayload<WriteMultipleRegistersResponse>(
+          [this](auto& res) {
+            return DecodeVars(res.start_addr, res.num_registers);
           });
     default: return std::unexpected(DecodeError::InvalidFunctionCode);
     }
