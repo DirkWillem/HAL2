@@ -107,16 +107,15 @@ struct HoldingRegImpl {
     return ReadRegister(storage, offset, size);
   }
 
-  template <std::endian E = std::endian::native>
   std::expected<bool, ExceptionCode> Write(std::span<const std::byte> data,
-                                           std::size_t                offset,
-                                           std::size_t size) noexcept {
-    if constexpr (E != std::endian::native) {
+                                           std::size_t offset, std::size_t size,
+                                           std::endian endian) noexcept {
+    if (endian != std::endian::native) {
       std::array<std::byte, sizeof(typename HR::Data)> swapped_buf{};
       std::memcpy(swapped_buf.data(), data.data(), size);
-      SwapEndianness<typename HR::Storage>(swapped_buf, offset, size);
+      SwapRegisterEndianness<typename HR::Storage>(swapped_buf, offset, size);
 
-      return WriteRegister(storage, data, offset, size);
+      return WriteRegister(storage, swapped_buf, offset, size);
     } else {
       return WriteRegister(storage, data, offset, size);
     }
@@ -145,7 +144,8 @@ class ServerStorage<hstd::Types<UC...>, hstd::Types<UHR...>>
   using RegReadFn = std::expected<std::span<const std::byte>, ExceptionCode> (
       ServerStorage::*)(std::size_t offset, std::size_t size) const;
   using RegWriteFn = std::expected<bool, ExceptionCode> (ServerStorage::*)(
-      std::span<const std::byte> data, std::size_t offset, std::size_t value);
+      std::span<const std::byte> data, std::size_t offset, std::size_t value,
+      std::endian endian);
   using SwapEndiannessFn = void (*)(std::span<std::byte> data,
                                     std::size_t offset, std::size_t size);
 
@@ -498,7 +498,8 @@ class ServerStorage<hstd::Types<UC...>, hstd::Types<UHR...>>
 
   std::expected<bool, ExceptionCode>
   WriteHoldingRegisters(std::span<const std::byte> data, uint16_t start_addr,
-                        uint16_t num_regs) {
+                        uint16_t    num_regs,
+                        std::endian endian = std::endian::native) {
     const uint16_t end_addr = start_addr + num_regs;
 
     bool any_written = false;
@@ -514,7 +515,7 @@ class ServerStorage<hstd::Types<UC...>, hstd::Types<UHR...>>
         const auto count = RegToByteOffset(write_end_addr - write_start_addr);
 
         const auto write_result = (this->*e.write)(
-            data.subspan(src_offset, count), entry_offset, count);
+            data.subspan(src_offset, count), entry_offset, count, endian);
 
         if (!write_result.has_value()) {
           return std::unexpected(write_result.error());

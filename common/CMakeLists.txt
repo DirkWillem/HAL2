@@ -28,6 +28,7 @@ target_sources(hstd
         hstd/chrono.cppm
         hstd/logic.cppm
         hstd/math.cppm
+        hstd/memory.cppm
         hstd/ratio.cppm
         hstd/spans.cppm
 

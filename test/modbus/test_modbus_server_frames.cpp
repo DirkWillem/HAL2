@@ -73,6 +73,20 @@ TEST_F(ModbusServerFrames, ReadCoilsFrameSingleByte) {
                                   ElementsAre(std::byte{0b1001'0001}))));
 }
 
+TEST_F(ModbusServerFrames, ReadCoilsInvalidAddress) {
+  const auto response = HandleFrame(ReadCoilsRequest{
+      .starting_addr = 0xEEEE,
+      .num_coils     = 8,
+  });
+
+  // Validate response
+  using Pdu = ErrorResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(
+                            AllOf(Field(&Pdu::function_code, 0x81),
+                                  Field(&Pdu::exception_code,
+                                        ExceptionCode::IllegalDataAddress))));
+}
+
 TEST_F(ModbusServerFrames, WriteSingleCoilToOn) {
   // Handle frame
   const auto response = HandleFrame(WriteSingleCoilRequest{
@@ -315,6 +329,113 @@ TEST_F(ModbusServerFrames, WriteSingleRegisterInvalidAddress) {
   using Pdu = ErrorResponse;
   ASSERT_THAT(response, VariantWith<Pdu>(
                             AllOf(Field(&Pdu::function_code, 0x86),
+                                  Field(&Pdu::exception_code,
+                                        ExceptionCode::IllegalDataAddress))));
+}
+
+TEST_F(ModbusServerFrames, WriteMultipleRegistersSingleRegister) {
+  std::array<std::byte, 2> data{0xAB_b, 0xCD_b};
+  const auto               response = HandleFrame(WriteMultipleRegistersRequest{
+                    .start_addr = 0x0001, .num_registers = 1, .values = data});
+
+  // Validate the response
+  using Pdu = WriteMultipleRegistersResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(AllOf(Field(&Pdu::start_addr, 0x0001),
+                                               Field(&Pdu::num_registers, 1))));
+
+  // Validate that the value was written
+  ASSERT_THAT(server().ReadHoldingRegister<uint16_t>(0x0001), Optional(0xABCD));
+}
+
+TEST_F(ModbusServerFrames, WriteMultipleRegistersFloatRegister) {
+  constexpr float Val  = 12.34F;
+  constexpr auto  Data = hstd::ToByteArray<std::endian::big>(Val);
+
+  const auto response = HandleFrame(WriteMultipleRegistersRequest{
+      .start_addr    = 0x0010,
+      .num_registers = 2,
+      .values        = Data,
+  });
+
+  // Validate the response
+  using Pdu = WriteMultipleRegistersResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(AllOf(Field(&Pdu::start_addr, 0x0010),
+                                               Field(&Pdu::num_registers, 2))));
+
+  // Validate that the value was written
+  ASSERT_THAT(server().ReadHoldingRegister<float>(0x0010), Optional(Val));
+}
+
+TEST_F(ModbusServerFrames, WriteMultipleRegistersFloatArray) {
+  constexpr std::array<float, 4> Vals{1.2F, 3.4F, 5.6F, 7.8F};
+  constexpr auto Data = hstd::ToByteArray<std::endian::big>(Vals);
+
+  const auto response = HandleFrame(WriteMultipleRegistersRequest{
+      .start_addr    = 0x0018,
+      .num_registers = 8,
+      .values        = Data,
+  });
+
+  // Validate the response
+  using Pdu = WriteMultipleRegistersResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(AllOf(Field(&Pdu::start_addr, 0x0018),
+                                               Field(&Pdu::num_registers, 8))));
+
+  // Validate that the value was written
+  ASSERT_THAT((server().ReadHoldingRegister<std::array<float, 4>>(0x0018)),
+              Optional(ElementsAreArray(Vals)));
+}
+
+TEST_F(ModbusServerFrames, WriteMultipleRegistersDataSizeDoesntMatchRegCount) {
+  constexpr float Val  = 12.34F;
+  constexpr auto  Data = hstd::ToByteArray<std::endian::big>(Val);
+
+  const auto response = HandleFrame(WriteMultipleRegistersRequest{
+      .start_addr    = 0x0010,
+      .num_registers = 5,
+      .values        = Data,
+  });
+
+  // Validate response
+  using Pdu = ErrorResponse;
+  ASSERT_THAT(response,
+              VariantWith<Pdu>(AllOf(Field(&Pdu::function_code, 0x90),
+                                     Field(&Pdu::exception_code,
+                                           ExceptionCode::IllegalDataValue))));
+}
+
+TEST_F(ModbusServerFrames, WriteMultipleRegistersUnalignedWrite) {
+  constexpr float Val  = 12.34F;
+  constexpr auto  Data = hstd::ToByteArray<std::endian::big>(Val);
+
+  const auto response = HandleFrame(WriteMultipleRegistersRequest{
+      .start_addr    = 0x0011,
+      .num_registers = 2,
+      .values        = Data,
+  });
+
+  // Validate response
+  using Pdu = ErrorResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(
+                            AllOf(Field(&Pdu::function_code, 0x90),
+                                  Field(&Pdu::exception_code,
+                                        ExceptionCode::ServerDeviceFailure))));
+}
+
+TEST_F(ModbusServerFrames, WriteMultipleRegistersInvalidAddress) {
+  constexpr float Val  = 12.34F;
+  constexpr auto  Data = hstd::ToByteArray<std::endian::big>(Val);
+
+  const auto response = HandleFrame(WriteMultipleRegistersRequest{
+      .start_addr    = 0xEEEE,
+      .num_registers = 2,
+      .values        = Data,
+  });
+
+  // Validate response
+  using Pdu = ErrorResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(
+                            AllOf(Field(&Pdu::function_code, 0x90),
                                   Field(&Pdu::exception_code,
                                         ExceptionCode::IllegalDataAddress))));
 }

@@ -4,7 +4,9 @@ module;
 #include <array>
 #include <bit>
 #include <cstdint>
+#include <expected>
 #include <span>
+#include <utility>
 #include <variant>
 
 export module modbus.server;
@@ -19,6 +21,7 @@ namespace modbus::server {
 
 export template <typename Cs, typename HRs>
 class Server : public ServerStorage<Cs, HRs> {
+  using Res = ResponsePdu<FrameVariant::Encode>;
   class FrameHandler {
     template <typename T, T Div>
     static constexpr T DivCeil(T lhs) {
@@ -130,21 +133,49 @@ class Server : public ServerStorage<Cs, HRs> {
       // Write coils
       const auto result =
           server.WriteCoils(req.start_addr, req.num_coils, req.values);
-      if (!result.has_value()) {
-        response = MakeErrorResponse(req.FC, result.error());
+
+      HandleResult(req, result, [&req = std::as_const(req)](const auto&) {
+        return WriteMultipleCoilsResponse{
+            .start_addr = req.start_addr,
+            .num_coils  = req.num_coils,
+        };
+      });
+    }
+
+    void operator()(const WriteMultipleRegistersRequest& req) noexcept {
+      // Validate that the number of registers matches the amount of bytes
+      if (req.num_registers * 2 != req.values.size()) {
+        response = IllegalDataValue(WriteMultipleRegistersRequest::FC);
         return;
       }
 
-      // Create response
-      response = WriteMultipleCoilsResponse{
-          .start_addr = req.start_addr,
-          .num_coils  = req.num_coils,
-      };
+      // Write data
+      const auto result = server.WriteHoldingRegisters(
+          req.values, req.start_addr, req.num_registers, std::endian::big);
+
+      HandleResult(req, result, [&req](const auto&) {
+        return WriteMultipleRegistersResponse{
+            .start_addr = req.start_addr, .num_registers = req.num_registers};
+      });
     }
 
     void operator()(const auto&) noexcept {}
 
    private:
+    template <typename T, std::invocable<const T&> F>
+    constexpr void HandleResult(const auto&                            req,
+                                const std::expected<T, ExceptionCode>& result,
+                                F&& transform) noexcept {
+      static_assert(
+          std::convertible_to<std::invoke_result_t<F, const T&>, Res>);
+
+      if (result.has_value()) {
+        response = transform(result.value());
+      } else {
+        response = MakeErrorResponse(req.FC, result.error());
+      }
+    }
+
     Server&                            server;
     ResponsePdu<FrameVariant::Encode>& response;
 

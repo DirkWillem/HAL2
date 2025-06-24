@@ -12,5 +12,6 @@ export import :endian;
 export import :chrono;
 export import :logic;
 export import :math;
+export import :memory;
 export import :ratio;
 export import :spans;
