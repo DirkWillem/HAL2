@@ -16,12 +16,14 @@ using namespace testing;
 using namespace modbus;
 using namespace modbus::server;
 
-using Coil1      = modbus::server::InMemCoil<0x0000, "Coil1">;
-using Coil2      = modbus::server::InMemCoil<0x0001, "Coil2">;
-using Coil4      = modbus::server::InMemCoil<0x0004, "Coil4">;
-using Coil7      = modbus::server::InMemCoil<0x0007, "Coil7">;
-using CoilGroup1 = modbus::server::InMemCoilSet<0x0008, 4, "Coils">;
-using CoilGroup2 = modbus::server::InMemCoilSet<0x0020, 16, "Coils2">;
+using DiscreteInput1 = InMemDiscreteInput<0x000, "DiscreteInput1">;
+
+using Coil1      = InMemCoil<0x0000, "Coil1">;
+using Coil2      = InMemCoil<0x0001, "Coil2">;
+using Coil4      = InMemCoil<0x0004, "Coil4">;
+using Coil7      = InMemCoil<0x0007, "Coil7">;
+using CoilGroup1 = InMemCoilSet<0x0008, 4, "Coils">;
+using CoilGroup2 = InMemCoilSet<0x0020, 16, "Coils2">;
 
 using U16HR1 = InMemHoldingRegister<0x0000, uint16_t, "U16 HR 1">;
 using U16HR2 = InMemHoldingRegister<0x0001, uint16_t, "U16 HR 2">;
@@ -36,6 +38,7 @@ using F32ArrayHR =
     InMemHoldingRegister<0x0018, std::array<float, 4>, "F32 Array HR">;
 
 using Srv = modbus::server::Server<
+    hstd::Types<DiscreteInput1>,
     hstd::Types<Coil2, Coil1, Coil4, Coil7, CoilGroup1, CoilGroup2>,
     hstd::Types<U16HR1, U16HR2, U16ArrayHR, F32HR1, F32HR2, F32ArrayHR>>;
 

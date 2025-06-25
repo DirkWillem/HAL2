@@ -13,6 +13,8 @@ using namespace testing;
 using namespace modbus;
 using namespace modbus::server;
 
+using DiscreteInput1 = InMemDiscreteInput<0x000, "DiscreteInput1">;
+
 using Coil1      = InMemCoil<0x0000, "Coil1">;
 using Coil2      = InMemCoil<0x0001, "Coil2">;
 using CoilGroup1 = InMemCoilSet<0x0008, 4, "Coils">;
@@ -31,7 +33,8 @@ using F32ArrayHR =
     InMemHoldingRegister<0x0018, std::array<float, 4>, "F32 Array HR">;
 
 using Srv =
-    Server<hstd::Types<Coil2, Coil1, CoilGroup1, CoilGroup2>,
+    Server<hstd::Types<DiscreteInput1>,
+           hstd::Types<Coil2, Coil1, CoilGroup1, CoilGroup2>,
            hstd::Types<U16HR1, U16HR2, U16ArrayHR, F32HR1, F32HR2, F32ArrayHR>>;
 
 class ModbusServer : public Test {

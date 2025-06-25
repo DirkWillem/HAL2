@@ -10,7 +10,7 @@ module;
 #include <span>
 #include <string_view>
 
-export module modbus.server:holding_register;
+export module modbus.server:reg;
 
 import hstd;
 

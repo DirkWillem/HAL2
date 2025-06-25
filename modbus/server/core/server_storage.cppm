@@ -15,26 +15,30 @@ export module modbus.server:server_storage;
 
 import hstd;
 
-export import :coil;
-export import :holding_register;
+export import :bit;
+export import :reg;
 
 namespace modbus::server {
 
-template <CoilOrCoilSet C>
+template <concepts::Bits C>
 consteval uint16_t StartAddress() {
-  if constexpr (IsCoil<C>) {
+  if constexpr (concepts::SingleBit<C>) {
     return C::Address;
-  } else {
+  } else if constexpr (concepts::BitSet<C>) {
     return C::StartAddress;
+  } else {
+    std::unreachable();
   }
 }
 
-template <CoilOrCoilSet C>
+template <concepts::Bits C>
 consteval uint16_t EndAddress() {
-  if constexpr (IsCoil<C>) {
+  if constexpr (concepts::SingleBit<C>) {
     return C::Address + 1;
-  } else {
+  } else if constexpr (concepts::BitSet<C>) {
     return C::EndAddress;
+  } else {
+    std::unreachable();
   }
 }
 
@@ -66,17 +70,18 @@ struct ReorderHelper<hstd::Types<Ts...>, NewIdxs> {
       decltype(std::make_index_sequence<sizeof...(Ts)>())>::Result;
 };
 
-template <CoilOrCoilSet C>
-struct CoilImpl {
-  using Bits = typename C::Bits;
+template <typename B>
+  requires concepts::DiscreteInput<B> || concepts::Coil<B>
+struct BitImpl {
+  using Bits = typename B::Bits;
 
   constexpr std::expected<uint32_t, ExceptionCode>
   Read(uint32_t mask) const noexcept {
-    if constexpr (IsCoil<C>) {
-      return ReadCoil(storage).transform(
+    if constexpr (concepts::SingleBit<B>) {
+      return ReadBit(storage).transform(
           [](const auto value) { return static_cast<uint32_t>(value) & 0b1U; });
-    } else if constexpr (IsCoilSet<C>) {
-      return ReadCoilSet(storage, static_cast<Bits>(mask))
+    } else if constexpr (concepts::BitSet<B>) {
+      return ReadBitSet(storage, static_cast<Bits>(mask))
           .transform([mask](const auto value) {
             return static_cast<uint32_t>(value) & mask;
           });
@@ -86,18 +91,20 @@ struct CoilImpl {
   }
 
   constexpr std::expected<uint32_t, ExceptionCode>
-  Write(uint32_t mask, uint32_t new_value) noexcept {
-    if constexpr (IsCoil<C>) {
-      return WriteCoil(storage, static_cast<Bits>(new_value & 0b1U));
-    } else if constexpr (IsCoilSet<C>) {
-      return WriteCoilSet(storage, static_cast<Bits>(mask),
-                          static_cast<Bits>(new_value));
+  Write(uint32_t mask, uint32_t new_value) noexcept
+    requires concepts::Coil<B>
+  {
+    if constexpr (concepts::SingleBit<B>) {
+      return WriteBit(storage, static_cast<Bits>(new_value & 0b1U));
+    } else if constexpr (concepts::BitSet<B>) {
+      return WriteBitSet(storage, static_cast<Bits>(mask),
+                         static_cast<Bits>(new_value));
     } else {
       std::unreachable();
     }
   }
 
-  typename C::Storage storage{};
+  typename B::Storage storage{};
 };
 
 template <HoldingReg HR>
@@ -129,41 +136,81 @@ struct HoldingRegImpl {
   typename HR::Storage storage;
 };
 
-export template <typename Cs, typename HRs>
+template <typename T>
+using BitReadFn =
+    std::expected<uint32_t, ExceptionCode> (T::*)(uint32_t mask) const;
+template <typename T>
+using BitWriteFn = std::expected<uint32_t, ExceptionCode> (T::*)(
+    uint32_t mask, uint32_t value);
+
+template <typename T>
+using RegReadFn = std::expected<std::span<const std::byte>, ExceptionCode> (
+    T::*)(std::size_t offset, std::size_t size) const;
+template <typename T>
+using RegWriteFn = std::expected<bool, ExceptionCode> (T::*)(
+    std::span<const std::byte> data, std::size_t offset, std::size_t value,
+    std::endian endian);
+using SwapEndiannessFn = void (*)(std::span<std::byte> data, std::size_t offset,
+                                  std::size_t size);
+
+template <typename Impl>
+concept AddressRegion = requires(const Impl& impl) {
+  { impl.start_addr } -> std::convertible_to<uint16_t>;
+  { impl.end_addr } -> std::convertible_to<uint16_t>;
+};
+
+template <typename Impl, typename Storage>
+concept ReadonlyBit = AddressRegion<Impl> && requires(const Impl& impl) {
+  { impl.read } -> std::convertible_to<BitReadFn<Storage>>;
+};
+
+template <typename Impl, typename Storage>
+concept MutableBit = ReadonlyBit<Impl, Storage> && requires(const Impl& impl) {
+  { impl.write } -> std::convertible_to<BitWriteFn<Storage>>;
+};
+
+template <typename Impl, typename Storage>
+concept ReadonlyBitArray = hstd::concepts::Array<Impl>
+                           && ReadonlyBit<typename Impl::value_type, Storage>;
+
+export template <typename DIs, typename Cs, typename HRs>
 class ServerStorage {};
 
-export template <CoilOrCoilSet... UC, HoldingReg... UHR>
-class ServerStorage<hstd::Types<UC...>, hstd::Types<UHR...>>
-    : private CoilImpl<UC>...
+export template <concepts::DiscreteInput... UDI, concepts::Coil... UC,
+                 HoldingReg... UHR>
+class ServerStorage<hstd::Types<UDI...>, hstd::Types<UC...>,
+                    hstd::Types<UHR...>>
+    : private BitImpl<UDI>...
+    , private BitImpl<UC>...
     , private HoldingRegImpl<UHR>... {
-  using CoilReadFn = std::expected<uint32_t, ExceptionCode> (ServerStorage::*)(
-      uint32_t mask) const;
-  using CoilWriteFn = std::expected<uint32_t, ExceptionCode> (ServerStorage::*)(
-      uint32_t mask, uint32_t value);
-
-  using RegReadFn = std::expected<std::span<const std::byte>, ExceptionCode> (
-      ServerStorage::*)(std::size_t offset, std::size_t size) const;
-  using RegWriteFn = std::expected<bool, ExceptionCode> (ServerStorage::*)(
-      std::span<const std::byte> data, std::size_t offset, std::size_t value,
-      std::endian endian);
-  using SwapEndiannessFn = void (*)(std::span<std::byte> data,
-                                    std::size_t offset, std::size_t size);
-
   static constexpr auto NCoils = sizeof...(UC);
 
   struct CoilTableEntry {
-    CoilReadFn  read;
-    CoilWriteFn write;
-    uint16_t    start_addr;
-    uint16_t    end_addr;
+    BitReadFn<ServerStorage>  read;
+    BitWriteFn<ServerStorage> write;
+    uint16_t                  start_addr;
+    uint16_t                  end_addr;
+  };
+
+  struct DiscreteInputTableEntry {
+    BitReadFn<ServerStorage> read;
+    uint16_t                 start_addr;
+    uint16_t                 end_addr;
   };
 
   struct HoldingRegTableEntry {
-    RegReadFn        read;
-    RegWriteFn       write;
-    SwapEndiannessFn swap_endianness;
-    uint16_t         start_addr;
-    uint16_t         end_addr;
+    RegReadFn<ServerStorage>  read;
+    RegWriteFn<ServerStorage> write;
+    SwapEndiannessFn          swap_endianness;
+    uint16_t                  start_addr;
+    uint16_t                  end_addr;
+  };
+
+  struct InputRegTableEntry {
+    RegReadFn<ServerStorage> read;
+    SwapEndiannessFn         swap_endianness;
+    uint16_t                 start_addr;
+    uint16_t                 end_addr;
   };
 
   /**
@@ -220,36 +267,46 @@ class ServerStorage<hstd::Types<UC...>, hstd::Types<UHR...>>
   using Reorder = typename ReorderHelper<hstd::Types<Ts...>,
                                          GetSortedOrder<Ts...>()>::Result;
 
+  using DiscreteInputs   = Reorder<UDI...>;
   using Coils            = Reorder<UC...>;
   using HoldingRegisters = Reorder<UHR...>;
 
-  template <hstd::concepts::Types T>
+  template <typename ET, hstd::concepts::Types T>
   static consteval auto BuildEntryTable(auto make_entry) {
     return ([&make_entry]<std::size_t... Idxs>(std::index_sequence<Idxs...>) {
-      return std::array {
+      return std::array<ET, T::Count> {
         make_entry.template operator()<typename T::template NthType<Idxs>>()...
       };
     })(std::make_index_sequence<T::Count>());
   }
 
+  static constexpr auto DiscreteInputsTable =
+      BuildEntryTable<DiscreteInputTableEntry, DiscreteInputs>(
+          []<concepts::DiscreteInput DI>() {
+            return DiscreteInputTableEntry{.read       = &BitImpl<DI>::Read,
+                                           .start_addr = StartAddress<DI>(),
+                                           .end_addr   = EndAddress<DI>()};
+          });
+
   static constexpr auto CoilsTable =
-      BuildEntryTable<Coils>([]<CoilOrCoilSet C>() {
-        return CoilTableEntry{.read       = &CoilImpl<C>::Read,
-                              .write      = &CoilImpl<C>::Write,
+      BuildEntryTable<CoilTableEntry, Coils>([]<concepts::Coil C>() {
+        return CoilTableEntry{.read       = &BitImpl<C>::Read,
+                              .write      = &BitImpl<C>::Write,
                               .start_addr = StartAddress<C>(),
                               .end_addr   = EndAddress<C>()};
       });
 
   static constexpr auto HoldingRegistersTable =
-      BuildEntryTable<HoldingRegisters>([]<HoldingReg HR>() {
-        return HoldingRegTableEntry{
-            .read            = &HoldingRegImpl<HR>::Read,
-            .write           = &HoldingRegImpl<HR>::Write,
-            .swap_endianness = &HoldingRegImpl<HR>::SwapEndianness,
-            .start_addr      = StartAddress<HR>(),
-            .end_addr        = EndAddress<HR>(),
-        };
-      });
+      BuildEntryTable<HoldingRegTableEntry, HoldingRegisters>(
+          []<HoldingReg HR>() {
+            return HoldingRegTableEntry{
+                .read            = &HoldingRegImpl<HR>::Read,
+                .write           = &HoldingRegImpl<HR>::Write,
+                .swap_endianness = &HoldingRegImpl<HR>::SwapEndianness,
+                .start_addr      = StartAddress<HR>(),
+                .end_addr        = EndAddress<HR>()
+            };
+          });
 
   static_assert(ValidateNoAddressOverlap<Coils>(),
                 "Coil addresses may not overlap");
@@ -269,24 +326,7 @@ class ServerStorage<hstd::Types<UC...>, hstd::Types<UHR...>>
    */
   constexpr std::expected<bool, ExceptionCode> WriteCoil(uint16_t address,
                                                          bool value) noexcept {
-    for (const auto& entry : CoilsTable) {
-      if (address >= entry.start_addr && address < entry.end_addr) {
-        const auto     shift     = address - entry.start_addr;
-        const uint32_t bit_mask  = 0b1U << shift;
-        const uint32_t bit_value = value ? bit_mask : 0;
-
-        return (this->*entry.write)(bit_mask, bit_value)
-            .transform([bit_mask](const auto v) {
-              return (v & bit_mask) == bit_mask;
-            });
-      }
-
-      if (address < entry.start_addr) {
-        return std::unexpected(ExceptionCode::IllegalDataAddress);
-      }
-    }
-
-    return std::unexpected(ExceptionCode::IllegalDataAddress);
+    return WriteBit<CoilsTable>(address, value);
   }
 
   /**
@@ -299,56 +339,7 @@ class ServerStorage<hstd::Types<UC...>, hstd::Types<UHR...>>
   constexpr std::expected<bool, ExceptionCode>
   WriteCoils(uint16_t start_addr, uint16_t n_coils,
              std::span<const std::byte> data) noexcept {
-    // For now, only byte-aligned multiple writes are supported
-    if (start_addr % 8 != 0) {
-      return std::unexpected(ExceptionCode::ServerDeviceFailure);
-    }
-
-    const auto end_addr = start_addr + n_coils;
-
-    bool any_written = false;
-
-    for (const auto& e : CoilsTable) {
-      if (start_addr < e.end_addr && end_addr >= e.start_addr) {
-        const auto start_byte = e.start_addr / 8;
-        const auto end_byte   = std::max(start_byte + 1, e.end_addr / 8);
-
-        for (auto i = 0; i < (end_byte - start_byte); i++) {
-          const auto byte_start_addr = start_byte * 8 + i * 8;
-          const auto byte_end_addr   = start_addr + 8;
-
-          auto byte_mask = hstd::Ones<std::byte>(8);
-
-          if (byte_start_addr < e.start_addr) {
-            const auto remove_start = e.start_addr - byte_start_addr;
-            byte_mask &= ~hstd::Ones<std::byte>(remove_start);
-          }
-
-          if (byte_end_addr > e.end_addr) {
-            const auto remove_end = byte_end_addr - e.end_addr;
-            byte_mask &=
-                ~(hstd::Ones<std::byte>(remove_end) << (8 - remove_end));
-          }
-
-          const auto word_mask  = static_cast<uint32_t>(byte_mask) << (i * 8);
-          const auto word_value = static_cast<uint8_t>(data[i]) << (i * 8);
-
-          const auto result = (this->*e.write)(word_mask, word_value);
-
-          if (!result.has_value()) {
-            return std::unexpected(result.error());
-          }
-
-          any_written = true;
-        }
-      }
-    }
-
-    if (!any_written) {
-      return std::unexpected(ExceptionCode::IllegalDataAddress);
-    }
-
-    return true;
+    return WriteBits<CoilsTable>(start_addr, n_coils, data);
   }
 
   /**
@@ -358,21 +349,7 @@ class ServerStorage<hstd::Types<UC...>, hstd::Types<UHR...>>
    */
   constexpr std::expected<bool, ExceptionCode>
   ReadCoil(uint32_t address) const noexcept {
-    for (const auto& entry : CoilsTable) {
-      if (address >= entry.start_addr && address < entry.end_addr) {
-        const auto     shift    = address - entry.start_addr;
-        const uint32_t bit_mask = 0b1U << shift;
-
-        return (this->*entry.read)(bit_mask).transform(
-            [bit_mask](const auto v) { return (v & bit_mask) == bit_mask; });
-      }
-
-      if (address < entry.start_addr) {
-        return std::unexpected(ExceptionCode::IllegalDataAddress);
-      }
-    }
-
-    return std::unexpected(ExceptionCode::IllegalDataAddress);
+    return ReadBit<CoilsTable>(address);
   }
 
   /**
@@ -388,51 +365,7 @@ class ServerStorage<hstd::Types<UC...>, hstd::Types<UHR...>>
   constexpr std::expected<T, ExceptionCode>
   ReadCoils(uint32_t start_address, uint32_t count,
             bool ignore_none_found = false) const noexcept {
-    const auto end_address = start_address + count;
-
-    bool any_read = false;
-
-    T result{0};
-
-    for (const auto& entry : CoilsTable) {
-      if (start_address < entry.end_addr && end_address >= entry.start_addr) {
-        any_read = true;
-        const auto entry_size =
-            static_cast<uint32_t>(entry.end_addr - entry.start_addr);
-
-        if (start_address <= entry.start_addr) {
-          const auto shift     = entry.start_addr - start_address;
-          const auto n_to_read = std::min(entry_size, count - shift);
-
-          const auto entry_result =
-              (this->*entry.read)(hstd::Ones<uint32_t>(n_to_read));
-          if (entry_result) {
-            result |= static_cast<T>(*entry_result << shift);
-          } else {
-            return entry_result;
-          }
-        } else {
-          const auto shift     = start_address - entry.start_addr;
-          const auto n_to_read = std::min(entry_size - shift, count);
-
-          const auto entry_result =
-              (this->*entry.read)(hstd::Ones<uint32_t>(n_to_read) << shift);
-          if (entry_result) {
-            result |= static_cast<T>(*entry_result >> shift);
-          } else {
-            return entry_result;
-          }
-        }
-      } else if (entry.start_addr >= end_address) {
-        break;
-      }
-    }
-
-    if (!any_read && !ignore_none_found) {
-      return std::unexpected(ExceptionCode::IllegalDataAddress);
-    } else {
-      return result;
-    }
+    return ReadBits<CoilsTable, T>(start_address, count, ignore_none_found);
   }
 
   template <std::endian E = std::endian::native>
@@ -540,6 +473,159 @@ class ServerStorage<hstd::Types<UC...>, hstd::Types<UHR...>>
   WriteHoldingRegister(const T& value, uint16_t addr) noexcept {
     return WriteHoldingRegisters(hstd::ByteViewOver(value), addr,
                                  sizeof(T) / sizeof(uint16_t));
+  }
+
+ private:
+  template <ReadonlyBitArray<ServerStorage> auto BitTable>
+  constexpr std::expected<bool, ExceptionCode>
+  ReadBit(uint32_t address) const noexcept {
+    for (const auto& entry : BitTable) {
+      if (address >= entry.start_addr && address < entry.end_addr) {
+        const auto     shift    = address - entry.start_addr;
+        const uint32_t bit_mask = 0b1U << shift;
+
+        return (this->*entry.read)(bit_mask).transform(
+            [bit_mask](const auto v) { return (v & bit_mask) == bit_mask; });
+      }
+
+      if (address < entry.start_addr) {
+        return std::unexpected(ExceptionCode::IllegalDataAddress);
+      }
+    }
+
+    return std::unexpected(ExceptionCode::IllegalDataAddress);
+  }
+
+  template <ReadonlyBitArray<ServerStorage> auto BitTable,
+            std::unsigned_integral               T>
+    requires(sizeof(T) <= sizeof(uint32_t))
+  constexpr std::expected<T, ExceptionCode>
+  ReadBits(uint32_t start_address, uint32_t count,
+           bool ignore_none_found = false) const noexcept {
+    const auto end_address = start_address + count;
+
+    bool any_read = false;
+
+    T result{0};
+
+    for (const auto& entry : BitTable) {
+      if (start_address < entry.end_addr && end_address >= entry.start_addr) {
+        any_read = true;
+        const auto entry_size =
+            static_cast<uint32_t>(entry.end_addr - entry.start_addr);
+
+        if (start_address <= entry.start_addr) {
+          const auto shift     = entry.start_addr - start_address;
+          const auto n_to_read = std::min(entry_size, count - shift);
+
+          const auto entry_result =
+              (this->*entry.read)(hstd::Ones<uint32_t>(n_to_read));
+          if (entry_result) {
+            result |= static_cast<T>(*entry_result << shift);
+          } else {
+            return entry_result;
+          }
+        } else {
+          const auto shift     = start_address - entry.start_addr;
+          const auto n_to_read = std::min(entry_size - shift, count);
+
+          const auto entry_result =
+              (this->*entry.read)(hstd::Ones<uint32_t>(n_to_read) << shift);
+          if (entry_result) {
+            result |= static_cast<T>(*entry_result >> shift);
+          } else {
+            return entry_result;
+          }
+        }
+      } else if (entry.start_addr >= end_address) {
+        break;
+      }
+    }
+
+    if (!any_read && !ignore_none_found) {
+      return std::unexpected(ExceptionCode::IllegalDataAddress);
+    } else {
+      return result;
+    }
+  }
+
+  template <ReadonlyBitArray<ServerStorage> auto BitTable>
+  constexpr std::expected<bool, ExceptionCode> WriteBit(uint16_t address,
+                                                        bool value) noexcept {
+    for (const auto& entry : BitTable) {
+      if (address >= entry.start_addr && address < entry.end_addr) {
+        const auto     shift     = address - entry.start_addr;
+        const uint32_t bit_mask  = 0b1U << shift;
+        const uint32_t bit_value = value ? bit_mask : 0;
+
+        return (this->*entry.write)(bit_mask, bit_value)
+            .transform([bit_mask](const auto v) {
+              return (v & bit_mask) == bit_mask;
+            });
+      }
+
+      if (address < entry.start_addr) {
+        return std::unexpected(ExceptionCode::IllegalDataAddress);
+      }
+    }
+
+    return std::unexpected(ExceptionCode::IllegalDataAddress);
+  }
+
+  template <ReadonlyBitArray<ServerStorage> auto BitTable>
+  constexpr std::expected<bool, ExceptionCode>
+  WriteBits(uint16_t start_addr, uint16_t n_coils,
+            std::span<const std::byte> data) noexcept {
+    // For now, only byte-aligned multiple writes are supported
+    if (start_addr % 8 != 0) {
+      return std::unexpected(ExceptionCode::ServerDeviceFailure);
+    }
+
+    const auto end_addr = start_addr + n_coils;
+
+    bool any_written = false;
+
+    for (const auto& e : BitTable) {
+      if (start_addr < e.end_addr && end_addr >= e.start_addr) {
+        const auto start_byte = e.start_addr / 8;
+        const auto end_byte   = std::max(start_byte + 1, e.end_addr / 8);
+
+        for (auto i = 0; i < (end_byte - start_byte); i++) {
+          const auto byte_start_addr = start_byte * 8 + i * 8;
+          const auto byte_end_addr   = start_addr + 8;
+
+          auto byte_mask = hstd::Ones<std::byte>(8);
+
+          if (byte_start_addr < e.start_addr) {
+            const auto remove_start = e.start_addr - byte_start_addr;
+            byte_mask &= ~hstd::Ones<std::byte>(remove_start);
+          }
+
+          if (byte_end_addr > e.end_addr) {
+            const auto remove_end = byte_end_addr - e.end_addr;
+            byte_mask &=
+                ~(hstd::Ones<std::byte>(remove_end) << (8 - remove_end));
+          }
+
+          const auto word_mask  = static_cast<uint32_t>(byte_mask) << (i * 8);
+          const auto word_value = static_cast<uint8_t>(data[i]) << (i * 8);
+
+          const auto result = (this->*e.write)(word_mask, word_value);
+
+          if (!result.has_value()) {
+            return std::unexpected(result.error());
+          }
+
+          any_written = true;
+        }
+      }
+    }
+
+    if (!any_written) {
+      return std::unexpected(ExceptionCode::IllegalDataAddress);
+    }
+
+    return true;
   }
 };
 

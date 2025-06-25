@@ -7,9 +7,9 @@ using namespace modbus::server;
 TEST(ModbusStorageCoilDiscreteInput, ReadWriteInMemCoil) {
   uint8_t coil{};
 
-  EXPECT_TRUE(WriteCoil(coil, true).has_value());
-  EXPECT_TRUE(*ReadCoil(coil));
+  EXPECT_TRUE(WriteBit(coil, true).has_value());
+  EXPECT_TRUE(*ReadBit(coil));
 
-  EXPECT_TRUE(WriteCoil(coil, false).has_value());
-  EXPECT_FALSE(*ReadCoil(coil));
+  EXPECT_TRUE(WriteBit(coil, false).has_value());
+  EXPECT_FALSE(*ReadBit(coil));
 }

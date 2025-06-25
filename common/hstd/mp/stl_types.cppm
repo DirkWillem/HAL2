@@ -12,4 +12,11 @@ inline constexpr auto IsArray = false;
 export template <typename T, std::size_t N>
 inline constexpr auto IsArray<std::array<T, N>> = true;
 
+namespace concepts {
+
+export template <typename T>
+concept Array = IsArray<T>;
+
+}
+
 }   // namespace hstd

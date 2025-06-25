@@ -13,14 +13,14 @@ export module modbus.server;
 
 import hstd;
 
-export import :coil;
-export import :holding_register;
+export import :bit;
+export import :reg;
 import :server_storage;
 
 namespace modbus::server {
 
-export template <typename Cs, typename HRs>
-class Server : public ServerStorage<Cs, HRs> {
+export template <typename DIs, typename Cs, typename HRs>
+class Server : public ServerStorage<DIs, Cs, HRs> {
   using Res = ResponsePdu<FrameVariant::Encode>;
   class FrameHandler {
     template <typename T, T Div>
@@ -196,8 +196,8 @@ namespace concepts {
 template <typename T>
 inline constexpr bool IsServer = false;
 
-template <typename UC, typename UHR>
-inline constexpr bool IsServer<Server<UC, UHR>> = true;
+template <typename UDI, typename UC, typename UHR>
+inline constexpr bool IsServer<Server<UDI, UC, UHR>> = true;
 
 export template <typename T>
 concept Server = IsServer<T>;
