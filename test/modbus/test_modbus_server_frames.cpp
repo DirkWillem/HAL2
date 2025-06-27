@@ -42,7 +42,7 @@ using Srv = modbus::server::Server<
     hstd::Types<Coil2, Coil1, Coil4, Coil7, CoilGroup1, CoilGroup2>,
     hstd::Types<U16HR1, U16HR2, U16ArrayHR, F32HR1, F32HR2, F32ArrayHR>>;
 
-using namespace hstd::operators;
+using namespace hstd::literals;
 
 class ModbusServerFrames : public Test {
  public:
@@ -74,6 +74,23 @@ TEST_F(ModbusServerFrames, ReadCoilsFrameSingleByte) {
   ASSERT_THAT(response, VariantWith<ReadCoilsResponse>(
                             Field(&ReadCoilsResponse::coils,
                                   ElementsAre(std::byte{0b1001'0001}))));
+}
+
+TEST_F(ModbusServerFrames, ReadCoilsMultipleBytes) {
+  server().WriteCoil(0, true);
+  server().WriteCoil(4, true);
+  server().WriteCoil(7, true);
+  server().WriteCoil(8, true);
+  server().WriteCoil(11, true);
+
+  const auto response = HandleFrame(ReadCoilsRequest{
+      .starting_addr = 0,
+      .num_coils     = 16,
+  });
+
+  ASSERT_THAT(response, VariantWith<ReadCoilsResponse>(
+                            Field(&ReadCoilsResponse::coils,
+                                  ElementsAre(0b1001'0001_b, 0b0000'1001_b))));
 }
 
 TEST_F(ModbusServerFrames, ReadCoilsInvalidAddress) {
@@ -175,8 +192,9 @@ TEST_F(ModbusServerFrames, WriteMultipleCoils) {
                                                Field(&Pdu::num_coils, 16))));
 
   // Validate that coils are written
-  ASSERT_THAT(server().ReadCoils<uint16_t>(0x20, 16),
-              Optional(0b10100101'11110000));
+  std::array<std::byte, 2> read_coils{};
+  ASSERT_THAT(server().ReadCoils(0x20, 16, read_coils),
+              Optional(ElementsAreArray(coils)));
 }
 
 TEST_F(ModbusServerFrames, WriteMultipleCoilsToInvalidAddress) {

@@ -13,6 +13,8 @@ using namespace testing;
 using namespace modbus;
 using namespace modbus::server;
 
+using namespace hstd::literals;
+
 using DiscreteInput1 = InMemDiscreteInput<0x000, "DiscreteInput1">;
 
 using Coil1      = InMemCoil<0x0000, "Coil1">;
@@ -78,8 +80,10 @@ TEST_F(ModbusServer, WriteCoilsCoilSet) {
 
   ASSERT_THAT(result, Optional(true));
 
-  ASSERT_THAT(srv->ReadCoils<uint16_t>(0x20, 16),
-              Optional(0b10100101'11110000));
+  std::array<std::byte, 2> data_read{};
+
+  ASSERT_THAT(srv->ReadCoils(0x20, 16, data_read),
+              Optional(ElementsAreArray(data)));
 }
 
 TEST_F(ModbusServer, ReadCoilSingleCoilOk) {
@@ -102,47 +106,92 @@ TEST_F(ModbusServer, ReadNonExistentCoil) {
   ASSERT_EQ(result.error(), ExceptionCode::IllegalDataAddress);
 }
 
-TEST_F(ModbusServer, ReadCoilsSingleCoilsSet) {
-  srv->WriteCoil(1, true);
-
-  const auto result = srv->ReadCoils<uint32_t>(0, 4);
-  ASSERT_THAT(result, Optional(0b0010));
-}
-
-TEST_F(ModbusServer, ReadCoilsCoilSetAligned) {
-  srv->WriteCoil(8, true);
-  srv->WriteCoil(11, true);
-
-  const auto result = srv->ReadCoils<uint32_t>(8, 4);
-  ASSERT_THAT(result, Optional(0b1001));
-}
-
-TEST_F(ModbusServer, ReadCoilsCoilSetUnaligned) {
-  srv->WriteCoil(8, true);
-  srv->WriteCoil(11, true);
-
-  // Start reading before coil set
-  const auto result = srv->ReadCoils<uint32_t>(6, 6);
-  ASSERT_THAT(result, Optional(0b100100));
-
-  // Start reading after coil set
-  const auto result2 = srv->ReadCoils<uint32_t>(9, 4);
-  ASSERT_THAT(result2, Optional(0b100));
-}
-
-TEST_F(ModbusServer, ReadCoilsMultipleEntries) {
-  srv->WriteCoil(0, true);
-  srv->WriteCoil(8, true);
-  srv->WriteCoil(11, true);
-
-  const auto result = srv->ReadCoils<uint32_t>(0, 12);
-  ASSERT_THAT(result, Optional(0b1001'0000'0001));
-}
+// TEST_F(ModbusServer, ReadCoilsSingleCoilsSet) {
+//   srv->WriteCoil(1, true);
+//
+//   const auto result = srv->ReadCoils<uint32_t>(0, 4);
+//   ASSERT_THAT(result, Optional(0b0010));
+// }
+//
+// TEST_F(ModbusServer, ReadCoilsCoilSetAligned) {
+//   srv->WriteCoil(8, true);
+//   srv->WriteCoil(11, true);
+//
+//   const auto result = srv->ReadCoils<uint32_t>(8, 4);
+//   ASSERT_THAT(result, Optional(0b1001));
+// }
+//
+// TEST_F(ModbusServer, ReadCoilsCoilSetUnaligned) {
+//   srv->WriteCoil(8, true);
+//   srv->WriteCoil(11, true);
+//
+//   // Start reading before coil set
+//   const auto result = srv->ReadCoils<uint32_t>(6, 6);
+//   ASSERT_THAT(result, Optional(0b100100));
+//
+//   // Start reading after coil set
+//   const auto result2 = srv->ReadCoils<uint32_t>(9, 4);
+//   ASSERT_THAT(result2, Optional(0b100));
+// }
+//
+// TEST_F(ModbusServer, ReadCoilsMultipleEntries) {
+//   srv->WriteCoil(0, true);
+//   srv->WriteCoil(8, true);
+//   srv->WriteCoil(11, true);
+//
+//   const auto result = srv->ReadCoils<uint32_t>(0, 12);
+//   ASSERT_THAT(result, Optional(0b1001'0000'0001));
+// }
 
 TEST_F(ModbusServer, ReadCoilsNoEntries) {
-  const auto result = srv->ReadCoils<uint32_t>(100, 8);
+  std::array<std::byte, 1> into{};
+  const auto               result = srv->ReadCoils(100, 8, into);
   ASSERT_FALSE(result.has_value());
   ASSERT_EQ(result.error(), ExceptionCode::IllegalDataAddress);
+}
+
+TEST_F(ModbusServer, ReadCoils) {
+  srv->WriteCoil(0, true);
+  srv->WriteCoil(1, true);
+
+  std::array<std::byte, 1> into{};
+
+  const auto result = srv->ReadCoils(0, 8, into);
+  ASSERT_THAT(result, Optional(ElementsAre(0b0000'0011_b)));
+}
+
+TEST_F(ModbusServer, ReadCoilsUnaligned) {
+  srv->WriteCoil(0, true);
+  srv->WriteCoil(1, true);
+
+  std::array<std::byte, 1> into{};
+
+  const auto result = srv->ReadCoils(1, 7, into);
+  ASSERT_THAT(result, Optional(ElementsAre(0b0000'0001_b)));
+}
+
+TEST_F(ModbusServer, ReadCoilsMultipleBytes) {
+  srv->WriteCoil(0, true);
+  srv->WriteCoil(1, true);
+  srv->WriteCoil(8, true);
+  srv->WriteCoil(11, true);
+
+  std::array<std::byte, 2> into{};
+
+  const auto result = srv->ReadCoils(0, 16, into);
+  ASSERT_THAT(result, Optional(ElementsAre(0b0000'0011_b, 0b0000'1001_b)));
+}
+
+TEST_F(ModbusServer, ReadCoilsMultipleBytesUnaligned) {
+  srv->WriteCoil(0, true);
+  srv->WriteCoil(1, true);
+  srv->WriteCoil(8, true);
+  srv->WriteCoil(11, true);
+
+  std::array<std::byte, 2> into{};
+
+  const auto result = srv->ReadCoils(2, 16, into);
+  ASSERT_THAT(result, Optional(ElementsAre(0b0100'0000_b, 0b0000'0010_b)));
 }
 
 TEST_F(ModbusServer, WriteHoldingRegisterSingleU16) {

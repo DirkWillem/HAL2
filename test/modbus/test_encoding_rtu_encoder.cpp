@@ -15,7 +15,7 @@ using namespace testing;
 using namespace modbus;
 using namespace modbus::encoding::rtu;
 
-using namespace hstd::operators;
+using namespace hstd::literals;
 
 class ModbusRtuEncoder : public Test {
  public:

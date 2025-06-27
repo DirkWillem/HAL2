@@ -41,24 +41,29 @@ class Server : public ServerStorage<DIs, Cs, HRs> {
      */
     void operator()(const ReadCoilsRequest& req) noexcept {
       const auto n_bytes = DivCeil<uint16_t, 8>(req.num_coils);
+      const auto result  = server.ReadCoils(req.starting_addr, req.num_coils,
+                                            std::span{buffer.data(), n_bytes});
+      HandleResult(req, result, [this, n_bytes](const auto&) {
+        return ReadCoilsResponse{.coils = buffer.subspan(0, n_bytes)};
+      });
 
-      bool any_read = false;
+      // bool any_read = false;
+      //
+      // for (uint32_t i = 0; i < n_bytes; i++) {
+      //   const auto n_bits_i = std::min(8U, req.num_coils - i * 8);
+      //   const auto result   = server.template ReadCoils<uint8_t>(
+      //       req.starting_addr + i * 8, n_bits_i, any_read);
+      //
+      //   if (result) {
+      //     buffer[i] = static_cast<std::byte>(*result);
+      //     any_read  = true;
+      //   } else {
+      //     response = MakeErrorResponse(req.FC, result.error());
+      //     return;
+      //   }
+      // }
 
-      for (uint32_t i = 0; i < n_bytes; i++) {
-        const auto n_bits_i = std::min(8U, req.num_coils - i * 8);
-        const auto result   = server.template ReadCoils<uint8_t>(
-            req.starting_addr + i * 8, n_bits_i, any_read);
-
-        if (result) {
-          buffer[i] = static_cast<std::byte>(*result);
-          any_read  = true;
-        } else {
-          response = MakeErrorResponse(req.FC, result.error());
-          return;
-        }
-      }
-
-      response = ReadCoilsResponse{.coils = buffer.subspan(0, n_bytes)};
+      // response = ReadCoilsResponse{.coils = buffer.subspan(0, n_bytes)};
     }
 
     /**

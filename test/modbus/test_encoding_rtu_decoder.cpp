@@ -16,7 +16,7 @@ using namespace ::testing;
 using namespace modbus;
 using namespace modbus::encoding::rtu;
 
-using namespace hstd::operators;
+using namespace hstd::literals;
 
 using ReqFrame = RequestFrame<FrameVariant::Decode>;
 using ResFrame = ResponseFrame<FrameVariant::Decode>;
