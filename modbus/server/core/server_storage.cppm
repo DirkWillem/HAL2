@@ -319,6 +319,40 @@ class ServerStorage<hstd::Types<UDI...>, hstd::Types<UC...>,
   }
 
  public:
+  template <concepts::DiscreteInput DI>
+  auto& GetStorage() & noexcept {
+    return BitImpl<DI>::storage;
+  }
+
+  template <concepts::Coil C>
+  auto& GetStorage() & noexcept {
+    return BitImpl<C>::storage;
+  }
+
+  /**
+   * Reads a discrete input value
+   * @param address Address of the coil to read
+   * @return Read coil value, or an exception code upon failure
+   */
+  constexpr std::expected<bool, ExceptionCode>
+  ReadDiscreteInput(uint32_t address) const noexcept {
+    return ReadBit<DiscreteInputsTable>(address);
+  }
+
+  /**
+   * Reads multiple discrete inputs at once
+   * @tparam T Bit type to return the coil values in
+   * @param start_addr Address of the first coil to read
+   * @param count Number of coils to read
+   * @param into Byte buffer to read the coil data into
+   * @return true, or exception code upon failure
+   */
+  constexpr std::expected<std::span<const std::byte>, ExceptionCode>
+  ReadDiscreteInputs(uint16_t start_addr, uint16_t count,
+                     std::span<std::byte> into) const noexcept {
+    return ReadBits<DiscreteInputsTable>(start_addr, count, into);
+  }
+
   /**
    * Reads a single coil value
    * @param address Address of the coil to read
@@ -328,22 +362,6 @@ class ServerStorage<hstd::Types<UDI...>, hstd::Types<UC...>,
   ReadCoil(uint32_t address) const noexcept {
     return ReadBit<CoilsTable>(address);
   }
-
-  /**
-   * Reads multiple (up to 32) coils at once
-   * @tparam T Bit type to return the coil values in
-   * @param start_address Address of the first coil to read
-   * @param count Number of coils to read
-   * @param ignore_none_found Whether to still succeed if no coils were found
-   * @return Read coil values, or exception code upon failure
-   */
-  // template <std::unsigned_integral T>
-  //   requires(sizeof(T) <= sizeof(uint32_t))
-  // constexpr std::expected<T, ExceptionCode>
-  // ReadCoils(uint32_t start_address, uint32_t count,
-  //           bool ignore_none_found = false) const noexcept {
-  //   return ReadBits<CoilsTable, T>(start_address, count, ignore_none_found);
-  // }
 
   /**
    * Reads multiple coils at once
@@ -581,60 +599,6 @@ class ServerStorage<hstd::Types<UDI...>, hstd::Types<UC...>,
 
     return into;
   }
-
-  // template <concepts::ReadonlyBitArray<ServerStorage> auto BitTable,
-  //           std::unsigned_integral                         T>
-  //   requires(sizeof(T) <= sizeof(uint32_t))
-  // constexpr std::expected<T, ExceptionCode>
-  // ReadBits(uint32_t start_address, uint32_t count,
-  //          bool ignore_none_found = false) const noexcept {
-  //   const auto end_address = start_address + count;
-  //
-  //   bool any_read = false;
-  //
-  //   T result{0};
-  //
-  //   for (const auto& entry : BitTable) {
-  //     if (start_address < entry.end_addr && end_address >= entry.start_addr)
-  //     {
-  //       any_read = true;
-  //       const auto entry_size =
-  //           static_cast<uint32_t>(entry.end_addr - entry.start_addr);
-  //
-  //       if (start_address <= entry.start_addr) {
-  //         const auto shift     = entry.start_addr - start_address;
-  //         const auto n_to_read = std::min(entry_size, count - shift);
-  //
-  //         const auto entry_result =
-  //             (this->*entry.read)(hstd::Ones<uint32_t>(n_to_read));
-  //         if (entry_result) {
-  //           result |= static_cast<T>(*entry_result << shift);
-  //         } else {
-  //           return entry_result;
-  //         }
-  //       } else {
-  //         const auto shift     = start_address - entry.start_addr;
-  //         const auto n_to_read = std::min(entry_size - shift, count);
-  //
-  //         const auto entry_result =
-  //             (this->*entry.read)(hstd::Ones<uint32_t>(n_to_read) << shift);
-  //         if (entry_result) {
-  //           result |= static_cast<T>(*entry_result >> shift);
-  //         } else {
-  //           return entry_result;
-  //         }
-  //       }
-  //     } else if (entry.start_addr >= end_address) {
-  //       break;
-  //     }
-  //   }
-  //
-  //   if (!any_read && !ignore_none_found) {
-  //     return std::unexpected(ExceptionCode::IllegalDataAddress);
-  //   } else {
-  //     return result;
-  //   }
-  // }
 
   template <concepts::ReadonlyBitArray<ServerStorage> auto BitTable>
   constexpr std::expected<bool, ExceptionCode> WriteBit(uint16_t address,

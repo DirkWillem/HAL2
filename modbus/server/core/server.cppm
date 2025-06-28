@@ -46,24 +46,19 @@ class Server : public ServerStorage<DIs, Cs, HRs> {
       HandleResult(req, result, [this, n_bytes](const auto&) {
         return ReadCoilsResponse{.coils = buffer.subspan(0, n_bytes)};
       });
+    }
 
-      // bool any_read = false;
-      //
-      // for (uint32_t i = 0; i < n_bytes; i++) {
-      //   const auto n_bits_i = std::min(8U, req.num_coils - i * 8);
-      //   const auto result   = server.template ReadCoils<uint8_t>(
-      //       req.starting_addr + i * 8, n_bits_i, any_read);
-      //
-      //   if (result) {
-      //     buffer[i] = static_cast<std::byte>(*result);
-      //     any_read  = true;
-      //   } else {
-      //     response = MakeErrorResponse(req.FC, result.error());
-      //     return;
-      //   }
-      // }
-
-      // response = ReadCoilsResponse{.coils = buffer.subspan(0, n_bytes)};
+    /**
+     * Handles a Read Discrete Inputs request
+     * @param req Request to handle
+     */
+    void operator()(const ReadDiscreteInputsRequest& req) noexcept {
+      const auto n_bytes = DivCeil<uint16_t, 8>(req.num_inputs);
+      const auto result  = server.ReadDiscreteInputs(
+          req.starting_addr, req.num_inputs, std::span{buffer.data(), n_bytes});
+      HandleResult(req, result, [this, n_bytes](const auto&) {
+        return ReadDiscreteInputsResponse{.inputs = buffer.subspan(0, n_bytes)};
+      });
     }
 
     /**

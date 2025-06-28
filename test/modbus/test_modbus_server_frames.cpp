@@ -16,7 +16,11 @@ using namespace testing;
 using namespace modbus;
 using namespace modbus::server;
 
-using DiscreteInput1 = InMemDiscreteInput<0x000, "DiscreteInput1">;
+using DiscreteInput0  = InMemDiscreteInput<0x0000, "DiscreteInput1">;
+using DiscreteInput1  = InMemDiscreteInput<0x0001, "DiscreteInput2">;
+using DiscreteInput4  = InMemDiscreteInput<0x0004, "DiscreteInput4">;
+using DiscreteInput7  = InMemDiscreteInput<0x0007, "DiscreteInput7">;
+using DiscreteInputs1 = InMemDiscreteInputSet<0x0008, 8, "DiscreteInputs1">;
 
 using Coil1      = InMemCoil<0x0000, "Coil1">;
 using Coil2      = InMemCoil<0x0001, "Coil2">;
@@ -37,10 +41,11 @@ using F32HR2 = InMemHoldingRegister<0x0012, float, "F32 HR 2">;
 using F32ArrayHR =
     InMemHoldingRegister<0x0018, std::array<float, 4>, "F32 Array HR">;
 
-using Srv = modbus::server::Server<
-    hstd::Types<DiscreteInput1>,
-    hstd::Types<Coil2, Coil1, Coil4, Coil7, CoilGroup1, CoilGroup2>,
-    hstd::Types<U16HR1, U16HR2, U16ArrayHR, F32HR1, F32HR2, F32ArrayHR>>;
+using Srv =
+    Server<hstd::Types<DiscreteInput0, DiscreteInput1, DiscreteInput4,
+                       DiscreteInput7, DiscreteInputs1>,
+           hstd::Types<Coil2, Coil1, Coil4, Coil7, CoilGroup1, CoilGroup2>,
+           hstd::Types<U16HR1, U16HR2, U16ArrayHR, F32HR1, F32HR2, F32ArrayHR>>;
 
 using namespace hstd::literals;
 
@@ -60,6 +65,53 @@ class ModbusServerFrames : public Test {
  private:
   std::unique_ptr<Srv> srv{nullptr};
 };
+
+TEST_F(ModbusServerFrames, ReadDiscreteInputsSingleByte) {
+  server().GetStorage<DiscreteInput1>() = 1;
+  server().GetStorage<DiscreteInput4>() = 1;
+  server().GetStorage<DiscreteInput7>() = 1;
+
+  const auto response = HandleFrame(ReadDiscreteInputsRequest{
+      .starting_addr = 0,
+      .num_inputs    = 8,
+  });
+
+  using Pdu = ReadDiscreteInputsResponse;
+  ASSERT_THAT(response,
+              VariantWith<Pdu>(
+                  Field(&Pdu::inputs, ElementsAre(std::byte{0b1001'0010}))));
+}
+
+TEST_F(ModbusServerFrames, ReadDiscreteInputsMultipleBytes) {
+  server().GetStorage<DiscreteInput1>()  = 1;
+  server().GetStorage<DiscreteInput4>()  = 1;
+  server().GetStorage<DiscreteInput7>()  = 1;
+  server().GetStorage<DiscreteInputs1>() = 0b1001;
+
+  const auto response = HandleFrame(ReadDiscreteInputsRequest{
+      .starting_addr = 0,
+      .num_inputs    = 16,
+  });
+
+  using Pdu = ReadDiscreteInputsResponse;
+  ASSERT_THAT(response,
+              VariantWith<Pdu>(Field(
+                  &Pdu::inputs, ElementsAre(0b1001'0010_b, 0b0000'1001_b))));
+}
+
+TEST_F(ModbusServerFrames, ReadDiscreteInputsInvalidAddress) {
+  const auto response = HandleFrame(ReadDiscreteInputsRequest{
+      .starting_addr = 0xEEEE,
+      .num_inputs    = 8,
+  });
+
+  // Validate response
+  using Pdu = ErrorResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(
+                            AllOf(Field(&Pdu::function_code, 0x82),
+                                  Field(&Pdu::exception_code,
+                                        ExceptionCode::IllegalDataAddress))));
+}
 
 TEST_F(ModbusServerFrames, ReadCoilsFrameSingleByte) {
   server().WriteCoil(0, true);

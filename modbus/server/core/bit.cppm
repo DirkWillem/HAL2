@@ -106,6 +106,9 @@ inline constexpr bool IsDiscreteInputSet = false;
 export template <uint16_t A, uint16_t C, MutableBitSetStorage<C> S,
                  hstd::StaticString N>
 inline constexpr bool IsDiscreteInputSet<DiscreteInputSet<A, C, S, N>> = true;
+export template <uint16_t A, uint16_t C, hstd::StaticString N>
+  requires(C <= 32)
+using InMemDiscreteInputSet = DiscreteInputSet<A, C, hstd::UintN_t<C>, N>;
 
 export template <uint16_t A, uint16_t C, MutableBitSetStorage<C> S,
                  hstd::StaticString N>
