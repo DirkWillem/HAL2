@@ -317,6 +317,7 @@ class ServerStorage<hstd::Types<UDI...>, hstd::Types<UC...>,
 
   using DiscreteInputs   = Reorder<UDI...>;
   using Coils            = Reorder<UC...>;
+  using InputRegisters   = Reorder<UIR...>;
   using HoldingRegisters = Reorder<UHR...>;
 
   template <typename ET, hstd::concepts::Types T>
@@ -344,6 +345,16 @@ class ServerStorage<hstd::Types<UDI...>, hstd::Types<UC...>,
                               .end_addr   = EndAddress<C>()};
       });
 
+  static constexpr auto InputRegistersTable =
+      BuildEntryTable<InputRegTableEntry, InputRegisters>(
+          []<concepts::InputRegister IR>() {
+            return InputRegTableEntry{.read = &RegisterImpl<IR>::Read,
+                                      .swap_endianness =
+                                          &RegisterImpl<IR>::SwapEndianness,
+                                      .start_addr = StartAddress<IR>(),
+                                      .end_addr   = EndAddress<IR>()};
+          });
+
   static constexpr auto HoldingRegistersTable =
       BuildEntryTable<HoldingRegTableEntry, HoldingRegisters>(
           []<concepts::HoldingRegister HR>() {
@@ -355,10 +366,14 @@ class ServerStorage<hstd::Types<UDI...>, hstd::Types<UC...>,
                                         .end_addr   = EndAddress<HR>()};
           });
 
+  static_assert(ValidateNoAddressOverlap<DiscreteInputs>(),
+                "Discrete input addresses may not overlap");
   static_assert(ValidateNoAddressOverlap<Coils>(),
                 "Coil addresses may not overlap");
+  static_assert(ValidateNoAddressOverlap<InputRegisters>(),
+                "Input register addresses may not overlap");
   static_assert(ValidateNoAddressOverlap<HoldingRegisters>(),
-                "Holding registers may not overlap");
+                "Holding register addresses may not overlap");
 
   [[nodiscard]] static constexpr std::size_t RegToByteOffset(uint16_t offset) {
     return static_cast<std::size_t>(offset) * sizeof(uint16_t);
@@ -445,6 +460,36 @@ class ServerStorage<hstd::Types<UDI...>, hstd::Types<UC...>,
   WriteCoils(uint16_t start_addr, uint16_t n_coils,
              std::span<const std::byte> data) noexcept {
     return WriteBits<CoilsTable>(start_addr, n_coils, data);
+  }
+
+  /**
+   * Reads a single value from the input registers. This may span multiple
+   * 2-byte registers
+   * @tparam T Type of the value to read
+   * @tparam E Endianness to read the value into
+   * @param addr Address of the register(s) to read
+   * @return Read value
+   */
+  template <typename T, std::endian E = std::endian::native>
+    requires(sizeof(T) % sizeof(uint16_t) == 0)
+  std::expected<T, ExceptionCode>
+  ReadInputRegister(uint16_t addr) const noexcept {
+    return ReadRegister<T, InputRegistersTable, E>(addr);
+  }
+
+  /**
+   * Reads multiple input registers
+   * @tparam E Destination endianness
+   * @param into Destination buffer
+   * @param start_addr Address of the first input register to read
+   * @param num_regs Number of holding registers to read
+   * @return Read data, or exception code on failure
+   */
+  template <std::endian E = std::endian::native>
+  std::expected<std::span<const std::byte>, ExceptionCode>
+  ReadInputRegisters(std::span<std::byte> into, uint16_t start_addr,
+                     uint16_t num_regs) const noexcept {
+    return ReadRegisters<InputRegistersTable, E>(into, start_addr, num_regs);
   }
 
   /**

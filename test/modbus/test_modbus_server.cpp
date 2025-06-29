@@ -35,9 +35,22 @@ using F32HR2 = InMemHoldingRegister<0x0012, float, "F32 HR 2">;
 using F32ArrayHR =
     InMemHoldingRegister<0x0018, std::array<float, 4>, "F32 Array HR">;
 
+using U16IR0 = InMemInputRegister<0x0000, uint16_t, "U16 IR 1">;
+using U16IR1 = InMemInputRegister<0x0001, uint16_t, "U16 IR 2">;
+
+using U16ArrayIR =
+    InMemInputRegister<0x0004, std::array<uint16_t, 4>, "U16 Array IR">;
+
+using F32IR0 = InMemInputRegister<0x0010, float, "F32 IR 1">;
+using F32IR1 = InMemInputRegister<0x0012, float, "F32 IR 2">;
+
+using F32ArrayIR =
+    InMemInputRegister<0x0018, std::array<float, 4>, "F32 Array IR">;
+
 using Srv =
     Server<hstd::Types<DiscreteInput1, DiscreteInput2>,
-           hstd::Types<Coil2, Coil1, CoilGroup1, CoilGroup2>, hstd::Types<>,
+           hstd::Types<Coil2, Coil1, CoilGroup1, CoilGroup2>,
+           hstd::Types<U16IR0, U16IR1, U16ArrayIR, F32IR0, F32IR1, F32ArrayIR>,
            hstd::Types<U16HR1, U16HR2, U16ArrayHR, F32HR1, F32HR2, F32ArrayHR>>;
 
 class ModbusServer : public Test {
@@ -178,6 +191,30 @@ TEST_F(ModbusServer, ReadCoilsMultipleBytesUnaligned) {
 
   const auto result = srv->ReadCoils(2, 16, into);
   ASSERT_THAT(result, Optional(ElementsAre(0b0100'0000_b, 0b0000'0010_b)));
+}
+
+TEST_F(ModbusServer, ReadInputRegisterSingleU16) {
+  srv->GetStorage<U16IR1>() = 0x1234;
+
+  uint16_t result{0};
+
+  const auto read_result =
+      srv->ReadInputRegisters(hstd::MutByteViewOver(result), 1, 1);
+
+  ASSERT_TRUE(read_result.has_value());
+  ASSERT_EQ(result, 0x1234);
+}
+
+TEST_F(ModbusServer, ReadInputRegisterSingleF32) {
+  srv->GetStorage<F32IR0>() = 123.456F;
+
+  float result{0.F};
+
+  const auto read_result =
+      srv->ReadInputRegisters(hstd::MutByteViewOver(result), 0x0010, 2);
+
+  ASSERT_TRUE(read_result.has_value());
+  ASSERT_EQ(result, 123.456F);
 }
 
 TEST_F(ModbusServer, WriteHoldingRegisterSingleU16) {
