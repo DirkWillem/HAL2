@@ -29,12 +29,54 @@ concept PlainMemoryRegisterStorage =
      && sizeof(T) % sizeof(uint16_t) == 0);
 
 /**
- * Concept for the storage of a holding register
+ * Concept for the mutable storage of a register
  * @tparam T Holding Register type
  * @tparam D Type of the stored data
  */
 export template <typename T, typename D>
-concept HoldingRegisterStorage = PlainMemoryRegisterStorage<T, D>;
+concept MutableRegisterStorage = PlainMemoryRegisterStorage<T, D>;
+
+/**
+ * Concept for the read-only storage of a register
+ * @tparam T Holding Register type
+ * @tparam D Type of the stored data
+ */
+export template <typename T, typename D>
+concept ReadonlyRegisterStorage = MutableRegisterStorage<T, D>;
+
+/**
+ * Describes an input register
+ * @tparam A Address
+ * @tparam D Stored data type
+ * @tparam S Storage implementation
+ * @tparam N Name of the register
+ */
+export template <uint16_t A, typename D, ReadonlyRegisterStorage<D> S,
+                 hstd::StaticString N>
+struct InputRegister {
+  using Data    = D;
+  using Storage = S;
+
+  static constexpr auto             StartAddress = A;
+  static constexpr auto             EndAddress   = A + (sizeof(D) / 2);
+  static constexpr std::string_view Name         = N;
+};
+
+template <typename T>
+inline constexpr bool IsInputRegister = false;
+
+template <uint16_t A, typename D, MutableRegisterStorage<D> S,
+          hstd::StaticString N>
+inline constexpr bool IsInputRegister<InputRegister<A, D, S, N>> = true;
+
+/**
+ * Type alias for an in-memory input register
+ * @tparam A Address
+ * @tparam D Stored data type
+ * @tparam N Name of the register
+ */
+export template <uint16_t A, typename D, hstd::StaticString N>
+using InMemInputRegister = InputRegister<A, D, D, N>;
 
 /**
  * Describes a holding register
@@ -43,7 +85,7 @@ concept HoldingRegisterStorage = PlainMemoryRegisterStorage<T, D>;
  * @tparam S Storage implementation
  * @tparam N Name of the register
  */
-export template <uint16_t A, typename D, HoldingRegisterStorage<D> S,
+export template <uint16_t A, typename D, MutableRegisterStorage<D> S,
                  hstd::StaticString N>
 struct HoldingRegister {
   using Data    = D;
@@ -53,6 +95,13 @@ struct HoldingRegister {
   static constexpr auto             EndAddress   = A + (sizeof(D) / 2);
   static constexpr std::string_view Name         = N;
 };
+
+template <typename T>
+inline constexpr bool IsHoldingRegister = false;
+
+template <uint16_t A, typename D, MutableRegisterStorage<D> S,
+          hstd::StaticString N>
+inline constexpr bool IsHoldingRegister<HoldingRegister<A, D, S, N>> = true;
 
 /**
  * Type alias for an in-memory holding register
@@ -128,14 +177,17 @@ void SwapRegisterEndianness(std::span<std::byte> data, std::size_t offset,
   }
 }
 
-template <typename T>
-inline constexpr bool IsHoldingRegister = false;
+namespace concepts {
 
-template <uint16_t A, typename D, HoldingRegisterStorage<D> S,
-          hstd::StaticString N>
-inline constexpr bool IsHoldingRegister<HoldingRegister<A, D, S, N>> = true;
+export template <typename T>
+concept InputRegister = IsInputRegister<T>;
 
-template <typename T>
-concept HoldingReg = IsHoldingRegister<T>;
+export template <typename T>
+concept HoldingRegister = IsHoldingRegister<T>;
+
+export template <typename T>
+concept Register = InputRegister<T> || HoldingRegister<T>;
+
+}   // namespace concepts
 
 }   // namespace modbus::server

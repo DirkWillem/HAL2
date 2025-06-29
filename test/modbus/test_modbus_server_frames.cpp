@@ -45,6 +45,7 @@ using Srv =
     Server<hstd::Types<DiscreteInput0, DiscreteInput1, DiscreteInput4,
                        DiscreteInput7, DiscreteInputs1>,
            hstd::Types<Coil2, Coil1, Coil4, Coil7, CoilGroup1, CoilGroup2>,
+           hstd::Types<>,
            hstd::Types<U16HR1, U16HR2, U16ArrayHR, F32HR1, F32HR2, F32ArrayHR>>;
 
 using namespace hstd::literals;
@@ -288,7 +289,7 @@ TEST_F(ModbusServerFrames,
 
 TEST_F(ModbusServerFrames, ReadHoldingRegistersSingleRegister) {
   // Write sample value
-  server().WriteHoldingRegister(0x1234_u16, 0x0001);
+  server().WriteHoldingRegister(0x0001, 0x1234_u16);
 
   // Handle frame
   const auto response = HandleFrame(ReadHoldingRegistersRequest{
@@ -303,8 +304,8 @@ TEST_F(ModbusServerFrames, ReadHoldingRegistersSingleRegister) {
 }
 
 TEST_F(ModbusServerFrames, ReadHoldingRegisterMultipleRegisters) {
-  server().WriteHoldingRegister(0x1234_u16, 0x0004);
-  server().WriteHoldingRegister(0x5678_u16, 0x0005);
+  server().WriteHoldingRegister(0x0004, 0x1234_u16);
+  server().WriteHoldingRegister(0x0005, 0x5678_u16);
 
   // Handle frame
   const auto response = HandleFrame(ReadHoldingRegistersRequest{
@@ -322,7 +323,7 @@ TEST_F(ModbusServerFrames, ReadHoldingRegisterMultipleRegisters) {
 TEST_F(ModbusServerFrames, ReadHoldingRegisterReadFloat) {
   // Write sample value
   const auto v = 123.456F;
-  server().WriteHoldingRegister(v, 0x0010);
+  server().WriteHoldingRegister(0x0010, v);
 
   // Handle frame
   const auto response = HandleFrame(ReadHoldingRegistersRequest{
@@ -343,7 +344,7 @@ TEST_F(ModbusServerFrames, ReadHoldingRegisterReadFloats) {
   // Write sample value
   std::array<float, 4> arr{1.2F, 3.4F, 5.6F, 7.8F};
   for (std::size_t i = 0; i < arr.size(); ++i) {
-    server().WriteHoldingRegister(arr[i], 0x0018 + i * 2);
+    server().WriteHoldingRegister(0x0018 + i * 2, arr[i]);
   }
 
   // Handle frame

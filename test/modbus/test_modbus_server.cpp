@@ -37,7 +37,7 @@ using F32ArrayHR =
 
 using Srv =
     Server<hstd::Types<DiscreteInput1, DiscreteInput2>,
-           hstd::Types<Coil2, Coil1, CoilGroup1, CoilGroup2>,
+           hstd::Types<Coil2, Coil1, CoilGroup1, CoilGroup2>, hstd::Types<>,
            hstd::Types<U16HR1, U16HR2, U16ArrayHR, F32HR1, F32HR2, F32ArrayHR>>;
 
 class ModbusServer : public Test {

@@ -19,8 +19,8 @@ import :server_storage;
 
 namespace modbus::server {
 
-export template <typename DIs, typename Cs, typename HRs>
-class Server : public ServerStorage<DIs, Cs, HRs> {
+export template <typename DIs, typename Cs, typename IRs, typename HRs>
+class Server : public ServerStorage<DIs, Cs, IRs, HRs> {
   using Res = ResponsePdu<FrameVariant::Encode>;
   class FrameHandler {
     template <typename T, T Div>
@@ -106,7 +106,7 @@ class Server : public ServerStorage<DIs, Cs, HRs> {
      */
     void operator()(const WriteSingleRegisterRequest& req) noexcept {
       const auto result =
-          server.WriteHoldingRegister(req.new_value, req.register_addr);
+          server.WriteHoldingRegister(req.register_addr, req.new_value);
 
       if (result) {
         response = WriteSingleRegisterResponse{
@@ -196,8 +196,8 @@ namespace concepts {
 template <typename T>
 inline constexpr bool IsServer = false;
 
-template <typename UDI, typename UC, typename UHR>
-inline constexpr bool IsServer<Server<UDI, UC, UHR>> = true;
+template <typename UDI, typename UC, typename UIR, typename UHR>
+inline constexpr bool IsServer<Server<UDI, UC, UIR, UHR>> = true;
 
 export template <typename T>
 concept Server = IsServer<T>;
