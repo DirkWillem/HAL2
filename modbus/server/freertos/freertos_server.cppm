@@ -40,7 +40,7 @@ class UartServer : public rtos::Task<UartServer<Srv, Uart>, 512> {
           const auto  request_frame = *decode_result;
           const auto& request_pdu   = E::GetPdu(request_frame);
 
-          ResponsePdu<FrameVariant::Encode> response_pdu{};
+          ResponsePdu response_pdu{};
 
           server.HandleFrame(request_pdu, response_pdu);
 

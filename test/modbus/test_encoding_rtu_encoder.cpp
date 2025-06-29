@@ -26,14 +26,12 @@ class ModbusRtuEncoder : public Test {
 
   void TearDown() override { check_buffer_builder = nullptr; }
 
-  std::span<const std::byte>
-  EncodeRequest(RequestFrame<FrameVariant::Encode> frame) {
+  std::span<const std::byte> EncodeRequest(RequestFrame frame) {
     auto encoder = Encoding::Encoder{frame.address, buffer};
     return std::visit(encoder, frame.pdu);
   }
 
-  std::span<const std::byte>
-  EncodeResponse(ResponseFrame<FrameVariant::Encode> frame) {
+  std::span<const std::byte> EncodeResponse(ResponseFrame frame) {
     auto encoder = Encoding::Encoder{frame.address, buffer};
     return std::visit(encoder, frame.pdu);
   }
@@ -243,11 +241,12 @@ TEST_F(ModbusRtuEncoder, ReadInputRegistersRequest) {
 }
 
 TEST_F(ModbusRtuEncoder, ReadInputRegistersResponse) {
-  std::array<uint16_t, 3> registers{0x1234, 0xAABB, 0xBEEF};
+  std::array<std::byte, 6> registers{0x12_b, 0x34_b, 0xAA_b,
+                                     0xBB_b, 0xBE_b, 0xEF_b};
 
   const auto encoded_frame = EncodeResponse({
       .pdu =
-          ReadInputRegistersResponse<FrameVariant::Encode>{
+          ReadInputRegistersResponse{
               .registers = registers,
           },
       .address = 0x11,

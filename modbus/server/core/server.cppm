@@ -21,7 +21,7 @@ namespace modbus::server {
 
 export template <typename DIs, typename Cs, typename IRs, typename HRs>
 class Server : public ServerStorage<DIs, Cs, IRs, HRs> {
-  using Res = ResponsePdu<FrameVariant::Encode>;
+  using Res = ResponsePdu;
   class FrameHandler {
     template <typename T, T Div>
     static constexpr T DivCeil(T lhs) {
@@ -29,8 +29,7 @@ class Server : public ServerStorage<DIs, Cs, IRs, HRs> {
     }
 
    public:
-    constexpr FrameHandler(Server&                            server,
-                           ResponsePdu<FrameVariant::Encode>& response)
+    constexpr FrameHandler(Server& server, ResponsePdu& response)
         : server{server}
         , response{response}
         , buffer{server.buffer} {}
@@ -76,6 +75,20 @@ class Server : public ServerStorage<DIs, Cs, IRs, HRs> {
       }
 
       response = ReadHoldingRegistersResponse{.registers = result.value()};
+    }
+
+    /**
+     * Handles a MODBUS Input Holding Registers frame
+     * @param req Request to handle
+     */
+    void operator()(const ReadInputRegistersRequest& req) noexcept {
+      const auto result =
+          server.template ReadInputRegisters<std::endian::big>(
+              buffer, req.starting_addr, req.num_input_registers);
+
+      HandleResult(req, result, [](const auto& registers) {
+        return ReadInputRegistersResponse{.registers = registers};
+      });
     }
 
     /**
@@ -159,8 +172,6 @@ class Server : public ServerStorage<DIs, Cs, IRs, HRs> {
       });
     }
 
-    void operator()(const auto&) noexcept {}
-
    private:
     template <typename T, std::invocable<const T&> F>
     constexpr void HandleResult(const auto&                            req,
@@ -176,15 +187,14 @@ class Server : public ServerStorage<DIs, Cs, IRs, HRs> {
       }
     }
 
-    Server&                            server;
-    ResponsePdu<FrameVariant::Encode>& response;
+    Server&      server;
+    ResponsePdu& response;
 
     std::span<std::byte> buffer;
   };
 
  public:
-  void HandleFrame(const RequestPdu<FrameVariant::Decode>& request,
-                   ResponsePdu<FrameVariant::Encode>&      response) {
+  void HandleFrame(const RequestPdu& request, ResponsePdu& response) {
     std::visit(FrameHandler{*this, response}, request);
   }
 

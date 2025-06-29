@@ -12,8 +12,8 @@ namespace modbus::encoding {
 
 export template <typename Enc>
 concept Encoder = requires(Enc enc) {
-  std::visit(enc, std::declval<RequestPdu<FrameVariant::Encode>>());
-  std::visit(enc, std::declval<ResponsePdu<FrameVariant::Encode>>());
+  std::visit(enc, std::declval<RequestPdu>());
+  std::visit(enc, std::declval<ResponsePdu>());
 };
 
 export template <typename Dec>
@@ -46,7 +46,7 @@ concept UartEncoding = Encoding<E> && requires {
   } -> std::convertible_to<uint8_t>;
   {
     E::GetPdu(std::declval<const typename E::Decoder::ReqFrame&>())
-  } -> std::convertible_to<const RequestPdu<FrameVariant::Decode>&>;
+  } -> std::convertible_to<const RequestPdu&>;
 };
 
 }   // namespace modbus::encoding

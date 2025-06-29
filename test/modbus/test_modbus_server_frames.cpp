@@ -41,11 +41,23 @@ using F32HR2 = InMemHoldingRegister<0x0012, float, "F32 HR 2">;
 using F32ArrayHR =
     InMemHoldingRegister<0x0018, std::array<float, 4>, "F32 Array HR">;
 
+using U16IR0 = InMemInputRegister<0x0000, uint16_t, "U16 IR 1">;
+using U16IR1 = InMemInputRegister<0x0001, uint16_t, "U16 IR 2">;
+
+using U16ArrayIR =
+    InMemInputRegister<0x0004, std::array<uint16_t, 4>, "U16 Array IR">;
+
+using F32IR0 = InMemInputRegister<0x0010, float, "F32 IR 1">;
+using F32IR1 = InMemInputRegister<0x0012, float, "F32 IR 2">;
+
+using F32ArrayIR =
+    InMemInputRegister<0x0018, std::array<float, 4>, "F32 Array IR">;
+
 using Srv =
     Server<hstd::Types<DiscreteInput0, DiscreteInput1, DiscreteInput4,
                        DiscreteInput7, DiscreteInputs1>,
-           hstd::Types<Coil2, Coil1, Coil4, Coil7, CoilGroup1, CoilGroup2>,
-           hstd::Types<>,
+           hstd::Types<Coil1, Coil2, Coil4, Coil7, CoilGroup1, CoilGroup2>,
+           hstd::Types<U16IR0, U16IR1, U16ArrayIR, F32IR0, F32IR1, F32ArrayIR>,
            hstd::Types<U16HR1, U16HR2, U16ArrayHR, F32HR1, F32HR2, F32ArrayHR>>;
 
 using namespace hstd::literals;
@@ -54,9 +66,8 @@ class ModbusServerFrames : public Test {
  public:
   void SetUp() override { srv = std::make_unique<Srv>(); }
 
-  ResponsePdu<FrameVariant::Encode>
-  HandleFrame(RequestPdu<FrameVariant::Decode> request) noexcept {
-    ResponsePdu<FrameVariant::Encode> response{};
+  ResponsePdu HandleFrame(RequestPdu request) noexcept {
+    ResponsePdu response{};
     srv->HandleFrame(request, response);
     return response;
   }
@@ -376,6 +387,96 @@ TEST_F(ModbusServerFrames, ReadHoldingRegisterUnalignedRead) {
   using Pdu = ErrorResponse;
   ASSERT_THAT(response, VariantWith<Pdu>(
                             AllOf(Field(&Pdu::function_code, 0x83),
+                                  Field(&Pdu::exception_code,
+                                        ExceptionCode::ServerDeviceFailure))));
+}
+
+TEST_F(ModbusServerFrames, ReadInputRegistersSingleRegister) {
+  // Write sample value
+  server().GetStorage<U16IR1>() = 0x1234;
+
+  // Handle frame
+  const auto response = HandleFrame(ReadInputRegistersRequest{
+      .starting_addr       = 0x0001,
+      .num_input_registers = 1,
+  });
+
+  // Validate response
+  using Pdu = ReadInputRegistersResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(Field(&Pdu::registers,
+                                               ElementsAre(0x12_b, 0x34_b))));
+}
+
+TEST_F(ModbusServerFrames, ReadInputRegisterMultipleRegisters) {
+  auto& arr = server().GetStorage<U16ArrayIR>();
+  arr[0]    = 0x1234;
+  arr[1]    = 0x5678;
+
+  // Handle frame
+  const auto response = HandleFrame(ReadInputRegistersRequest{
+      .starting_addr       = 0x0004,
+      .num_input_registers = 2,
+  });
+
+  // Validate response
+  using Pdu = ReadInputRegistersResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(Field(
+                            &Pdu::registers,
+                            ElementsAre(0x12_b, 0x34_b, 0x56_b, 0x78_b))));
+}
+
+TEST_F(ModbusServerFrames, ReadInputRegisterReadFloat) {
+  // Write sample value
+  const auto v                  = 123.456F;
+  server().GetStorage<F32IR0>() = v;
+
+  // Handle frame
+  const auto response = HandleFrame(ReadInputRegistersRequest{
+      .starting_addr       = 0x0010,
+      .num_input_registers = 2,
+  });
+
+  // Validate response
+  std::array<std::byte, 4> v_check = hstd::ToByteArray<std::endian::big>(v);
+
+  using Pdu = ReadInputRegistersResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(
+                            Field(&Pdu::registers, ElementsAreArray(v_check))));
+}
+
+TEST_F(ModbusServerFrames, ReadInputRegisterReadFloats) {
+  // Write sample value
+  std::array<float, 4> arr{1.2F, 3.4F, 5.6F, 7.8F};
+  auto&                storage_arr = server().GetStorage<F32ArrayIR>();
+  for (std::size_t i = 0; i < arr.size(); ++i) {
+    storage_arr[i] = arr[i];
+  }
+
+  // Handle frame
+  const auto response = HandleFrame(ReadInputRegistersRequest{
+      .starting_addr       = 0x0018,
+      .num_input_registers = 8,
+  });
+
+  // Validate response
+  const auto v_check = hstd::ToByteArray<std::endian::big>(arr);
+
+  using Pdu = ReadInputRegistersResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(
+                            Field(&Pdu::registers, ElementsAreArray(v_check))));
+}
+
+TEST_F(ModbusServerFrames, ReadInputRegisterUnalignedRead) {
+  // Handle frame
+  const auto response = HandleFrame(ReadInputRegistersRequest{
+      .starting_addr         = 0x0010,
+      .num_input_registers = 1,
+  });
+
+  // Validate response
+  using Pdu = ErrorResponse;
+  ASSERT_THAT(response, VariantWith<Pdu>(
+                            AllOf(Field(&Pdu::function_code, 0x84),
                                   Field(&Pdu::exception_code,
                                         ExceptionCode::ServerDeviceFailure))));
 }

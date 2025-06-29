@@ -18,8 +18,8 @@ using namespace modbus::encoding::rtu;
 
 using namespace hstd::literals;
 
-using ReqFrame = RequestFrame<FrameVariant::Decode>;
-using ResFrame = ResponseFrame<FrameVariant::Decode>;
+using ReqFrame = RequestFrame;
+using ResFrame = ResponseFrame;
 
 class ModbusRtuDecoder : public Test {
  public:
@@ -331,13 +331,13 @@ TEST_F(ModbusRtuDecoder, ReadInputRegistersResponse) {
 
   ASSERT_TRUE(decode_result.has_value());
 
-  using Pdu        = ReadInputRegistersResponse<FrameVariant::Decode>;
+  using Pdu        = ReadInputRegistersResponse;
   const auto frame = decode_result.value();
 
   ASSERT_EQ(frame.address, 0x06);
   ASSERT_THAT(frame.pdu, VariantWith<Pdu>(Field(
                              &Pdu::registers,
-                             ElementsAre(uint16_t{0xBAAB}, uint16_t{0x1234}))));
+                             ElementsAre(0xBA_b, 0xAB_b, 0x12_b, 0x34_b))));
 }
 
 TEST_F(ModbusRtuDecoder, WriteSingleCoilRequest) {

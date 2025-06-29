@@ -24,12 +24,6 @@ export enum class FunctionCode : uint8_t {
   ErrorResponseBase      = 0x80,
 };
 
-export enum class FrameVariant { Encode, Decode };
-
-export template <FrameVariant FV, typename T>
-using Array = std::conditional_t < FV == FrameVariant::Encode,
-      std::span<T>, hstd::BitCastSpan < T, std::byte, std::endian::big >> ;
-
 export enum class ExceptionCode : uint8_t {
   IllegalFunction                    = 0x01,
   IllegalDataAddress                 = 0x02,
@@ -101,8 +95,7 @@ export struct WriteMultipleRegistersRequest {
   std::span<const std::byte> values;
 };
 
-export template <FrameVariant FV>
-using RequestPdu =
+export using RequestPdu =
     std::variant<ReadCoilsRequest, ReadDiscreteInputsRequest,
                  ReadHoldingRegistersRequest, ReadInputRegistersRequest,
                  WriteSingleCoilRequest, WriteSingleRegisterRequest,
@@ -145,11 +138,10 @@ export struct ReadHoldingRegistersResponse {
   std::span<const std::byte> registers;
 };
 
-export template <FrameVariant FV>
-struct ReadInputRegistersResponse {
+export struct ReadInputRegistersResponse {
   static constexpr auto FC = FunctionCode::ReadInputRegisters;
 
-  Array<FV, uint16_t> registers;
+  std::span<const std::byte> registers;
 };
 
 export struct WriteSingleCoilResponse {
@@ -179,10 +171,9 @@ export struct WriteMultipleRegistersResponse {
   uint16_t num_registers;
 };
 
-export template <FrameVariant FV>
-using ResponsePdu =
+export using ResponsePdu =
     std::variant<ErrorResponse, ReadCoilsResponse, ReadDiscreteInputsResponse,
-                 ReadHoldingRegistersResponse, ReadInputRegistersResponse<FV>,
+                 ReadHoldingRegistersResponse, ReadInputRegistersResponse,
                  WriteSingleCoilResponse, WriteSingleRegisterResponse,
                  WriteMultipleCoilsResponse, WriteMultipleRegistersResponse>;
 
