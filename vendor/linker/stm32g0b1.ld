@@ -47,7 +47,7 @@ MEMORY
 _estack = ORIGIN(RAM) + LENGTH(RAM); /* end of "RAM" Ram type memory */
 
 _Min_Heap_Size = 0x200; /* required amount of heap */
-_Min_Stack_Size = 0x400; /* required amount of stack */
+_Min_Stack_Size = 0x18000; /* required amount of stack */
 
 
 /* Sections */
@@ -167,7 +167,7 @@ SECTIONS
   } >RAM
 
   /* User_heap_stack section, used to check that there is enough "RAM" Ram  type memory left */
-  ._user_heap_stack :
+  ._user_heap_stack (NOLOAD) :
   {
     . = ALIGN(8);
     PROVIDE ( end = . );
