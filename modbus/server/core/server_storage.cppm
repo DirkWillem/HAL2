@@ -4,6 +4,7 @@ module;
 #include <array>
 #include <bit>
 #include <cstdint>
+#include <cstring>
 #include <expected>
 #include <functional>
 #include <span>
@@ -248,20 +249,25 @@ class ServerStorage<hstd::Types<UDI...>, hstd::Types<UC...>,
   template <typename T>
   static consteval bool ValidateNoAddressOverlap() {
     return ([]<typename... Ts>(hstd::Types<Ts...>) {
-      constexpr auto                                N = sizeof...(Ts);
-      std::array<std::tuple<uint16_t, uint16_t>, N> addrs{
-          std::make_tuple(StartAddress<Ts>(), EndAddress<Ts>())...};
+      constexpr auto N = sizeof...(Ts);
 
-      for (std::size_t i = 0; i < N - 1; i++) {
-        const auto cur_end_addr    = std::get<1>(addrs[i]);
-        const auto next_start_addr = std::get<0>(addrs[i + 1]);
+      if constexpr (N <= 1) {
+        return true;
+      } else {
+        std::array<std::tuple<uint16_t, uint16_t>, N> addrs{
+            std::make_tuple(StartAddress<Ts>(), EndAddress<Ts>())...};
 
-        if (cur_end_addr > next_start_addr) {
-          return false;
+        for (std::size_t i = 0; i < N - 1; i++) {
+          const auto cur_end_addr    = std::get<1>(addrs[i]);
+          const auto next_start_addr = std::get<0>(addrs[i + 1]);
+
+          if (cur_end_addr > next_start_addr) {
+            return false;
+          }
         }
-      }
 
-      return true;
+        return true;
+      }
     })(T{});
   }
 
