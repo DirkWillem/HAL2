@@ -30,6 +30,10 @@ target_link_libraries(test_helpers PUBLIC
 
 # Test source files
 set(HAL2_TEST_SRCS
+        hstd/test_crc.cpp
+        hstd/test_logic.cpp
+        hstd/test_memory.cpp
+
         modbus/test_encoding_rtu_decoder.cpp
         modbus/test_encoding_rtu_encoder.cpp
         modbus/test_modbus_server.cpp

@@ -13,13 +13,14 @@ import :endian;
 
 namespace hstd {
 
-export template <std::endian E, typename T>
+export template <std::endian E = std::endian::native, typename T>
 constexpr auto ToByteArray(const T& data) noexcept {
   return std::bit_cast<std::array<std::byte, sizeof(T)>>(
       ConvertToEndianness<E>(data));
 }
 
-export template <std::endian E, typename T, std::size_t N>
+export template <std::endian E = std::endian::native, typename T, std::size_t N>
+  requires(E != std::endian::native)
 constexpr auto ToByteArray(const std::array<T, N>& data) noexcept {
   auto result = std::bit_cast<std::array<std::byte, sizeof(T) * N>>(data);
 
@@ -31,6 +32,12 @@ constexpr auto ToByteArray(const std::array<T, N>& data) noexcept {
   }
 
   return result;
+}
+
+export template <std::endian E = std::endian::native, typename T, std::size_t N>
+  requires(E == std::endian::native)
+constexpr auto ToByteArray(const std::array<T, N>& data) noexcept {
+  return std::bit_cast<std::array<std::byte, sizeof(T) * N>>(data);
 }
 
 }   // namespace hstd
