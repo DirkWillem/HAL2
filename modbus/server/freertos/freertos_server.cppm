@@ -24,10 +24,11 @@ class UartServer : public rtos::Task<UartServer<Srv, Uart>, 512> {
   using Decoder = typename E::Decoder;
 
  public:
-  UartServer(Srv& server, Uart& uart) noexcept
+  UartServer(Srv& server, Uart& uart, uint8_t address) noexcept
       : rtos::Task<UartServer, 512>{"ModbusServer"}
       , server{server}
-      , uart{uart} {}
+      , uart{uart}
+      , address{address} {}
 
   [[noreturn]] void operator()() noexcept {
     using namespace std::chrono_literals;
@@ -37,8 +38,14 @@ class UartServer : public rtos::Task<UartServer<Srv, Uart>, 512> {
         const auto decode_result = Decoder{*recv}.DecodeRequest();
 
         if (decode_result.has_value()) {
-          const auto  request_frame = *decode_result;
-          const auto& request_pdu   = E::GetPdu(request_frame);
+          const auto request_frame = *decode_result;
+          const auto addr          = E::GetAddress(request_frame);
+
+          if (E::GetAddress(request_frame) != address) {
+            continue;
+          }
+
+          const auto& request_pdu = E::GetPdu(request_frame);
 
           ResponsePdu response_pdu{};
 
@@ -58,6 +65,8 @@ class UartServer : public rtos::Task<UartServer<Srv, Uart>, 512> {
   Uart& uart;
 
   std::array<std::byte, 256> buffer{};
+
+  uint8_t address;
 };
 
 }   // namespace modbus::server::freertos
