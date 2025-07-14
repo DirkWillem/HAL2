@@ -36,7 +36,7 @@ void HAL_IncTick();
 [[maybe_unused]] void SysTick_Handler() {
   HAL_IncTick();
 
-  if constexpr (rtos::IsRtosUsed<rtos::FreeRtos>()) {
+  if constexpr (rtos::IsRtosUsed<rtos::FreeRtosMarker>()) {
     extern void xPortSysTickHandler(void);
     xPortSysTickHandler();
   }
@@ -48,14 +48,14 @@ void HAL_IncTick();
 
 // RTOS-Related interrupts
 void PendSV_Handler() {
-  if constexpr (rtos::IsRtosUsed<rtos::FreeRtos>()) {
+  if constexpr (rtos::IsRtosUsed<rtos::FreeRtosMarker>()) {
     extern void xPortPendSVHandler(void);
     xPortPendSVHandler();
   }
 }
 
 void SVC_Handler() {
-  if constexpr (rtos::IsRtosUsed<rtos::FreeRtos>()) {
+  if constexpr (rtos::IsRtosUsed<rtos::FreeRtosMarker>()) {
     extern void vPortSVCHandler(void);
     vPortSVCHandler();
   }
@@ -138,12 +138,106 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t size) {
   }
 
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
-  HANDLE_UART_TX_CALLBACK(Usart1) HANDLE_UART_TX_CALLBACK(Usart2)
-      HANDLE_UART_TX_CALLBACK(Usart3) HANDLE_UART_TX_CALLBACK(Uart4)
-          HANDLE_UART_TX_CALLBACK(Uart5) HANDLE_UART_TX_CALLBACK(LpUart1)
+  HANDLE_UART_TX_CALLBACK(Usart1)
+  HANDLE_UART_TX_CALLBACK(Usart2)
+  HANDLE_UART_TX_CALLBACK(Usart3)
+  HANDLE_UART_TX_CALLBACK(Uart4)
+  HANDLE_UART_TX_CALLBACK(Uart5) HANDLE_UART_TX_CALLBACK(LpUart1)
 }
 
-;
+#define HANDLE_TIM_PERIOD_ELAPSED_CB(Inst)                 \
+  if constexpr (hal::IsPeripheralInUse<stm32g4::Inst>()) { \
+    if (htim == &stm32g4::Inst::instance().htim) {         \
+      stm32g4::Inst::instance().PeriodElapsed();           \
+    }                                                      \
+  }
+
+[[maybe_unused]] void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim) {
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim1)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim2)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim3)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim4)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim6)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim7)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim15)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim16)
+  HANDLE_TIM_PERIOD_ELAPSED_CB(Tim17)
+}
+
+#define HANDLE_TIM_IRQ(Periph)                               \
+  if constexpr (hal::IsPeripheralInUse<stm32g4::Periph>()) { \
+    stm32g4::Periph::instance().HandleInterrupt();           \
+  }
+
+[[maybe_unused]] void TIM1_BRK_TIM15_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim1)
+  HANDLE_TIM_IRQ(Tim15)
+}
+
+[[maybe_unused]] void TIM1_UP_TIM16_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim1)
+  HANDLE_TIM_IRQ(Tim16)
+}
+
+[[maybe_unused]] void TIM1_TRG_COM_TIM17_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim1)
+  HANDLE_TIM_IRQ(Tim17)
+}
+
+[[maybe_unused]] void TIM1_CC_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim1)
+}
+
+[[maybe_unused]] void TIM2_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim2)
+}
+
+[[maybe_unused]] void TIM3_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim3)
+}
+
+[[maybe_unused]] void TIM4_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim4)
+}
+
+[[maybe_unused]] void TIM5_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim5)
+}
+
+[[maybe_unused]] void TIM6_DAC_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim6)
+}
+
+[[maybe_unused]] void TIM7_DAC_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim7)
+}
+
+[[maybe_unused]] void TIM8_BRK_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim8)
+}
+[[maybe_unused]] void TIM8_UP_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim8)
+}
+[[maybe_unused]] void TIM8_TRG_COM_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim8)
+}
+[[maybe_unused]] void TIM8_CC_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim8)
+}
+
+[[maybe_unused]] void TIM20_BRK_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim20)
+}
+[[maybe_unused]] void TIM20_UP_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim20)
+}
+[[maybe_unused]] void TIM20_TRG_COM_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim20)
+}
+[[maybe_unused]] void TIM20_CC_IRQHandler() {
+  HANDLE_TIM_IRQ(Tim20)
+}
+
 // }
 //
 // [[maybe_unused]] void TIM1_BRK_UP_TRG_COM_IRQHandler() {

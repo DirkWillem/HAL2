@@ -5,6 +5,7 @@ export import :mp.stl_types;
 export import :mp.types;
 export import :mp.values;
 
+export import :array;
 export import :atomic;
 export import :callback;
 export import :crc;

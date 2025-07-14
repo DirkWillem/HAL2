@@ -64,7 +64,7 @@ constexpr uint32_t GetHalI2c4ClkSource(I2cSourceClock src) noexcept {
   }
 }
 
-bool ClockConfig::Configure() const noexcept {
+bool ClockSettings::Configure() const noexcept {
   HAL_PWREx_ControlVoltageScaling(PWR_REGULATOR_VOLTAGE_SCALE1_BOOST);
 
   RCC_OscInitTypeDef rcc_osc_init = {
@@ -92,10 +92,10 @@ bool ClockConfig::Configure() const noexcept {
   RCC_ClkInitTypeDef rcc_clk_init = {
       .ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
                    | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2,
-      .SYSCLKSource   = static_cast<uint32_t>(mcs.sys_clk_source),
-      .AHBCLKDivider  = GetHalAhbDivider(mcs.ahb_prescaler),
-      .APB1CLKDivider = GetHalApbDivider(mcs.apb1_prescaler),
-      .APB2CLKDivider = GetHalApbDivider(mcs.apb2_prescaler),
+      .SYSCLKSource   = static_cast<uint32_t>(system_clock_settings.sys_clk_source),
+      .AHBCLKDivider  = GetHalAhbDivider(system_clock_settings.ahb_prescaler),
+      .APB1CLKDivider = GetHalApbDivider(system_clock_settings.apb1_prescaler),
+      .APB2CLKDivider = GetHalApbDivider(system_clock_settings.apb2_prescaler),
   };
   if (HAL_RCC_ClockConfig(&rcc_clk_init, FLASH_LATENCY_4) != HAL_OK) {
     return false;

@@ -203,12 +203,18 @@ function(add_stm32g4_hal VARIANT XMLFILE)
             FILE_SET CXX_MODULES
             FILES
             "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/uart_pin_mapping.cppm"
-#            "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/tim_pin_mapping.cppm"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/tim_pin_mapping.cppm"
 
             stm32g4/stm32g4.cppm
 
+            stm32g4/tim/channel.cppm
+            stm32g4/tim/common.cppm
+            stm32g4/tim/features.cppm
+            stm32g4/tim/tim.cppm
+
             stm32g4/clocks.cppm
             stm32g4/dma.cppm
+            stm32g4/nvic.cppm
             stm32g4/peripherals.cppm
             stm32g4/pin.cppm
             stm32g4/system.cppm
@@ -226,6 +232,7 @@ function(add_stm32g4_hal VARIANT XMLFILE)
             PUBLIC
             "${VARIANT}_vendor"
             rtos_check
+            rtos_concepts
 
             PRIVATE
             hstd

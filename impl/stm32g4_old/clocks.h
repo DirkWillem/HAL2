@@ -41,7 +41,7 @@ enum class SysClkSource {
   Pll = RCC_SYSCLKSOURCE_PLLCLK
 };
 
-struct MainClockSettings {
+struct SystemClockSettings {
   SysClkSource sys_clk_source         = SysClkSource::Pll;
   uint32_t     ahb_prescaler          = 1;
   uint32_t     apb1_prescaler         = 1;
@@ -58,7 +58,7 @@ struct PeripheralSourceClockSettings {
   I2cSourceClock i2c4 = I2cSourceClock::Pclk1;
 };
 
-class ClockConfig {
+class ClockSettings {
  public:
   static constexpr auto LseFreq = 32'768_Hz;
   static constexpr auto LsiFreq = 32_kHz;
@@ -82,8 +82,8 @@ class ClockConfig {
     return result;
   }
 
-  [[nodiscard]] consteval auto SysClkFreq() const noexcept {
-    switch (mcs.sys_clk_source) {
+  [[nodiscard]] consteval auto SysClkSourceClockFrequency() const noexcept {
+    switch (system_clock_settings.sys_clk_source) {
     case SysClkSource::Hsi: return HsiFreq.As<halstd::Hz>();
     case SysClkSource::Hse: return f_hse.As<halstd::Hz>();
     case SysClkSource::Pll: return PllClkFreq().As<halstd::Hz>();
@@ -92,15 +92,15 @@ class ClockConfig {
   }
 
   [[nodiscard]] consteval auto HclkFreq() const noexcept {
-    return SysClkFreq() / mcs.ahb_prescaler;
+    return SysClkSourceClockFrequency() / system_clock_settings.ahb_prescaler;
   }
 
   [[nodiscard]] consteval auto Pclk1Freq() const noexcept {
-    return HclkFreq() / mcs.apb1_prescaler;
+    return HclkFreq() / system_clock_settings.apb1_prescaler;
   }
 
   [[nodiscard]] consteval auto Pclk2Freq() const noexcept {
-    return HclkFreq() / mcs.apb2_prescaler;
+    return HclkFreq() / system_clock_settings.apb2_prescaler;
   }
 
   [[nodiscard]] consteval auto PeripheralClkFreq(I2cId id) const {
@@ -116,7 +116,7 @@ class ClockConfig {
 
     switch (clk_src) {
     case I2cSourceClock::Pclk1: return Pclk1Freq().As<halstd::Hz>();
-    case I2cSourceClock::SysClk: return SysClkFreq().As<halstd::Hz>();
+    case I2cSourceClock::SysClk: return SysClkSourceClockFrequency().As<halstd::Hz>();
     case I2cSourceClock::Hsi: return HsiFreq.As<halstd::Hz>();
     }
   }
@@ -131,8 +131,8 @@ class ClockConfig {
     }
   }
 
-  consteval ClockConfig(halstd::Frequency auto f_hse, PllSettings pll,
-                        MainClockSettings             mcs,
+  consteval ClockSettings(halstd::Frequency auto f_hse, PllSettings pll,
+                        SystemClockSettings             mcs,
                         PeripheralSourceClockSettings pscs = {}) noexcept
       : f_hse{f_hse.template As<halstd::Hz>()}
       , pll{pll}
@@ -174,7 +174,7 @@ class ClockConfig {
 
   halstd::hertz                 f_hse;
   PllSettings                   pll;
-  MainClockSettings             mcs;
+  SystemClockSettings             system_clock_settings;
   PeripheralSourceClockSettings pscs;
 };
 
@@ -184,7 +184,7 @@ concept ClockFrequencies = hal::ClockFrequencies<C> && requires(const C& cfs) {
   { cfs.PeripheralClkFreq(std::declval<SpiId>()) } -> halstd::Frequency;
 };
 
-static_assert(ClockFrequencies<ClockConfig>);
+static_assert(ClockFrequencies<ClockSettings>);
 
 template <hal::ClockFrequencies auto CF>
 class SysTickClock {

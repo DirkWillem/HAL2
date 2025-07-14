@@ -10,6 +10,8 @@ export module hal.abstract:tim;
 
 import hstd;
 
+import rtos.concepts;
+
 namespace hal {
 
 /**
@@ -35,14 +37,48 @@ concept Tim = requires(Impl& impl, const Impl& cimpl) {
   impl.DisableInterrupt();
 };
 
+namespace concepts {
+
+export template <typename Impl>
+concept TimPeriodElapsedCallback =
+    requires(Impl& impl) { impl.PeriodElapsedCallback(); };
+
+export template <typename Impl, typename EG>
+concept DynamicEventGroupTimPeriodElapsedCallback =
+    TimPeriodElapsedCallback<Impl> && requires(Impl& impl) {
+      impl.RegisterPeriodElapsedEventBit(std::declval<EG&>(),
+                                         std::declval<uint32_t>());
+    };
+
 /**
  * Concept for a registerable timer period elapsed callback
  */
 export template <typename Impl>
-concept RegisterableTimPeriodElapsedCallback = requires(Impl& impl) {
-  impl.RegisterPeriodElapsedCallback(std::declval<hstd::Callback<>&>());
-  impl.ClearPeriodElapsedCallback();
-  impl.InvokePeriodElapsedCallback();
+concept RegisterableTimPeriodElapsedCallback =
+    TimPeriodElapsedCallback<Impl> && requires(Impl& impl) {
+      impl.RegisterPeriodElapsedCallback(std::declval<hstd::Callback<>&>());
+      impl.ClearPeriodElapsedCallback();
+    };
+
+}   // namespace concepts
+
+export template <::rtos::concepts::EventGroup EG>
+class DynamicEventGroupTimPeriodElapsedCallback {
+ public:
+  void RegisterPeriodElapsedEventBit(EG& eg, uint32_t bs) noexcept {
+    event_group = &eg;
+    bits        = bs;
+  }
+
+  void PeriodElapsedCallback() {
+    if (event_group != nullptr) {
+      event_group->SetBitsFromInterrupt(bits);
+    }
+  }
+
+ private:
+  EG*      event_group = nullptr;
+  uint32_t bits        = 0;
 };
 
 /**
@@ -87,7 +123,8 @@ struct TimClock {
 };
 
 export template <typename Impl>
-concept AlarmTim = Tim<Impl> && RegisterableTimPeriodElapsedCallback<Impl>;
+concept AlarmTim =
+    Tim<Impl> && concepts::RegisterableTimPeriodElapsedCallback<Impl>;
 
 template <AlarmTim T>
 class AlarmImpl {
@@ -209,7 +246,7 @@ class Alarm : private AlarmImpl<T> {
  * Base class that can be inherited from to automatically implement
  * RegisterableTimPeriodElapsedCallback
  */
-export class TimPeriodElapsedCallback {
+export class RegisterTimPeriodElapsedCallback {
  public:
   constexpr void InvokePeriodElapsedCallback() noexcept {
     if (callback != nullptr) {

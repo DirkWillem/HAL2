@@ -39,12 +39,56 @@ export enum class SysClkSource {
   Pll = RCC_SYSCLKSOURCE_PLLCLK
 };
 
-export struct MainClockSettings {
+export struct SystemClockSettings {
   SysClkSource sys_clk_source         = SysClkSource::Pll;
   uint32_t     ahb_prescaler          = 1;
   uint32_t     apb1_prescaler         = 1;
   uint32_t     apb2_prescaler         = 1;
   uint32_t     system_timer_prescaler = 1;
+
+  consteval void Validate() noexcept {
+    hstd::Assert(
+        hstd::IsPowerOf2(ahb_prescaler) && ahb_prescaler <= 512
+            && ahb_prescaler != 32,
+        "AHB prescaler must be a power of 2 of at most 512, except 32");
+    hstd::Assert(hstd::IsPowerOf2(apb1_prescaler) && apb1_prescaler <= 16,
+                 "APB1 prescaler must be a power of 2 of at most 16");
+    hstd::Assert(hstd::IsPowerOf2(apb2_prescaler) && apb2_prescaler <= 16,
+                 "APB2 prescaler must be a power of 2 of at most 16");
+    hstd::Assert(system_timer_prescaler == 1 || system_timer_prescaler == 8,
+                 "System timer prescaler must be 1 or 8");
+  }
+
+  [[nodiscard]] consteval hstd::Frequency auto
+  AhbClockFrequency(hstd::Frequency auto sysclk) const noexcept {
+    return sysclk / ahb_prescaler;
+  }
+
+  [[nodiscard]] consteval hstd::Frequency auto
+  Apb1PeripheralsClockFrequency(hstd::Frequency auto sysclk) const noexcept {
+    return AhbClockFrequency(sysclk) / apb1_prescaler;
+  }
+
+  [[nodiscard]] consteval hstd::Frequency auto
+  Apb1TimersClockFrequency(hstd::Frequency auto sysclk) const noexcept {
+    if (apb1_prescaler == 1) {
+      return Apb1PeripheralsClockFrequency(sysclk).template As<hstd::Hz>();
+    }
+    return (Apb1PeripheralsClockFrequency(sysclk) * 2).template As<hstd::Hz>();
+  }
+
+  [[nodiscard]] consteval hstd::Frequency auto
+  Apb2PeripheralsClockFrequency(hstd::Frequency auto sysclk) const noexcept {
+    return AhbClockFrequency(sysclk) / apb2_prescaler;
+  }
+
+  [[nodiscard]] consteval hstd::Frequency auto
+  Apb2TimersClockFrequency(hstd::Frequency auto sysclk) const noexcept {
+    if (apb2_prescaler == 1) {
+      return Apb2PeripheralsClockFrequency(sysclk).template As<hstd::Hz>();
+    }
+    return (Apb2PeripheralsClockFrequency(sysclk) * 2).template As<hstd::Hz>();
+  }
 };
 
 export enum class I2cSourceClock { Pclk1, SysClk, Hsi };
@@ -118,7 +162,7 @@ constexpr uint32_t GetHalI2c4ClkSource(I2cSourceClock src) noexcept {
   }
 }
 
-export class ClockConfig {
+export class ClockSettings {
  public:
   static constexpr auto LseFreq = 32'768_Hz;
   static constexpr auto LsiFreq = 32_kHz;
@@ -142,8 +186,8 @@ export class ClockConfig {
     return result;
   }
 
-  [[nodiscard]] consteval auto SysClkFreq() const noexcept {
-    switch (mcs.sys_clk_source) {
+  [[nodiscard]] consteval auto SysClkSourceClockFrequency() const noexcept {
+    switch (system_clock_settings.sys_clk_source) {
     case SysClkSource::Hsi: return HsiFreq.As<hstd::Hz>();
     case SysClkSource::Hse: return f_hse.As<hstd::Hz>();
     case SysClkSource::Pll: return PllClkFreq().As<hstd::Hz>();
@@ -152,15 +196,15 @@ export class ClockConfig {
   }
 
   [[nodiscard]] consteval auto HclkFreq() const noexcept {
-    return SysClkFreq() / mcs.ahb_prescaler;
+    return SysClkSourceClockFrequency() / system_clock_settings.ahb_prescaler;
   }
 
   [[nodiscard]] consteval auto Pclk1Freq() const noexcept {
-    return HclkFreq() / mcs.apb1_prescaler;
+    return HclkFreq() / system_clock_settings.apb1_prescaler;
   }
 
   [[nodiscard]] consteval auto Pclk2Freq() const noexcept {
-    return HclkFreq() / mcs.apb2_prescaler;
+    return HclkFreq() / system_clock_settings.apb2_prescaler;
   }
 
   [[nodiscard]] consteval auto PeripheralClkFreq(I2cId id) const {
@@ -176,7 +220,8 @@ export class ClockConfig {
 
     switch (clk_src) {
     case I2cSourceClock::Pclk1: return Pclk1Freq().As<hstd::Hz>();
-    case I2cSourceClock::SysClk: return SysClkFreq().As<hstd::Hz>();
+    case I2cSourceClock::SysClk:
+      return SysClkSourceClockFrequency().As<hstd::Hz>();
     case I2cSourceClock::Hsi: return HsiFreq.As<hstd::Hz>();
     }
   }
@@ -191,9 +236,9 @@ export class ClockConfig {
     }
   }
 
-  consteval ClockConfig(hstd::Frequency auto f_hse, PllSettings pll,
-                        MainClockSettings             mcs,
-                        PeripheralSourceClockSettings pscs = {}) noexcept
+  consteval ClockSettings(hstd::Frequency auto f_hse, PllSettings pll,
+                          SystemClockSettings           system_clock_settings,
+                          PeripheralSourceClockSettings pscs = {}) noexcept
       : f_hse{f_hse.template As<hstd::Hz>()}
       , pll{pll}
       , pscs{pscs} {
@@ -213,20 +258,8 @@ export class ClockConfig {
                    "PLLCLK may not exceed 170 MHz");
     }
 
-    // Validate main clock settings
-    hstd::Assert(
-        hstd::IsPowerOf2(mcs.ahb_prescaler) && mcs.ahb_prescaler <= 512
-            && mcs.ahb_prescaler != 32,
-        "AHB prescaler must be a power of 2 of at most 512, except 32");
-    hstd::Assert(hstd::IsPowerOf2(mcs.apb1_prescaler)
-                     && mcs.apb1_prescaler <= 16,
-                 "APB1 prescaler must be a power of 2 of at most 16");
-    hstd::Assert(hstd::IsPowerOf2(mcs.apb2_prescaler)
-                     && mcs.apb2_prescaler <= 16,
-                 "APB2 prescaler must be a power of 2 of at most 16");
-    hstd::Assert(mcs.system_timer_prescaler == 1
-                     || mcs.system_timer_prescaler == 8,
-                 "System timer prescaler must be 1 or 8");
+    // Validate system clock settings
+    system_clock_settings.Validate();
 
     hstd::Assert(Pclk1Freq().As<hstd::MHz>().count <= 170,
                  "PCLK1 may not exceed 170 MHz");
@@ -262,10 +295,13 @@ export class ClockConfig {
     RCC_ClkInitTypeDef rcc_clk_init = {
         .ClockType = RCC_CLOCKTYPE_HCLK | RCC_CLOCKTYPE_SYSCLK
                      | RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2,
-        .SYSCLKSource   = static_cast<uint32_t>(mcs.sys_clk_source),
-        .AHBCLKDivider  = GetHalAhbDivider(mcs.ahb_prescaler),
-        .APB1CLKDivider = GetHalApbDivider(mcs.apb1_prescaler),
-        .APB2CLKDivider = GetHalApbDivider(mcs.apb2_prescaler),
+        .SYSCLKSource =
+            static_cast<uint32_t>(system_clock_settings.sys_clk_source),
+        .AHBCLKDivider = GetHalAhbDivider(system_clock_settings.ahb_prescaler),
+        .APB1CLKDivider =
+            GetHalApbDivider(system_clock_settings.apb1_prescaler),
+        .APB2CLKDivider =
+            GetHalApbDivider(system_clock_settings.apb2_prescaler),
     };
     if (HAL_RCC_ClockConfig(&rcc_clk_init, FLASH_LATENCY_4) != HAL_OK) {
       return false;
@@ -289,7 +325,7 @@ export class ClockConfig {
 
   hstd::hertz                   f_hse;
   PllSettings                   pll;
-  MainClockSettings             mcs;
+  SystemClockSettings           system_clock_settings;
   PeripheralSourceClockSettings pscs;
 };
 
@@ -299,10 +335,10 @@ concept ClockFrequencies = hal::ClockFrequencies<C> && requires(const C& cfs) {
   { cfs.PeripheralClkFreq(std::declval<SpiId>()) } -> hstd::Frequency;
 };
 
-static_assert(ClockFrequencies<ClockConfig>);
+static_assert(ClockFrequencies<ClockSettings>);
 
 export class SysTickClock {
-public:
+ public:
   using rep        = uint32_t;
   using period     = std::milli;
   using duration   = std::chrono::duration<rep, period>;

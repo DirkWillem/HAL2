@@ -37,4 +37,4 @@ target_sources(hal_abstract
 
         hal_mod/hal_abstract.cppm)
 
-target_link_libraries(hal_abstract PRIVATE project_settings hstd)
+target_link_libraries(hal_abstract PRIVATE project_settings hstd rtos_concepts)

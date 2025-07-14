@@ -4,9 +4,9 @@ module;
 #include <ratio>
 #include <utility>
 
-#include <stm32g0xx_hal.h>
+#include <stm32g4xx_hal.h>
 
-export module hal.stm32g0:tim;
+export module hal.stm32g4:tim;
 
 import hstd;
 
@@ -14,53 +14,23 @@ export import :tim.channel;
 import :tim.common;
 import :clocks;
 
-import rtos.concepts;
-
 extern "C" {
 
 [[maybe_unused]] void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef*);
 }
 
-namespace stm32g0 {
+namespace stm32g4 {
 
 using namespace hstd::literals;
 
-export template <TimId Id, hal::DmaPriority Prio = hal::DmaPriority::Low>
-using TimPeriodElapsedDma = ::stm32g0::TimPeriodElapsedDma<Id, Prio>;
+export template <TimId Id, hal::DmaPriority Prio = hal::DmaPriority::Low,
+                 typename Cb = hstd::Empty>
+using TimUpdateDma = ::stm32g4::TimUpdateDma<Id, Prio, Cb>;
 
 export struct TimConfig {
   uint32_t arr;
   uint16_t prescaler;
 };
-
-export enum class TimerBitCount {
-  Bits16,
-  Bits32,
-};
-
-export [[nodiscard]] constexpr TimerBitCount BitCount(TimId tim) noexcept {
-  switch (tim) {
-  case TimId::Tim1: return TimerBitCount::Bits16;
-  case TimId::Tim2: return TimerBitCount::Bits32;
-  case TimId::Tim3: [[fallthrough]];
-  case TimId::Tim4: [[fallthrough]];
-  case TimId::Tim6: [[fallthrough]];
-  case TimId::Tim7: [[fallthrough]];
-  case TimId::Tim14: [[fallthrough]];
-  case TimId::Tim15: [[fallthrough]];
-  case TimId::Tim16: [[fallthrough]];
-  case TimId::Tim17: return TimerBitCount::Bits16;
-  default: std::unreachable();
-  }
-}
-
-export [[nodiscard]] constexpr uint32_t MaxTimerPeriod(TimId tim) noexcept {
-  switch (BitCount(tim)) {
-  case TimerBitCount::Bits16: return 0xFFFF;
-  case TimerBitCount::Bits32: return 0xFFFFFFFF;
-  default: std::unreachable();
-  }
-}
 
 export template <typename Impl>
 concept TimConfigFn = requires(Impl f) {
@@ -98,13 +68,42 @@ static_assert(
     TimConfigFn<decltype(FixedTimerResolutionAndFrequency<100, 1_kHz>)>);
 static_assert(TimConfigFn<decltype(FixedFrequencyMaxPeriod<1_kHz>)>);
 
+template <ClockSettings CS>
+consteval auto TimerSourceClockFrequency(TimId id) {
+  using enum TimId;
+
+  switch (id) {
+    // APB1 timers
+  case Tim2: [[fallthrough]];
+  case Tim3: [[fallthrough]];
+  case Tim4: [[fallthrough]];
+  case Tim5: [[fallthrough]];
+  case Tim6: [[fallthrough]];
+  case Tim7:
+    return CS.system_clock_settings.Apb1TimersClockFrequency(
+        CS.SysClkSourceClockFrequency());
+
+    // APB2 timers
+  case Tim1: [[fallthrough]];
+  case Tim8: [[fallthrough]];
+  case Tim15: [[fallthrough]];
+  case Tim16: [[fallthrough]];
+  case Tim17: [[fallthrough]];
+  case Tim20:
+    return CS.system_clock_settings.Apb2TimersClockFrequency(
+        CS.SysClkSourceClockFrequency());
+  }
+
+  std::unreachable();
+}
+
 export template <typename Impl, TimId Id, ClockSettings CS,
                  TimConfigFn auto ConfigFn, TimChannel... Chs>
 class TimImpl
     : public hal::UsedPeripheral
     , private Chs... {
   using ChannelNumbers = hstd::Values<unsigned, Chs::Channel...>;
-  using ChList         = detail::ChannelList<Chs...>;
+  using ChList         = ChannelList<Chs...>;
 
   friend void ::HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef*);
 
@@ -130,7 +129,14 @@ class TimImpl
     return *static_cast<typename ChList::template GetByNum<Ch>*>(this);
   }
 
-  void Start() noexcept { HAL_TIM_Base_Start(&htim); }
+  void Start() noexcept {
+    if constexpr ((... || Chs::IsPwm)) {
+      __HAL_TIM_MOE_ENABLE(&htim);
+    }
+
+    HAL_TIM_Base_Start(&htim);
+  }
+
   void Stop() noexcept { HAL_TIM_Base_Stop(&htim); }
 
   bool StartWithInterrupt() noexcept {
@@ -151,12 +157,16 @@ class TimImpl
     htim.Instance->SR &= ~TIM_SR_UIF_Msk;
   }
 
+  void SetRepetitions(uint8_t rep) {
+    htim.Instance->RCR = static_cast<uint32_t>(rep);
+  }
+
+  uint32_t GetPeriod() const noexcept { return htim.Instance->ARR; }
+
   static constexpr hstd::Frequency auto Frequency() noexcept {
-    constexpr auto OutFreqNumerator = GetFrequencyRatioNumerator();
-    constexpr hstd::Frequency auto FSrc =
-        CS.system_clock_settings.ApbTimersClockFrequency(
-            CS.SysClkSourceClockFrequency());
-    constexpr auto Config = ConfigFn(Id, FSrc);
+    constexpr auto OutFreqNumerator       = GetFrequencyRatioNumerator();
+    constexpr hstd::Frequency auto FSrc   = TimerSourceClockFrequency<CS>(Id);
+    constexpr auto                 Config = ConfigFn(Id, FSrc);
     const auto FHz = (FSrc / (Config.prescaler + 1)).template As<hstd::Hz>();
 
     return FHz.template As<
@@ -171,10 +181,8 @@ class TimImpl
     requires(!UsesDma)
       : Chs{htim}... {
     // Configure global timer
-    constexpr hstd::Frequency auto FSrc =
-        CS.system_clock_settings.ApbTimersClockFrequency(
-            CS.SysClkSourceClockFrequency());
-    const auto settings = ConfigFn(Id, FSrc);
+    const hstd::Frequency auto FSrc     = TimerSourceClockFrequency<CS>(Id);
+    const auto                 settings = ConfigFn(Id, FSrc);
 
     if (!ConfigureTimer(settings)) {
       return;
@@ -188,9 +196,8 @@ class TimImpl
     requires(UsesDma)
       : Chs{htim}... {
     // Configure global timer
-    constexpr hstd::Frequency auto FSrc =
-        CS.system_clock_settings.ApbTimersClockFrequency(
-            CS.SysClkSourceClockFrequency());
+    constexpr hstd::Frequency auto FSrc = TimerSourceClockFrequency<CS>(Id);
+
     const auto settings = ConfigFn(Id, FSrc);
 
     if (!ConfigureTimer(settings)) {
@@ -202,8 +209,9 @@ class TimImpl
   }
 
   void PeriodElapsed() {
-    if constexpr (hal::RegisterableTimPeriodElapsedCallback<Impl>) {
-      static_cast<Impl*>(this)->InvokePeriodElapsedCallback();
+    static_assert(hal::concepts::TimPeriodElapsedCallback<Impl>);
+    if constexpr (hal::concepts::TimPeriodElapsedCallback<Impl>) {
+      static_cast<Impl*>(this)->PeriodElapsedCallback();
     }
     (..., ChannelPeriodElapsedCallback<Chs>());
   }
@@ -213,10 +221,8 @@ class TimImpl
  private:
   [[nodiscard]] static consteval std::intmax_t
   GetFrequencyRatioNumerator() noexcept {
-    constexpr hstd::Frequency auto FSrc =
-        CS.system_clock_settings.ApbTimersClockFrequency(
-            CS.SysClkSourceClockFrequency());
-    constexpr auto Config = ConfigFn(Id, FSrc);
+    constexpr hstd::Frequency auto FSrc   = TimerSourceClockFrequency<CS>(Id);
+    constexpr auto                 Config = ConfigFn(Id, FSrc);
 
     auto freq_in_current_unit =
         (FSrc / ((Config.prescaler + 1))).template As<hstd::Hz>().count;
@@ -302,8 +308,8 @@ class TimImpl
 
   template <TimChannel Ch>
   void ChannelPeriodElapsedCallback() {
-    if constexpr (PeriodElapsedCallback<Ch>) {
-      Ch::PeriodElapsedCallback();
+    if constexpr (concepts::ChannelPeriodElapsedCallback<Ch>) {
+      Ch::ChannelPeriodElapsedCallback();
     }
   }
 };
@@ -324,11 +330,13 @@ export using Tim1  = Tim<TimId::Tim1>;
 export using Tim2  = Tim<TimId::Tim2>;
 export using Tim3  = Tim<TimId::Tim3>;
 export using Tim4  = Tim<TimId::Tim4>;
+export using Tim5  = Tim<TimId::Tim5>;
 export using Tim6  = Tim<TimId::Tim6>;
 export using Tim7  = Tim<TimId::Tim7>;
-export using Tim14 = Tim<TimId::Tim14>;
+export using Tim8  = Tim<TimId::Tim8>;
 export using Tim15 = Tim<TimId::Tim15>;
 export using Tim16 = Tim<TimId::Tim16>;
 export using Tim17 = Tim<TimId::Tim17>;
+export using Tim20 = Tim<TimId::Tim20>;
 
-}   // namespace stm32g0
+}   // namespace stm32g4

@@ -21,6 +21,7 @@ target_sources(hstd
         hstd/mp/types.cppm
         hstd/mp/values.cppm
 
+        hstd/array.cppm
         hstd/atomic.cppm
         hstd/callback.cppm
         hstd/crc.cppm

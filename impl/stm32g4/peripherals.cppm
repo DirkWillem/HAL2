@@ -7,6 +7,8 @@ module;
 
 export module hal.stm32g4:peripherals;
 
+import hstd;
+
 namespace stm32g4 {
 
 export enum class UartId {
@@ -145,6 +147,62 @@ I2sIdFromName(std::string_view name) noexcept {
     return I2sId::I2s2;
   } else if (name == "I2S3"sv) {
     return I2sId::I2s3;
+  }
+
+  std::unreachable();
+}
+
+export enum class TimId {
+  Tim1,
+  Tim2,
+  Tim3,
+  Tim4,
+  Tim5,
+  Tim6,
+  Tim7,
+  Tim8,
+  Tim15,
+  Tim16,
+  Tim17,
+  Tim20
+};
+
+export [[nodiscard]] consteval TimId
+TimIdFromName(std::string_view name) noexcept {
+  using enum TimId;
+  return hstd::StaticMap<std::string_view, TimId, 12>(name,
+                                                      {{
+                                                          {"TIM1", Tim1},
+                                                          {"TIM2", Tim2},
+                                                          {"TIM3", Tim3},
+                                                          {"TIM4", Tim4},
+                                                          {"TIM5", Tim5},
+                                                          {"TIM6", Tim6},
+                                                          {"TIM7", Tim7},
+                                                          {"TIM8", Tim8},
+                                                          {"TIM15", Tim15},
+                                                          {"TIM16", Tim16},
+                                                          {"TIM17", Tim17},
+                                                          {"TIM20", Tim20},
+                                                      }});
+}
+
+export [[nodiscard]] constexpr TIM_TypeDef* GetTimPointer(TimId id) noexcept {
+  using enum TimId;
+
+  switch (id) {
+  case Tim1: return TIM1;
+  case Tim2: return TIM2;
+  case Tim3: return TIM3;
+  case Tim4: return TIM4;
+  case Tim5: return TIM5;
+  case Tim6: return TIM6;
+  case Tim7: return TIM7;
+  case Tim8: return TIM8;
+  case Tim15: return TIM15;
+  case Tim16: return TIM16;
+  case Tim17: return TIM17;
+  case Tim20: return TIM20;
   }
 
   std::unreachable();

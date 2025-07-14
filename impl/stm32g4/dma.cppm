@@ -11,6 +11,7 @@ export module hal.stm32g4:dma;
 import hal.abstract;
 
 import :peripherals;
+import :nvic;
 
 namespace stm32g4 {
 
@@ -31,7 +32,7 @@ export enum class I2cDmaRequest { Tx, Rx };
 export enum class SpiDmaRequest { Tx, Rx };
 
 /** Possible DMA requests for TIM */
-export enum class TimDmaRequest { PeriodElapsed, Ch1, Ch2, Ch3, Ch4 };
+export enum class TimDmaRequest { Update, Ch1, Ch2, Ch3, Ch4 };
 
 [[nodiscard]] uint32_t GetDmaRequestId(UartId         id,
                                        UartDmaRequest request) noexcept {
@@ -104,69 +105,68 @@ export enum class TimDmaRequest { PeriodElapsed, Ch1, Ch2, Ch3, Ch4 };
   std::unreachable();
 }
 
-// [[nodiscard]] uint32_t GetDmaRequestId(TimId         id,
-//                                        TimDmaRequest request) noexcept {
-//   switch (id) {
-//   case TimId::Tim1:
-//     switch (request) {
-//     case TimDmaRequest::PeriodElapsed: return DMA_REQUEST_TIM1_UP;
-//     case TimDmaRequest::Ch1: return DMA_REQUEST_TIM1_CH1;
-//     case TimDmaRequest::Ch2: return DMA_REQUEST_TIM1_CH2;
-//     case TimDmaRequest::Ch3: return DMA_REQUEST_TIM1_CH3;
-//     case TimDmaRequest::Ch4: return DMA_REQUEST_TIM1_CH4;
-//     default: std::unreachable();
-//     }
-//   case TimId::Tim2:
-//     switch (request) {
-//     case TimDmaRequest::PeriodElapsed: return DMA_REQUEST_TIM2_UP;
-//     case TimDmaRequest::Ch1: return DMA_REQUEST_TIM2_CH1;
-//     case TimDmaRequest::Ch2: return DMA_REQUEST_TIM2_CH2;
-//     case TimDmaRequest::Ch3: return DMA_REQUEST_TIM2_CH3;
-//     case TimDmaRequest::Ch4: return DMA_REQUEST_TIM2_CH4;
-//     default: std::unreachable();
-//     }
-//   case TimId::Tim3:
-//     switch (request) {
-//     case TimDmaRequest::PeriodElapsed: return DMA_REQUEST_TIM3_UP;
-//     case TimDmaRequest::Ch1: return DMA_REQUEST_TIM3_CH1;
-//     case TimDmaRequest::Ch2: return DMA_REQUEST_TIM3_CH2;
-//     case TimDmaRequest::Ch3: return DMA_REQUEST_TIM3_CH3;
-//     case TimDmaRequest::Ch4: return DMA_REQUEST_TIM3_CH4;
-//     default: std::unreachable();
-//     }
-//   case TimId::Tim4:
-//     switch (request) {
-//     case TimDmaRequest::PeriodElapsed: return DMA_REQUEST_TIM4_UP;
-//     case TimDmaRequest::Ch1: return DMA_REQUEST_TIM4_CH1;
-//     case TimDmaRequest::Ch2: return DMA_REQUEST_TIM4_CH2;
-//     case TimDmaRequest::Ch3: return DMA_REQUEST_TIM4_CH3;
-//     case TimDmaRequest::Ch4: return DMA_REQUEST_TIM4_CH4;
-//     default: std::unreachable();
-//     }
-//   case TimId::Tim15:
-//     switch (request) {
-//     case TimDmaRequest::PeriodElapsed: return DMA_REQUEST_TIM15_UP;
-//     case TimDmaRequest::Ch1: return DMA_REQUEST_TIM15_CH1;
-//     case TimDmaRequest::Ch2: return DMA_REQUEST_TIM15_CH2;
-//     default: std::unreachable();
-//     }
-//   case TimId::Tim16:
-//     switch (request) {
-//     case TimDmaRequest::PeriodElapsed: return DMA_REQUEST_TIM16_UP;
-//     case TimDmaRequest::Ch1: return DMA_REQUEST_TIM16_CH1;
-//     default: std::unreachable();
-//     }
-//   case TimId::Tim17:
-//     switch (request) {
-//     case TimDmaRequest::PeriodElapsed: return DMA_REQUEST_TIM17_UP;
-//     case TimDmaRequest::Ch1: return DMA_REQUEST_TIM17_CH1;
-//     default: std::unreachable();
-//     }
-//   default: break;
-//   }
-//
-//   std::unreachable();
-// }
+[[nodiscard]] uint32_t GetDmaRequestId(TimId         id,
+                                       TimDmaRequest request) noexcept {
+  switch (id) {
+  case TimId::Tim1:
+    switch (request) {
+    case TimDmaRequest::Update: return DMA_REQUEST_TIM1_UP;
+    case TimDmaRequest::Ch1: return DMA_REQUEST_TIM1_CH1;
+    case TimDmaRequest::Ch2: return DMA_REQUEST_TIM1_CH2;
+    case TimDmaRequest::Ch3: return DMA_REQUEST_TIM1_CH3;
+    case TimDmaRequest::Ch4: return DMA_REQUEST_TIM1_CH4;
+    default: std::unreachable();
+    }
+  case TimId::Tim2:
+    switch (request) {
+    case TimDmaRequest::Update: return DMA_REQUEST_TIM2_UP;
+    case TimDmaRequest::Ch1: return DMA_REQUEST_TIM2_CH1;
+    case TimDmaRequest::Ch2: return DMA_REQUEST_TIM2_CH2;
+    case TimDmaRequest::Ch3: return DMA_REQUEST_TIM2_CH3;
+    case TimDmaRequest::Ch4: return DMA_REQUEST_TIM2_CH4;
+    default: std::unreachable();
+    }
+  case TimId::Tim3:
+    switch (request) {
+    case TimDmaRequest::Update: return DMA_REQUEST_TIM3_UP;
+    case TimDmaRequest::Ch1: return DMA_REQUEST_TIM3_CH1;
+    case TimDmaRequest::Ch2: return DMA_REQUEST_TIM3_CH2;
+    case TimDmaRequest::Ch3: return DMA_REQUEST_TIM3_CH3;
+    case TimDmaRequest::Ch4: return DMA_REQUEST_TIM3_CH4;
+    default: std::unreachable();
+    }
+  case TimId::Tim4:
+    switch (request) {
+    case TimDmaRequest::Update: return DMA_REQUEST_TIM4_UP;
+    case TimDmaRequest::Ch1: return DMA_REQUEST_TIM4_CH1;
+    case TimDmaRequest::Ch2: return DMA_REQUEST_TIM4_CH2;
+    case TimDmaRequest::Ch3: return DMA_REQUEST_TIM4_CH3;
+    case TimDmaRequest::Ch4: return DMA_REQUEST_TIM4_CH4;
+    default: std::unreachable();
+    }
+  case TimId::Tim15:
+    switch (request) {
+    case TimDmaRequest::Update: return DMA_REQUEST_TIM15_UP;
+    case TimDmaRequest::Ch1: return DMA_REQUEST_TIM15_CH1;
+    default: std::unreachable();
+    }
+  case TimId::Tim16:
+    switch (request) {
+    case TimDmaRequest::Update: return DMA_REQUEST_TIM16_UP;
+    case TimDmaRequest::Ch1: return DMA_REQUEST_TIM16_CH1;
+    default: std::unreachable();
+    }
+  case TimId::Tim17:
+    switch (request) {
+    case TimDmaRequest::Update: return DMA_REQUEST_TIM17_UP;
+    case TimDmaRequest::Ch1: return DMA_REQUEST_TIM17_CH1;
+    default: std::unreachable();
+    }
+  default: break;
+  }
+
+  std::unreachable();
+}
 
 [[nodiscard]] uint32_t ToHalDmaDirection(hal::DmaDirection dir) noexcept {
   switch (dir) {
@@ -219,6 +219,7 @@ ToHalPeriphDataWidth(hal::DmaDataWidth data_width) noexcept {
   std::unreachable();
 }
 
+template <typename Impl>
 void SetupDma(std::size_t n_used_channels) noexcept {
 #if defined(STM32G474xx)
   // Enable clocks
@@ -232,7 +233,7 @@ void SetupDma(std::size_t n_used_channels) noexcept {
   }
 
   // Enable IRQ
-  static constexpr std::array<IRQn_Type, 16> ChannelIrqns{
+  constexpr std::array<IRQn_Type, 16> ChannelIrqns{
       DMA1_Channel1_IRQn, DMA1_Channel2_IRQn, DMA1_Channel3_IRQn,
       DMA1_Channel4_IRQn, DMA1_Channel5_IRQn, DMA1_Channel6_IRQn,
       DMA1_Channel7_IRQn, DMA1_Channel8_IRQn, DMA2_Channel1_IRQn,
@@ -241,9 +242,14 @@ void SetupDma(std::size_t n_used_channels) noexcept {
       DMA2_Channel8_IRQn,
   };
 
+  constexpr auto IrqPrios =
+      ([ChannelIrqns]<std::size_t... Idxs>(std::index_sequence<Idxs...>) {
+        return std::array<uint32_t, 16>{GetIrqPrio<Impl>(ChannelIrqns[Idxs])...};
+      })(std::make_index_sequence<16>());
+
   for (std::size_t i = 0; i < n_used_channels; i++) {
-    HAL_NVIC_SetPriority(ChannelIrqns[i], 0, 0);
-    HAL_NVIC_EnableIRQ(ChannelIrqns[i]);
+    NVIC_SetPriority(ChannelIrqns[i], IrqPrios[i]);
+    NVIC_EnableIRQ(ChannelIrqns[i]);
   }
 #else
 #error "Cannot determine DMA interrupts for this STM32G4 variant"
@@ -268,8 +274,9 @@ struct DmaChannelId {
  * @tparam Prio Channel priority
  */
 export template <auto Periph, auto Req,
-                 hal::DmaPriority Prio = hal::DmaPriority::Low>
-struct DmaChannel {
+                 hal::DmaPriority Prio = hal::DmaPriority::Low,
+                 typename CBs          = hstd::Empty>
+struct DmaChannel : public CBs {
   static constexpr auto Peripheral = Periph;
   static constexpr auto Request    = Req;
   static constexpr auto Priority   = Prio;
@@ -280,7 +287,8 @@ class DmaImpl;
 
 export template <typename Impl, hal::DmaChannel... Channels>
 class DmaImpl<Impl, hal::DmaChannels<Channels...>>
-    : public hal::UsedPeripheral {
+    : public hal::UsedPeripheral
+    , private Channels... {
 #if defined(STM32G474xx)
   static constexpr auto NDma1Channels = 8u;
   static constexpr auto NDma2Channels = 8u;
@@ -325,6 +333,14 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
   }
 
   template <hal::DmaChannelId Chan>
+  constexpr auto& Channel() & noexcept {
+    constexpr auto Idx = ChanList::template DmaChannelIndex<Chan>();
+    using ChanType = typename hstd::Types<Channels...>::template NthType<Idx>;
+
+    return static_cast<ChanType&>(*this);
+  }
+
+  template <hal::DmaChannelId Chan>
   /**
    * Sets up a DMA channel
    * @tparam Chan Channel to set up
@@ -355,6 +371,8 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
     };
     HAL_DMA_Init(&hdma);
 
+    RegisterCallbacks<Idx>();
+
     return hdma;
   }
 
@@ -377,7 +395,21 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
   }
 
  private:
-  DmaImpl() { SetupDma(sizeof...(Channels)); }
+  DmaImpl() { SetupDma<Impl>(sizeof...(Channels)); }
+
+  template <unsigned Idx>
+  void RegisterCallbacks() noexcept {
+    using ChannelType = hstd::Types<Channels...>::template NthType<Idx>;
+
+    if constexpr (hal::DmaTransferCompleteCallback<ChannelType>) {
+      hdmas[Idx].XferCpltCallback = &TransferCompleteCallback<ChannelType>;
+    }
+  }
+
+  template <typename ChanT>
+  static constexpr void TransferCompleteCallback(DMA_HandleTypeDef*) noexcept {
+    static_cast<ChanT&>(instance()).DmaTransferCompleteCallback();
+  }
 
   template <hal::DmaChannelId Chan>
     requires(ChanList::template ContainsChanId<Chan>())
@@ -389,6 +421,20 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
         DMA2_Channel5, DMA2_Channel6, DMA2_Channel7, DMA2_Channel8};
 
     return channels[ChanList::template DmaChannelIndex<Chan>()];
+  }
+
+  template <unsigned DmaInst, unsigned Chan>
+    requires(Chan >= 1
+             && ((DmaInst == 1 && Chan <= NDma1Channels)
+                 || (DmaInst == 2 && Chan <= NDma2Channels)))
+  [[nodiscard]] static consteval unsigned ChannelIndex() noexcept {
+    if constexpr (DmaInst == 1) {
+      return Chan - 1;
+    } else if constexpr (DmaInst == 2) {
+      return Chan + NDma1Channels - 1;
+    } else {
+      std::unreachable();
+    }
   }
 
   std::array<DMA_HandleTypeDef, sizeof...(Channels)> hdmas{};

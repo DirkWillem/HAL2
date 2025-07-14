@@ -30,6 +30,10 @@ concept DmaChannelId = requires {
 export template <typename Impl>
 concept DmaChannel = DmaChannelId<Impl> && requires { Impl::Priority; };
 
+export template <typename Impl>
+concept DmaTransferCompleteCallback =
+    requires(Impl& impl) { impl.DmaTransferCompleteCallback(); };
+
 struct DummyChannel {
   static constexpr auto Peripheral = 1;
   static constexpr auto Request    = 2;
