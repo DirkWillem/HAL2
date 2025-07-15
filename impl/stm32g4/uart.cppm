@@ -1,5 +1,6 @@
 module;
 
+#include <optional>
 #include <span>
 #include <string_view>
 #include <utility>
@@ -11,9 +12,12 @@ export module hal.stm32g4:uart;
 import hstd;
 import hal.abstract;
 
+import rtos.concepts;
+
 import :dma;
 import :peripherals;
 import :pin_mapping.uart;
+import :nvic;
 
 extern "C" {
 
@@ -24,6 +28,8 @@ extern "C" {
 }
 
 namespace stm32g4 {
+
+export enum class UartOperatingMode { Poll, Interrupt, Dma, DmaRtos };
 
 export enum class UartFlowControl {
   None,
@@ -236,12 +242,6 @@ void InitializeUartForPollMode(UART_HandleTypeDef& huart) noexcept {
   HAL_UARTEx_DisableFifoMode(&huart);
 }
 
-void InitializeUartForInterruptMode(UartId id, UART_HandleTypeDef&) noexcept {
-  const auto irqn = GetIrqn(id);
-  HAL_NVIC_SetPriority(irqn, 0, 0);
-  HAL_NVIC_EnableIRQ(irqn);
-}
-
 /**
  * UART Transmit DMA channel
  * @tparam Id UART Id
@@ -258,6 +258,26 @@ using UartTxDma = DmaChannel<Id, UartDmaRequest::Tx, Prio>;
 export template <UartId Id, hal::DmaPriority Prio = hal::DmaPriority::Low>
 using UartRxDma = DmaChannel<Id, UartDmaRequest::Rx, Prio>;
 
+template <UartOperatingMode OM, typename... Ts>
+class UartImplBase {
+ protected:
+  using EG = int;
+};
+
+template <typename OS>
+class UartImplBase<UartOperatingMode::DmaRtos, OS> {
+ protected:
+  using EG                            = typename OS::EventGroup;
+  static constexpr uint32_t TxDoneBit = (0b1U << 0U);
+  static constexpr uint32_t RxDoneBit = (0b1U << 1U);
+
+  EG                        event_group{};
+  std::tuple<EG*, uint32_t> tx_event_group{};
+  std::tuple<EG*, uint32_t> rx_event_group{};
+
+  std::optional<std::span<std::byte>> rx_data{};
+};
+
 /**
  * Implementation for UART
  * @tparam Id UART Id
@@ -265,9 +285,11 @@ using UartRxDma = DmaChannel<Id, UartDmaRequest::Rx, Prio>;
  * @tparam OM UART Operating Mode
  */
 export template <typename Impl, UartId Id,
-                 hal::UartOperatingMode OM = hal::UartOperatingMode::Poll,
-                 UartConfig             C  = {}>
-class UartImpl : public hal::UsedPeripheral {
+                 UartOperatingMode OM = UartOperatingMode::Poll,
+                 UartConfig        C  = {}, typename... Rest>
+class UartImpl
+    : public hal::UsedPeripheral
+    , UartImplBase<OM, Rest...> {
   friend void ::HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart,
                                            uint16_t            size);
   friend void ::HAL_UART_TxCpltCallback(UART_HandleTypeDef*);
@@ -287,40 +309,168 @@ class UartImpl : public hal::UsedPeripheral {
    * @param sv View of the string to write
    */
   void Write(std::string_view sv)
-    requires(OM == hal::UartOperatingMode::Poll)
+    requires(OM == UartOperatingMode::Poll)
   {
     HAL_UART_Transmit(&huart, hstd::ReinterpretSpan<uint8_t>(sv).data(),
                       sv.size(), 500);
   }
 
   void Write(std::string_view sv)
-    requires(OM == hal::UartOperatingMode::Interrupt)
+    requires(OM == UartOperatingMode::Interrupt)
   {
     HAL_UART_Transmit_IT(&huart, hstd::ReinterpretSpan<uint8_t>(sv).data(),
                          sv.size());
   }
 
   void Write(std::string_view sv)
-    requires(OM == hal::UartOperatingMode::Dma)
+    requires(OM == UartOperatingMode::Dma)
   {
     HAL_UART_Transmit_DMA(&huart, hstd::ReinterpretSpan<uint8_t>(sv).data(),
                           sv.size());
   }
 
   void Write(std::span<const std::byte> data)
-    requires(OM == hal::UartOperatingMode::Dma)
+    requires(OM == UartOperatingMode::Dma)
   {
     HAL_UART_Transmit_DMA(&huart, hstd::ReinterpretSpan<uint8_t>(data).data(),
                           data.size());
   }
 
+  /**
+   * Writes a string over the UART and blocks until transmitted
+   * @param sv String to write
+   * @param timeout Maximum write timeout
+   * @return Whether the write was successful
+   */
+  bool Write(std::string_view sv, hstd::Duration auto timeout)
+    requires(OM == UartOperatingMode::DmaRtos)
+  {
+    Write(sv, UartImplBase<OM, Rest...>::event_group,
+          UartImplBase<OM, Rest...>::TxDoneBit);
+
+    return UartImplBase<OM, Rest...>::event_group
+        .Wait(UartImplBase<OM, Rest...>::TxDoneBit, timeout)
+        .has_value();
+  }
+
+  /**
+   * Writes bytes to the UART and blocks until transmitted
+   * @param data Data to write
+   * @param timeout Write timeout
+   * @return Whether the write was successful
+   */
+  bool Write(std::span<const std::byte> data, hstd::Duration auto timeout)
+    requires(OM == UartOperatingMode::DmaRtos)
+  {
+    Write(data, UartImplBase<OM, Rest...>::event_group,
+          UartImplBase<OM, Rest...>::TxDoneBit);
+
+    return UartImplBase<OM, Rest...>::event_group
+        .Wait(UartImplBase<OM, Rest...>::TxDoneBit, timeout)
+        .has_value();
+  }
+
+  /**
+   * Writes a string to the UART and sets a bit in the event group on
+   * transmission
+   * @param sv String to write
+   * @param event_group Event group to set a bit in when write completes
+   * @param bitmask Bit to set in the event group
+   */
+  void Write(std::string_view                        sv,
+             typename UartImplBase<OM, Rest...>::EG& event_group,
+             uint32_t                                bitmask)
+    requires(OM == UartOperatingMode::DmaRtos)
+  {
+    UartImplBase<OM, Rest...>::tx_event_group =
+        std::make_pair(&event_group, bitmask);
+
+    HAL_UART_Transmit_DMA(&huart, hstd::ReinterpretSpan<uint8_t>(sv).data(),
+                          sv.size());
+  }
+
+  /**
+   * Writes bytes to the UART and sets a bit in the event group on
+   * transmission
+   * @param data Data to write
+   * @param event_group Event group to set a bit in when write completes
+   * @param bitmask Bit to set in the event group
+   */
+  void Write(std::span<const std::byte>              data,
+             typename UartImplBase<OM, Rest...>::EG& event_group,
+             uint32_t                                bitmask)
+    requires(OM == UartOperatingMode::DmaRtos)
+  {
+    UartImplBase<OM, Rest...>::tx_event_group =
+        std::make_pair(&event_group, bitmask);
+
+    HAL_UART_Transmit_DMA(&huart, hstd::ReinterpretSpan<uint8_t>(data).data(),
+                          data.size());
+  }
+
   void Receive(std::span<std::byte> into) noexcept
-    requires(OM == hal::UartOperatingMode::Dma)
+    requires(OM == UartOperatingMode::Dma)
   {
     rx_buf = into;
     HAL_UARTEx_ReceiveToIdle_DMA(
         &huart, hstd::ReinterpretSpanMut<uint8_t>(rx_buf).data(),
         rx_buf.size());
+  }
+
+  /**
+   * Starts receiving data from the UART and blocks until data is received
+   * @param into Buffer to receive data into
+   * @param timeout Receive timeout
+   * @return Received data if data is received within time window, std::nullopt
+   * otherwise
+   */
+  std::optional<std::span<std::byte>>
+  Receive(std::span<std::byte> into, hstd::Duration auto timeout) noexcept
+    requires(OM == UartOperatingMode::DmaRtos)
+  {
+    Receive(into, UartImplBase<OM, Rest...>::event_group,
+            UartImplBase<OM, Rest...>::RxDoneBit);
+
+    if (UartImplBase<OM, Rest...>::event_group
+            .Wait(UartImplBase<OM, Rest...>::RxDoneBit, timeout)
+            .has_value()) {
+      return UartImplBase<OM, Rest...>::rx_data;
+    } else {
+      return {};
+    }
+  }
+
+  /**
+   * Starts receiving data from the UART into the provided buffer and sets a bit
+   * in the provided event group upon data receival
+   * @param into Buffer to receive data into
+   * @param event_group Event group in which to set a bit upon data receival
+   * @param bitmask Bit to set in the event group
+   */
+  void Receive(std::span<std::byte>                    into,
+               typename UartImplBase<OM, Rest...>::EG& event_group,
+               uint32_t                                bitmask) noexcept
+    requires(OM == UartOperatingMode::DmaRtos)
+  {
+    UartImplBase<OM, Rest...>::rx_data = std::nullopt;
+    UartImplBase<OM, Rest...>::rx_event_group =
+        std::make_pair(&event_group, bitmask);
+    rx_buf = into;
+    HAL_UARTEx_ReceiveToIdle_DMA(
+        &huart, hstd::ReinterpretSpanMut<uint8_t>(rx_buf).data(),
+        rx_buf.size());
+  }
+
+  /**
+   * Returns the received data using the Receive method with an explicit event
+   * group
+   * @return Optional containing received data if data was received, or
+   * std::nullopt if no data was received
+   */
+  std::optional<std::span<std::byte>> ReceivedData() noexcept
+    requires(OM == UartOperatingMode::DmaRtos)
+  {
+    return UartImplBase<OM, Rest...>::rx_data;
   }
 
   /**
@@ -339,7 +489,7 @@ class UartImpl : public hal::UsedPeripheral {
    * @param baud UART baud rate
    */
   UartImpl(Pinout pinout, unsigned baud)
-    requires(OM != hal::UartOperatingMode::Dma)
+    requires(OM != UartOperatingMode::Dma)
       : huart{} {
     // Set up pins
     pinout.Initialize();
@@ -352,24 +502,34 @@ class UartImpl : public hal::UsedPeripheral {
     }
 
     // Set up UART for the requested operation mode
-    if constexpr (OM == hal::UartOperatingMode::Poll) {
+    if constexpr (OM == UartOperatingMode::Poll) {
       InitializeUartForPollMode(huart);
-    } else if constexpr (OM == hal::UartOperatingMode::Interrupt) {
-      InitializeUartForInterruptMode(Id, huart);
+    } else if constexpr (OM == UartOperatingMode::Interrupt) {
+      EnableInterrupt<GetIrqn(Id), Impl>();
     } else {
       std::unreachable();
     }
   }
 
   void ReceiveComplete(std::size_t n_bytes) noexcept {
-    if constexpr (hal::AsyncUart<Impl>) {
+    if constexpr (OM != UartOperatingMode::DmaRtos) {
       static_cast<Impl*>(this)->UartReceiveCallback(rx_buf.subspan(0, n_bytes));
+    } else {
+      UartImplBase<OM, Rest...>::rx_data = rx_buf.subspan(0, n_bytes);
+
+      auto& [eg, bitmask] = UartImplBase<OM, Rest...>::rx_event_group;
+      eg->SetBitsFromInterrupt(bitmask);
     }
   }
 
   void TransmitComplete() noexcept {
-    if constexpr (hal::AsyncUart<Impl>) {
-      static_cast<Impl*>(this)->UartTransmitCallback();
+    if constexpr (OM != UartOperatingMode::DmaRtos) {
+      if constexpr (hal::AsyncUart<Impl>) {
+        static_cast<Impl*>(this)->UartTransmitCallback();
+      }
+    } else {
+      auto& [eg, bitmask] = UartImplBase<OM, Rest...>::tx_event_group;
+      eg->SetBitsFromInterrupt(bitmask);
     }
   }
 
@@ -379,7 +539,7 @@ class UartImpl : public hal::UsedPeripheral {
    * @param baud UART baud rate
    */
   UartImpl(hal::Dma auto& dma, Pinout pinout, unsigned baud)
-    requires(OM == hal::UartOperatingMode::Dma)
+    requires(OM == UartOperatingMode::Dma || OM == UartOperatingMode::DmaRtos)
       : huart{} {
     using Dma = std::decay_t<decltype(dma)>;
     static_assert(Dma::template ChannelEnabled<TxDmaChannel>(),
@@ -408,7 +568,7 @@ class UartImpl : public hal::UsedPeripheral {
         hal::DmaDataWidth::Byte, false, hal::DmaDataWidth::Byte, true);
     __HAL_LINKDMA(&huart, hdmarx, hrxdma);
 
-    InitializeUartForInterruptMode(Id, huart);
+    EnableInterrupt<GetIrqn(Id), Impl>();
   }
 
   std::span<std::byte> rx_buf{};

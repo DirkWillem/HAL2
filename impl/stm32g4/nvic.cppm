@@ -28,4 +28,10 @@ consteval uint32_t GetIrqPrio(IRQn_Type irqn) noexcept {
   return 0;
 }
 
+export template<IRQn_Type Irqn, typename PrioImpl>
+void EnableInterrupt() noexcept {
+  NVIC_SetPriority(Irqn, GetIrqPrio<PrioImpl>(Irqn));
+  NVIC_EnableIRQ(Irqn);
+}
+
 }   // namespace stm32g4

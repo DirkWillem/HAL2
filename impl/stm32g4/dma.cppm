@@ -242,15 +242,15 @@ void SetupDma(std::size_t n_used_channels) noexcept {
       DMA2_Channel8_IRQn,
   };
 
-  constexpr auto IrqPrios =
-      ([ChannelIrqns]<std::size_t... Idxs>(std::index_sequence<Idxs...>) {
-        return std::array<uint32_t, 16>{GetIrqPrio<Impl>(ChannelIrqns[Idxs])...};
-      })(std::make_index_sequence<16>());
+  ([ChannelIrqns]<std::size_t... Idxs>(std::index_sequence<Idxs...>) {
+    (..., EnableInterrupt<ChannelIrqns[Idxs], Impl>());
+  })(std::make_index_sequence<16>());
 
-  for (std::size_t i = 0; i < n_used_channels; i++) {
-    NVIC_SetPriority(ChannelIrqns[i], IrqPrios[i]);
-    NVIC_EnableIRQ(ChannelIrqns[i]);
-  }
+  // for (std::size_t i = 0; i < n_used_channels; i++) {
+  //
+  //   // NVIC_SetPriority(ChannelIrqns[i], IrqPrios[i]);
+  //   // NVIC_EnableIRQ(ChannelIrqns[i]);
+  // }
 #else
 #error "Cannot determine DMA interrupts for this STM32G4 variant"
 #endif
