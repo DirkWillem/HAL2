@@ -46,7 +46,9 @@ add_library(modbus_server_freertos)
 target_sources(modbus_server_freertos PUBLIC
         FILE_SET CXX_MODULES
         FILES
-        server/freertos/freertos_server.cppm)
+        server/freertos/freertos_server.cppm
+
+        server/freertos/helpers.cppm)
 target_link_libraries(modbus_server_freertos
         PUBLIC
         modbus_server

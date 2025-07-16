@@ -9,6 +9,7 @@ module;
 #include <ranges>
 #include <span>
 #include <string_view>
+#include <utility>
 
 export module modbus.server:reg;
 
@@ -19,14 +20,45 @@ import modbus.core;
 namespace modbus::server {
 
 /**
+ * Concept for a custom read-only register storage
+ * @tparam Impl Implementation type
+ */
+template <typename Impl>
+concept CustomReadonlyRegisterStorage = requires(const Impl& impl) {
+  { Impl::Size } -> std::convertible_to<std::size_t>;
+
+  {
+    impl.Read(std::declval<std::size_t>(), std::declval<std::size_t>())
+  } -> std::convertible_to<
+      std::expected<std::span<const std::byte>, ExceptionCode>>;
+
+  Impl::SwapEndianness(std::declval<std::span<std::byte>>(),
+                       std::declval<std::size_t>(),
+                       std::declval<std::size_t>());
+};
+
+/**
+ * Concept for a custom mutable register storage
+ * @tparam Impl Implementation type
+ */
+template <typename Impl>
+concept CustomMutableRegisterStorage =
+    CustomReadonlyRegisterStorage<Impl> && requires(Impl& impl) {
+      {
+        impl.Write(std::declval<std::span<const std::byte>>(),
+                   std::declval<std::size_t>(), std::declval<std::size_t>())
+      } -> std::convertible_to<std::expected<bool, ExceptionCode>>;
+    };
+
+/**
  * Concept for a plain memory holding register storage
  * @tparam T Checked type
  * @tparam D Data type
  */
-template <typename T, typename D>
+export template <typename T, typename D>
 concept PlainMemoryRegisterStorage =
-    (std::same_as<T, D> && std::is_trivially_copyable_v<D>
-     && sizeof(T) % sizeof(uint16_t) == 0);
+    (std::same_as<T, D> && std::is_trivially_constructible_v<D>
+     && std::is_trivially_copyable_v<D> && sizeof(T) % sizeof(uint16_t) == 0);
 
 /**
  * Concept for the mutable storage of a register
@@ -34,7 +66,8 @@ concept PlainMemoryRegisterStorage =
  * @tparam D Type of the stored data
  */
 export template <typename T, typename D>
-concept MutableRegisterStorage = PlainMemoryRegisterStorage<T, D>;
+concept MutableRegisterStorage =
+    PlainMemoryRegisterStorage<T, D> || CustomMutableRegisterStorage<T>;
 
 /**
  * Concept for the read-only storage of a register
@@ -43,6 +76,22 @@ concept MutableRegisterStorage = PlainMemoryRegisterStorage<T, D>;
  */
 export template <typename T, typename D>
 concept ReadonlyRegisterStorage = MutableRegisterStorage<T, D>;
+
+/**
+ * Returns the size of a register
+ * @tparam S Register storage type
+ * @return Size of the register in halfwords
+ */
+template <typename S>
+consteval std::size_t RegisterSize() noexcept {
+  if constexpr (PlainMemoryRegisterStorage<S, S>) {
+    return sizeof(S) / 2;
+  } else if constexpr (CustomReadonlyRegisterStorage<S>) {
+    return S::Size / 2;
+  }
+
+  std::unreachable();
+}
 
 /**
  * Describes an input register
@@ -58,7 +107,7 @@ struct InputRegister {
   using Storage = S;
 
   static constexpr auto             StartAddress = A;
-  static constexpr auto             EndAddress   = A + (sizeof(D) / 2);
+  static constexpr auto             EndAddress   = A + RegisterSize<S>();
   static constexpr std::string_view Name         = N;
 };
 
@@ -138,6 +187,12 @@ ReadRegister(const S& storage, std::size_t offset, std::size_t size) noexcept {
   return hstd::ByteViewOver<std::byte>(storage).subspan(offset, size);
 }
 
+export template <CustomReadonlyRegisterStorage S>
+std::expected<std::span<const std::byte>, ExceptionCode>
+ReadRegister(const S& storage, std::size_t offset, std::size_t size) noexcept {
+  return storage.Read(offset, size);
+}
+
 export template <typename S>
   requires PlainMemoryRegisterStorage<S, S>
 std::expected<bool, ExceptionCode>
@@ -155,6 +210,13 @@ WriteRegister(S& storage, std::span<const std::byte> data, std::size_t offset,
       hstd::MutByteViewOver<std::byte>(storage).subspan(offset, size).data(),
       data.data(), size);
   return true;
+}
+
+export template <CustomMutableRegisterStorage S>
+std::expected<bool, ExceptionCode>
+WriteRegister(S& storage, std::span<const std::byte> data, std::size_t offset,
+              std::size_t size) {
+  return storage.Write(data, offset, size);
 }
 
 export template <typename S>
@@ -175,6 +237,12 @@ void SwapRegisterEndianness(std::span<std::byte> data, std::size_t offset,
   } else {
     std::ranges::reverse(data);
   }
+}
+
+export template <CustomReadonlyRegisterStorage S>
+void SwapRegisterEndianness(std::span<std::byte> data, std::size_t offset,
+                            std::size_t size) {
+  S::SwapEndianness(data, offset, size);
 }
 
 namespace concepts {

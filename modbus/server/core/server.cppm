@@ -15,7 +15,7 @@ import hstd;
 
 export import :bit;
 export import :reg;
-import :server_storage;
+export import :server_storage;
 
 namespace modbus::server {
 
@@ -82,9 +82,8 @@ class Server : public ServerStorage<DIs, Cs, IRs, HRs> {
      * @param req Request to handle
      */
     void operator()(const ReadInputRegistersRequest& req) noexcept {
-      const auto result =
-          server.template ReadInputRegisters<std::endian::big>(
-              buffer, req.starting_addr, req.num_input_registers);
+      const auto result = server.template ReadInputRegisters<std::endian::big>(
+          buffer, req.starting_addr, req.num_input_registers);
 
       HandleResult(req, result, [](const auto& registers) {
         return ReadInputRegistersResponse{.registers = registers};
@@ -194,6 +193,12 @@ class Server : public ServerStorage<DIs, Cs, IRs, HRs> {
   };
 
  public:
+  explicit Server()
+      : ServerStorage<DIs, Cs, IRs, HRs>{InitStorages<>{}} {}
+
+  explicit Server(auto init)
+      : ServerStorage<DIs, Cs, IRs, HRs>{init} {}
+
   void HandleFrame(const RequestPdu& request, ResponsePdu& response) {
     std::visit(FrameHandler{*this, response}, request);
   }

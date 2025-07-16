@@ -7,6 +7,7 @@ module;
 #include <cstring>
 #include <expected>
 #include <functional>
+#include <optional>
 #include <span>
 #include <tuple>
 #include <utility>
@@ -20,6 +21,76 @@ export import :bit;
 export import :reg;
 
 namespace modbus::server {
+
+export template <typename E, typename T>
+struct InitStorage {
+  using Element = E;
+
+  constexpr InitStorage(hstd::Marker<E>, T arg) noexcept
+      : arg{arg} {}
+
+  T arg;
+};
+
+namespace concepts {
+
+template <typename T>
+inline constexpr bool IsInitStorage = false;
+
+template <typename S, typename T>
+inline constexpr bool IsInitStorage<InitStorage<S, T>> = true;
+
+template <typename T>
+concept InitStorage = IsInitStorage<T>;
+
+}   // namespace concepts
+
+export template <concepts::InitStorage... Is>
+struct InitStorages {
+  explicit constexpr InitStorages(Is... inits)
+      : inits{inits...} {}
+
+  template <typename E>
+  constexpr auto GetInit() noexcept {
+    using Storage = typename E::Storage;
+    if constexpr (sizeof...(Is) == 0) {
+      static_assert(std::is_default_constructible_v<Storage>,
+                    "Cannot get default storage initialization for non-default "
+                    "constructible storage");
+
+      return Storage{};
+    } else {
+      static_assert(sizeof...(Is) > 0);
+
+      constexpr auto Idx =
+          ([]<std::size_t... Idxs>(std::index_sequence<Idxs...>) constexpr{
+            constexpr std::array<bool, sizeof...(Idxs)> Arr{
+                {std::is_same_v<typename Is::Element, E>...}};
+
+            for (std::size_t i = 0; i < Arr.size(); i++) {
+              if (Arr[i]) {
+                return std::optional{i};
+              }
+            }
+
+            return std::optional<std::size_t>{};
+          })(std::make_index_sequence<sizeof...(Is)>());
+
+      if constexpr (Idx) {
+        return std::get<*Idx>(inits).arg;
+      } else {
+        static_assert(
+            std::is_default_constructible_v<Storage>,
+            "Cannot get default storage initialization for non-default "
+            "constructible storage");
+
+        return Storage{};
+      }
+    }
+  }
+
+  std::tuple<Is...> inits;
+};
 
 template <concepts::Bits C>
 consteval uint16_t StartAddress() {
@@ -110,6 +181,12 @@ struct BitImpl {
 
 template <concepts::Register R>
 struct RegisterImpl {
+  using Storage = typename R::Storage;
+
+  template <typename T>
+  explicit RegisterImpl(T init)
+      : storage{init} {}
+
   std::expected<std::span<const std::byte>, ExceptionCode>
   Read(std::size_t offset, std::size_t size) const noexcept {
     return ReadRegister(storage, offset, size);
@@ -123,7 +200,7 @@ struct RegisterImpl {
     if (endian != std::endian::native) {
       std::array<std::byte, sizeof(typename R::Data)> swapped_buf{};
       std::memcpy(swapped_buf.data(), data.data(), size);
-      SwapRegisterEndianness<typename R::Storage>(swapped_buf, offset, size);
+      SwapRegisterEndianness<Storage>(swapped_buf, offset, size);
 
       return WriteRegister(storage, swapped_buf, offset, size);
     } else {
@@ -133,10 +210,10 @@ struct RegisterImpl {
 
   static void SwapEndianness(std::span<std::byte> data, std::size_t offset,
                              std::size_t size) noexcept {
-    SwapRegisterEndianness<typename R::Storage>(data, offset, size);
+    SwapRegisterEndianness<Storage>(data, offset, size);
   }
 
-  typename R::Storage storage;
+  Storage storage;
 };
 
 template <typename T>
@@ -378,6 +455,13 @@ class ServerStorage<hstd::Types<UDI...>, hstd::Types<UC...>,
   [[nodiscard]] static constexpr std::size_t RegToByteOffset(uint16_t offset) {
     return static_cast<std::size_t>(offset) * sizeof(uint16_t);
   }
+
+ protected:
+  explicit ServerStorage(auto inits)
+      : BitImpl<UDI>{}...
+      , BitImpl<UC>{}...
+      , RegisterImpl<UIR>{inits.template GetInit<UIR>()}...
+      , RegisterImpl<UHR>{inits.template GetInit<UHR>()}... {}
 
  public:
   template <concepts::Bits B>

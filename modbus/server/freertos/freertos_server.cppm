@@ -15,6 +15,8 @@ export import modbus.server;
 import modbus.encoding;
 import modbus.encoding.rtu;
 
+export import :helpers;
+
 namespace modbus::server::freertos {
 
 export template <concepts::Server Srv, hal::RtosUart Uart,
