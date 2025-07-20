@@ -14,7 +14,25 @@ import :time;
 
 namespace rtos {
 
-export inline constexpr auto MinStackSize = configMINIMAL_STACK_SIZE;
+export inline constexpr auto MinStackSize =
+    configMINIMAL_STACK_SIZE * sizeof(StackType_t);
+
+export inline constexpr auto MiniStackSize       = MinStackSize;
+export inline constexpr auto SmallStackSize      = 128 * sizeof(StackType_t);
+export inline constexpr auto MediumStackSize     = 256 * sizeof(StackType_t);
+export inline constexpr auto LargeStackSize      = 512 * sizeof(StackType_t);
+export inline constexpr auto ExtraLargeStackSize = 1024 * sizeof(StackType_t);
+
+export template <std::size_t SS>
+struct StackSizeMarker {};
+
+export inline constexpr StackSizeMarker<MiniStackSize>  MiniStackSizeMarker{};
+export inline constexpr StackSizeMarker<SmallStackSize> SmallStackSizeMarker{};
+export inline constexpr StackSizeMarker<MediumStackSize>
+                                                        MediumStackSizeMarker{};
+export inline constexpr StackSizeMarker<LargeStackSize> LargeStackSizeMarker{};
+export inline constexpr StackSizeMarker<ExtraLargeStackSize>
+    ExtraLargeStackSizeMarker{};
 
 /**
  * Reference to a FreeRTOS task
@@ -46,6 +64,13 @@ class TaskRef {
  */
 export template <typename T, std::size_t StackSize = MinStackSize>
 class Task {
+  static_assert(StackSize % sizeof(StackType_t) == 0,
+                "Stack size must be a multiple of the word size");
+
+  static constexpr auto StackSizeWords = StackSize / sizeof(StackType_t);
+  static_assert(StackSizeWords >= configMINIMAL_STACK_SIZE,
+                "Stack size must be at least configMINIMAL_STACK_SIZE");
+
  public:
   TaskRef& ref() & noexcept { return task_ref; }
 
@@ -57,8 +82,8 @@ class Task {
    */
   explicit Task(const char* name,
                 UBaseType_t prio = configMAX_PRIORITIES - 1) noexcept
-      : task_ref{xTaskCreateStatic(&Task::StaticInvoke, name, StackSize, this,
-                                   prio, stack.data(), &handle)} {}
+      : task_ref{xTaskCreateStatic(&Task::StaticInvoke, name, StackSizeWords,
+                                   this, prio, stack.data(), &handle)} {}
 
   std::optional<uint32_t>
   WaitForNotification(hstd::Duration auto timeout,
@@ -82,32 +107,35 @@ class Task {
     (*self)();
   }
 
-  StaticTask_t                       handle{};
-  std::array<StackType_t, StackSize> stack{};
-  TaskRef                            task_ref;
+  StaticTask_t                            handle{};
+  std::array<StackType_t, StackSizeWords> stack{};
+  TaskRef                                 task_ref;
 };
-
-export template <std::size_t SS>
-struct StackSizeMarker {};
 
 export template <typename T, std::size_t StackSize = MinStackSize>
 class LambdaTask : public T {
- public:
   static_assert(StackSize % sizeof(StackType_t) == 0,
                 "Stack size must be a multiple of the word size");
 
+  static constexpr auto StackSizeWords = StackSize / sizeof(StackType_t);
+  static_assert(StackSizeWords >= configMINIMAL_STACK_SIZE,
+                "Stack size must be at least configMINIMAL_STACK_SIZE");
+
+ public:
   LambdaTask(const char* name, T lambda,
              UBaseType_t prio = configMAX_PRIORITIES - 1)
       : T{lambda}
-      , task_ref{xTaskCreateStatic(&LambdaTask::StaticInvoke, name, StackSize,
-                                   this, prio, stack.data(), &handle)} {}
+      , task_ref{xTaskCreateStatic(&LambdaTask::StaticInvoke, name,
+                                   StackSizeWords, this, prio, stack.data(),
+                                   &handle)} {}
 
   LambdaTask(const char*                                 name,
              [[maybe_unused]] StackSizeMarker<StackSize> stack_size_marker,
              T lambda, UBaseType_t prio = configMAX_PRIORITIES - 1) noexcept
       : T{lambda}
-      , task_ref{xTaskCreateStatic(&LambdaTask::StaticInvoke, name, StackSize,
-                                   this, prio, stack.data(), &handle)} {}
+      , task_ref{xTaskCreateStatic(&LambdaTask::StaticInvoke, name,
+                                   StackSizeWords, this, prio, stack.data(),
+                                   &handle)} {}
 
  private:
   static void StaticInvoke(void* data) noexcept {
@@ -116,8 +144,7 @@ class LambdaTask : public T {
   }
 
   StaticTask_t handle{};
-  alignas(StackType_t)
-      std::array<StackType_t, StackSize / sizeof(StackType_t)> stack{};
+  alignas(StackType_t) std::array<StackType_t, StackSizeWords> stack{};
   TaskRef task_ref;
 };
 
