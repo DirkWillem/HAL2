@@ -26,9 +26,7 @@ export enum class Port : uint8_t {
 #ifdef GPIOD
   D,
 #endif
-#ifdef GPIOE
   E,
-#endif
 #ifdef GPIOF
   F
 #endif

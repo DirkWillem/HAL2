@@ -5,6 +5,8 @@ module;
 
 #include <stm32g0xx_hal.h>
 
+#include "internal/peripheral_availability.h"
+
 export module hal.stm32g0:clocks;
 
 import hstd;
@@ -231,9 +233,11 @@ enum class FlashLatency {
   return ((div - 1) << RCC_PLLCFGR_PLLP_Pos) & RCC_PLLCFGR_PLLP_Msk;
 }
 
+#ifdef HAS_PLLQ
 [[nodiscard]] consteval uint32_t GetPllQDiv(uint32_t div) noexcept {
   return ((div - 1) << RCC_PLLCFGR_PLLQ_Pos) & RCC_PLLCFGR_PLLQ_Msk;
 }
+#endif
 
 [[nodiscard]] consteval uint32_t GetPllRDiv(uint32_t div) noexcept {
   return ((div - 1) << RCC_PLLCFGR_PLLR_Pos) & RCC_PLLCFGR_PLLR_Msk;
@@ -302,8 +306,10 @@ bool ConfigurePowerAndClocks() noexcept {
   __HAL_RCC_SYSCFG_CLK_ENABLE();
   __HAL_RCC_PWR_CLK_ENABLE();
 
+#ifdef HAS_USBCPD_STROBE_BITS
   HAL_SYSCFG_StrobeDBattpinsConfig(SYSCFG_CFGR1_UCPD1_STROBE
                                    | SYSCFG_CFGR1_UCPD2_STROBE);
+#endif
 
   constexpr auto vos_range = CoreVoltageRange::Range1;
   HAL_PWREx_ControlVoltageScaling(static_cast<uint32_t>(vos_range));
@@ -317,7 +323,9 @@ bool ConfigurePowerAndClocks() noexcept {
       .HSIDiv              = GetHsiPrescaler(CS.hsi_prescaler),
       .HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT,
       .LSIState            = RCC_LSI_OFF,
-      .HSI48State          = RCC_HSI48_ON,
+#ifdef HAS_HSI48
+      .HSI48State = RCC_HSI48_ON,
+#endif
       .PLL =
           {
               .PLLState  = RCC_PLL_OFF,
@@ -325,8 +333,10 @@ bool ConfigurePowerAndClocks() noexcept {
               .PLLM      = RCC_PLLM_DIV1,
               .PLLN      = 8,
               .PLLP      = RCC_PLLP_DIV2,
-              .PLLQ      = RCC_PLLQ_DIV2,
-              .PLLR      = RCC_PLLR_DIV2,
+#ifdef HAS_PLLQ
+              .PLLQ = RCC_PLLQ_DIV2,
+#endif
+              .PLLR = RCC_PLLR_DIV2,
           },
   };
 
@@ -337,8 +347,10 @@ bool ConfigurePowerAndClocks() noexcept {
         .PLLM      = GetPllM(CS.pll.m),
         .PLLN      = CS.pll.n,
         .PLLP      = GetPllPDiv(CS.pll.p),
-        .PLLQ      = GetPllQDiv(CS.pll.q),
-        .PLLR      = GetPllRDiv(CS.pll.r),
+#ifdef HAS_PLLQ
+        .PLLQ = GetPllQDiv(CS.pll.q),
+#endif
+        .PLLR = GetPllRDiv(CS.pll.r),
     };
   }
 

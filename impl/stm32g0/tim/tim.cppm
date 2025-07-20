@@ -6,6 +6,8 @@ module;
 
 #include <stm32g0xx_hal.h>
 
+#include "internal/peripheral_availability.h"
+
 export module hal.stm32g0:tim;
 
 import hstd;
@@ -41,13 +43,21 @@ export enum class TimerBitCount {
 export [[nodiscard]] constexpr TimerBitCount BitCount(TimId tim) noexcept {
   switch (tim) {
   case TimId::Tim1: return TimerBitCount::Bits16;
+#ifdef HAS_TIM2
   case TimId::Tim2: return TimerBitCount::Bits32;
+#endif
   case TimId::Tim3: [[fallthrough]];
+#ifdef HAS_TIM4
   case TimId::Tim4: [[fallthrough]];
+#endif
+#ifdef HAS_TIM56
   case TimId::Tim6: [[fallthrough]];
   case TimId::Tim7: [[fallthrough]];
+#endif
   case TimId::Tim14: [[fallthrough]];
+#ifdef HAS_TIM15
   case TimId::Tim15: [[fallthrough]];
+#endif
   case TimId::Tim16: [[fallthrough]];
   case TimId::Tim17: return TimerBitCount::Bits16;
   default: std::unreachable();
@@ -202,7 +212,7 @@ class TimImpl
   }
 
   void PeriodElapsed() {
-    if constexpr (hal::RegisterableTimPeriodElapsedCallback<Impl>) {
+    if constexpr (hal::concepts::RegisterableTimPeriodElapsedCallback<Impl>) {
       static_cast<Impl*>(this)->InvokePeriodElapsedCallback();
     }
     (..., ChannelPeriodElapsedCallback<Chs>());
@@ -320,14 +330,22 @@ class Tim : public hal::UnusedPeripheral<Tim<Id>> {
   TIM_HandleTypeDef htim{};
 };
 
-export using Tim1  = Tim<TimId::Tim1>;
-export using Tim2  = Tim<TimId::Tim2>;
-export using Tim3  = Tim<TimId::Tim3>;
-export using Tim4  = Tim<TimId::Tim4>;
-export using Tim6  = Tim<TimId::Tim6>;
-export using Tim7  = Tim<TimId::Tim7>;
+export using Tim1 = Tim<TimId::Tim1>;
+#ifdef HAS_TIM2
+export using Tim2 = Tim<TimId::Tim2>;
+#endif
+export using Tim3 = Tim<TimId::Tim3>;
+#ifdef HAS_TIM4
+export using Tim4 = Tim<TimId::Tim4>;
+#endif
+#ifdef HAS_TIM67
+export using Tim6 = Tim<TimId::Tim6>;
+export using Tim7 = Tim<TimId::Tim7>;
+#endif
 export using Tim14 = Tim<TimId::Tim14>;
+#ifdef HAS_TIM15
 export using Tim15 = Tim<TimId::Tim15>;
+#endif
 export using Tim16 = Tim<TimId::Tim16>;
 export using Tim17 = Tim<TimId::Tim17>;
 

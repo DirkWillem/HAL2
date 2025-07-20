@@ -8,7 +8,6 @@ module;
 
 #include <pin_macros.h>
 
-
 export module hal.stm32g0:tim.channel;
 
 import hstd;
@@ -53,15 +52,23 @@ namespace detail {
 consteval bool TimHasChannel(TimId tim, unsigned channel) noexcept {
   switch (tim) {
   // Advanced control timer with 6 channels
-  case TimId::Tim1: return channel >= 1 && channel <= 6;
-  // GP timers with 4 channels
+  case TimId::Tim1:
+    return channel >= 1 && channel <= 6;
+    // GP timers with 4 channels
+#ifdef HAS_TIM2
   case TimId::Tim2: [[fallthrough]];
-  case TimId::Tim3: [[fallthrough]];
-  case TimId::Tim4: return channel >= 1 && channel <= 4;
+#endif
+#ifdef HAS_TIM4
+  case TimId::Tim4: [[fallthrough]];
+#endif
+  case TimId::Tim3: return channel >= 1 && channel <= 4;
   // GP timers with 1 channel
-  case TimId::Tim14: return channel == 1;
-  // GP timers with 2 channels
+  case TimId::Tim14:
+    return channel == 1;
+    // GP timers with 2 channels
+#ifdef HAS_TIM15
   case TimId::Tim15: [[fallthrough]];
+#endif
   case TimId::Tim16: [[fallthrough]];
   case TimId::Tim17: return channel >= 1 && channel <= 2;
   // Timers without channels or invalid TimId values
@@ -82,15 +89,21 @@ consteval bool TimChIsPwmWithOutputCapable(TimId    tim,
   case TimId::Tim1:
     return channel >= 1 && channel <= 4;
     // GP timers with 4 channels
+#ifdef HAS_TIM2
   case TimId::Tim2: [[fallthrough]];
-  case TimId::Tim3: [[fallthrough]];
-  case TimId::Tim4:
+#endif
+#ifdef HAS_TIM4
+  case TimId::Tim4: [[fallthrough]];
+#endif
+  case TimId::Tim3:
     return channel >= 1 && channel <= 4;
     // GP timers with 1 channel
   case TimId::Tim14:
     return channel == 1;
     // GP timers with 2 channels
+#ifdef HAS_TIM15
   case TimId::Tim15: [[fallthrough]];
+#endif
   case TimId::Tim16: [[fallthrough]];
   case TimId::Tim17:
     return channel >= 1 && channel <= 2;
@@ -111,12 +124,18 @@ consteval bool TimChIsDmaCapable(TimId tim, unsigned channel) noexcept {
   case TimId::Tim1:
     return channel >= 1 && channel <= 4;
     // GP timers with 4 channels
+#ifdef HAS_TIM2
   case TimId::Tim2: [[fallthrough]];
-  case TimId::Tim3: [[fallthrough]];
-  case TimId::Tim4:
+#endif
+#ifdef HAS_TIM4
+  case TimId::Tim4: [[fallthrough]];
+#endif
+  case TimId::Tim3:
     return channel >= 1 && channel <= 4;
     // GP timers with 2 channels
+#ifdef HAS_TIM15
   case TimId::Tim15: return channel >= 1 && channel <= 2;
+#endif
   case TimId::Tim16: [[fallthrough]];
   case TimId::Tim17:
     return channel == 1;
@@ -240,7 +259,7 @@ class TimPwmOutputChannel {
   }
 
   template <TimId Tim>
-  bool Configure(hal::Dma auto&                          dma,
+  bool Configure(hal::Dma auto&                        dma,
                  [[maybe_unused]] hstd::Frequency auto f_src) noexcept
     requires UsesDma
   {
@@ -314,8 +333,7 @@ class TimPwmOutputChannel {
 static_assert(TimChannel<TimPwmOutputChannel<2, PIN(A, 7)>>);
 static_assert(PeriodElapsedCallback<TimPwmOutputChannel<2, PIN(A, 7)>>);
 
-template <unsigned Ch0, hstd::IsValues<PinId> Pins,
-          hstd::IsValues<PwmMode> PMs>
+template <unsigned Ch0, hstd::IsValues<PinId> Pins, hstd::IsValues<PwmMode> PMs>
 class TimMultiplePwmOutputChannel {
  public:
   static_assert(Pins::Count == PMs::Count);
@@ -327,7 +345,7 @@ class TimMultiplePwmOutputChannel {
   static constexpr auto UsesDma = true;
 
   template <TimId Tim>
-  bool Configure(hal::Dma auto&                          dma,
+  bool Configure(hal::Dma auto&                        dma,
                  [[maybe_unused]] hstd::Frequency auto f_src) noexcept
     requires UsesDma
   {
@@ -457,12 +475,5 @@ class TimMultiplePwmOutputChannel {
 
   TIM_HandleTypeDef& htim;
 };
-
-static_assert(TimChannel<TimMultiplePwmOutputChannel<
-                  1, hstd::Values<PinId, PIN(A, 6), PIN(A, 7)>,
-                  hstd::Values<PwmMode, PwmMode::Pwm2, PwmMode::Pwm1>>>);
-static_assert(PeriodElapsedCallback<TimMultiplePwmOutputChannel<
-                  1, hstd::Values<PinId, PIN(A, 6), PIN(A, 7)>,
-                  hstd::Values<PwmMode, PwmMode::Pwm2, PwmMode::Pwm1>>>);
 
 }   // namespace stm32g0

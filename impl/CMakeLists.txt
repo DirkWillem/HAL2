@@ -111,6 +111,7 @@ function(add_stm32g0_hal VARIANT XMLFILE)
             FILES
             "${CMAKE_CURRENT_LIST_DIR}/stm32g0/pin_macros.h"
             "${CMAKE_CURRENT_LIST_DIR}/stm32g0/interrupts.h"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/internal/peripheral_availability.h"
     )
 
     target_link_libraries("${VARIANT}_hal"
@@ -342,6 +343,7 @@ endfunction()
 
 
 if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
+    add_stm32g0_hal(stm32g030 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G030K(6-8)Tx.xml")
     add_stm32g0_hal(stm32g0b1 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G0B1R(B-C-E)Tx.xml")
 endif ()
 

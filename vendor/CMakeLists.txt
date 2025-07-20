@@ -6,8 +6,9 @@ add_library(stm32_system STATIC
         stm32_system/sysmem.c)
 
 
-function(add_stm32g0_vendor_hal VARIANT)
+function(add_stm32g0_vendor_hal SERIES VARIANT)
     string(TOUPPER "${VARIANT}" VARIANT_UPPER)
+    string(TOUPPER "${SERIES}" SERIES_UPPER)
 
     add_linkopts(${VARIANT})
 
@@ -25,7 +26,9 @@ function(add_stm32g0_vendor_hal VARIANT)
             project_settings_base)
 
     target_compile_definitions("${VARIANT}_device" INTERFACE
-            "CORE_CM0P" "STM32G0" "${VARIANT_UPPER}" "${VARIANT_UPPER}xx")
+            "CORE_CM0P" "STM32G0"
+            "${SERIES_UPPER}" "${SERIES_UPPER}xx"
+            "${VARIANT_UPPER}" "${VARIANT_UPPER}xx")
 
     # stm32g0xx_hal library
     file(GLOB HAL_HEADERS "stm32g0xx_hal/Inc/stm32g0xx_*.h")
@@ -215,7 +218,8 @@ if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
     target_link_libraries(freertos_kernel_port PUBLIC project_settings)
 
     # HAL
-    add_stm32g0_vendor_hal(stm32g0b1)
+    add_stm32g0_vendor_hal(stm32g0x0 stm32g030)
+    add_stm32g0_vendor_hal(stm32g0x1 stm32g0b1)
 endif ()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m4")

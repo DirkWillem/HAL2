@@ -7,6 +7,8 @@ module;
 
 #include <stm32g0xx_hal.h>
 
+#include "internal/peripheral_availability.h"
+
 export module hal.stm32g0:uart;
 
 import hstd;
@@ -144,25 +146,64 @@ void EnableUartClk(UartId id) noexcept {
   switch (id) {
   case UartId::Usart1: __HAL_RCC_USART1_CLK_ENABLE(); break;
   case UartId::Usart2: __HAL_RCC_USART2_CLK_ENABLE(); break;
+#ifdef HAS_USART34
   case UartId::Usart3: __HAL_RCC_USART3_CLK_ENABLE(); break;
   case UartId::Usart4: __HAL_RCC_USART4_CLK_ENABLE(); break;
+#endif
+#ifdef HAS_USART56
   case UartId::Usart5: __HAL_RCC_USART5_CLK_ENABLE(); break;
   case UartId::Usart6: __HAL_RCC_USART6_CLK_ENABLE(); break;
+#endif
+#ifdef HAS_LPUART1
   case UartId::LpUart1: __HAL_RCC_LPUART1_CLK_ENABLE(); break;
+#endif
+#ifdef HAS_LPUART2
   case UartId::LpUart2: __HAL_RCC_LPUART2_CLK_ENABLE(); break;
+#endif
   }
 }
 
 [[nodiscard]] constexpr IRQn_Type GetIrqn(UartId id) noexcept {
+#if defined(HAS_USART34)
+#if defined(HAS_USART56)
+#if defined(HAS_LPUART1)
+  constexpr auto Usart3_6_LpUart1_IRQn = USART3_4_5_6_LPUART1_IRQn;
+#else
+  constexpr auto Usart3_6_LpUart1_IRQn = USART3_4_5_6_IRQn;
+#endif
+#else
+#if defined(HAS_LPUART1)
+  constexpr auto Usart3_6_LpUart1_IRQn = USART3_4_LPUART1_IRQn;
+#else
+  constexpr auto Usart3_6_LpUart1_IRQn = USART3_4_IRQn;
+#endif
+#endif
+#endif
+
   switch (id) {
   case UartId::Usart1: return USART1_IRQn;
-  case UartId::Usart2: [[fallthrough]];
-  case UartId::LpUart2: return USART2_LPUART2_IRQn;
+
+#ifdef HAS_LPUART2
+  case UartId::LpUart2: [[fallthrough]];
+#endif
+  case UartId::Usart2:
+#ifndef HAS_LPUART2
+    return USART2_IRQn;
+#else
+    return USART2_LPUART2_IRQn;
+#endif
+
+#ifdef HAS_USART34
   case UartId::Usart3: [[fallthrough]];
-  case UartId::Usart4: [[fallthrough]];
+  case UartId::Usart4: return Usart3_6_LpUart1_IRQn;
+#endif
+#ifdef HAS_USART56
   case UartId::Usart5: [[fallthrough]];
-  case UartId::Usart6: [[fallthrough]];
-  case UartId::LpUart1: return USART3_4_5_6_LPUART1_IRQn;
+  case UartId::Usart6: return Usart3_6_LpUart1_IRQn;
+#endif
+#ifdef HAS_LPUART1
+  case UartId::LpUart1: return Usart3_6_LpUart1_IRQn;
+#endif
   }
 
   std::unreachable();
@@ -566,13 +607,21 @@ class Uart : public hal::UnusedPeripheral<Uart<Id>> {
   UART_HandleTypeDef huart{};
 };
 
-export using Usart1  = Uart<UartId::Usart1>;
-export using Usart2  = Uart<UartId::Usart2>;
-export using Usart3  = Uart<UartId::Usart3>;
-export using Usart4  = Uart<UartId::Usart4>;
-export using Usart5  = Uart<UartId::Usart5>;
-export using Usart6  = Uart<UartId::Usart6>;
+export using Usart1 = Uart<UartId::Usart1>;
+export using Usart2 = Uart<UartId::Usart2>;
+#ifdef HAS_USART34
+export using Usart3 = Uart<UartId::Usart3>;
+export using Usart4 = Uart<UartId::Usart4>;
+#endif
+#ifdef HAS_USART56
+export using Usart5 = Uart<UartId::Usart5>;
+export using Usart6 = Uart<UartId::Usart6>;
+#endif
+#ifdef HAS_LPUART1
 export using LpUart1 = Uart<UartId::LpUart1>;
+#endif
+#ifdef HAS_LPUART2
 export using LpUart2 = Uart<UartId::LpUart2>;
+#endif
 
 }   // namespace stm32g0

@@ -93,6 +93,9 @@ struct StackSizeMarker {};
 export template <typename T, std::size_t StackSize = MinStackSize>
 class LambdaTask : public T {
  public:
+  static_assert(StackSize % sizeof(StackType_t) == 0,
+                "Stack size must be a multiple of the word size");
+
   LambdaTask(const char* name, T lambda,
              UBaseType_t prio = configMAX_PRIORITIES - 1)
       : T{lambda}
@@ -113,7 +116,8 @@ class LambdaTask : public T {
   }
 
   StaticTask_t handle{};
-  alignas(StackType_t) std::array<StackType_t, StackSize> stack{};
+  alignas(StackType_t)
+      std::array<StackType_t, StackSize / sizeof(StackType_t)> stack{};
   TaskRef task_ref;
 };
 
