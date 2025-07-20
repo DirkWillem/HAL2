@@ -21,13 +21,14 @@ namespace modbus::server::freertos {
 
 export template <concepts::Server Srv, hal::RtosUart Uart,
                  encoding::UartEncoding E = encoding::rtu::Encoding>
-class UartServer : public rtos::Task<UartServer<Srv, Uart>, 512> {
+class UartServer
+    : public rtos::Task<UartServer<Srv, Uart>, rtos::MediumStackSize> {
   using Encoder = typename E::Encoder;
   using Decoder = typename E::Decoder;
 
  public:
   UartServer(Srv& server, Uart& uart, uint8_t address) noexcept
-      : rtos::Task<UartServer, 512>{"ModbusServer"}
+      : rtos::Task<UartServer, rtos::MediumStackSize>{"ModbusServer"}
       , server{server}
       , uart{uart}
       , address{address} {}
