@@ -11,6 +11,8 @@ module;
 
 export module modbus.server;
 
+export import modbus.core;
+
 import hstd;
 
 export import :bit;

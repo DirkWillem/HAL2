@@ -53,6 +53,10 @@ export class EventGroup {
     }
   }
 
+  uint32_t ReadBits() const noexcept {
+    return xEventGroupGetBits(handle);
+  }
+
   std::optional<uint32_t> Wait(uint32_t            bits_to_wait,
                                hstd::Duration auto timeout,
                                bool                clear_on_exit = true,

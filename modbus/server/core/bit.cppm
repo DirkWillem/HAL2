@@ -12,7 +12,6 @@ import hstd;
 import modbus.core;
 
 namespace modbus::server {
-
 export template <typename T>
 concept MutableBitStorage = std::is_same_v<T, uint8_t>;
 
@@ -78,18 +77,56 @@ WriteBit(S& storage, uint8_t value) noexcept {
   return {value};
 }
 
-export template <typename T, uint16_t C>
-concept MutableBitSetStorage =
-    (std::is_unsigned_v<T> && C <= std::numeric_limits<T>::digits);
+template <typename Impl>
+concept CustomReadonlyBitSetStorage = requires(const Impl& c_impl) {
+  { Impl::MaxBitCount } -> std::convertible_to<std::size_t>;
+  requires std::unsigned_integral<typename Impl::MemType>;
+  requires(Impl::MaxBitCount
+           <= std::numeric_limits<typename Impl::MemType>::digits);
+
+  {
+    c_impl.Read(std::declval<typename Impl::MemType>())
+  }
+  -> std::convertible_to<std::expected<typename Impl::MemType, ExceptionCode>>;
+};
+
+template <typename Impl>
+concept CustomMutableBitSetStorage = requires(Impl& impl) {
+  {
+    impl.Write(std::declval<typename Impl::MemType>(),
+               std::declval<typename Impl::MemType>())
+  }
+  -> std::convertible_to<std::expected<typename Impl::MemType, ExceptionCode>>;
+};
 
 export template <typename T, uint16_t C>
-concept ReadonlyBitSetStorage = MutableBitSetStorage<T, C>;
+concept MutableBitSetStorage =
+    (std::is_unsigned_v<T> && C <= std::numeric_limits<T>::digits)
+    || (CustomMutableBitSetStorage<T> && C <= T::MaxBitCount);
+
+export template <typename T, uint16_t C>
+concept ReadonlyBitSetStorage =
+    MutableBitSetStorage<T, C>
+    || (CustomReadonlyBitSetStorage<T> && C <= T::MaxBitCount);
+
+template<typename T>
+struct UnderlyingBitType;
+
+template<std::unsigned_integral T>
+struct UnderlyingBitType<T> {
+  using Type = T;
+};
+
+template<CustomReadonlyBitSetStorage S>
+struct UnderlyingBitType<S> {
+  using Type = typename S::MemType;
+};
 
 export template <uint16_t A, uint16_t C, ReadonlyBitSetStorage<C> S,
                  hstd::StaticString N>
 struct DiscreteInputSet {
   using Storage = S;
-  using Bits    = S;
+  using Bits    = UnderlyingBitType<S>::Type;
 
   static constexpr auto             StartAddress = A;
   static constexpr auto             EndAddress   = A + C;
@@ -114,7 +151,7 @@ export template <uint16_t A, uint16_t C, MutableBitSetStorage<C> S,
                  hstd::StaticString N>
 struct CoilSet {
   using Storage = S;
-  using Bits    = S;
+  using Bits    = UnderlyingBitType<S>::Type;
 
   static constexpr auto             StartAddress = A;
   static constexpr auto             EndAddress   = A + C;
@@ -142,12 +179,24 @@ constexpr std::expected<S, ExceptionCode> ReadBitSet(const S& storage,
   return {storage & mask};
 }
 
+export template <CustomReadonlyBitSetStorage S>
+constexpr std::expected<typename S::MemType, ExceptionCode>
+ReadBitSet(S& storage, typename S::MemType mask) {
+  return storage.Read(mask);
+}
+
 export template <typename S>
   requires(std::is_unsigned_v<S>)
 constexpr std::expected<S, ExceptionCode> WriteBitSet(S& storage, S mask,
                                                       S value) noexcept {
   storage = (storage & ~mask) | (value & mask);
   return {value & mask};
+}
+
+export template <CustomMutableBitSetStorage S>
+constexpr std::expected<typename S::MemType, ExceptionCode>
+WriteBitSet(S& storage, typename S::MemType mask, typename S::MemType value) {
+  return storage.Write(mask, value);
 }
 
 namespace concepts {
