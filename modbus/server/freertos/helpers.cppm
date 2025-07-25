@@ -1,5 +1,6 @@
 module;
 
+#include <chrono>
 #include <cstdint>
 #include <expected>
 #include <memory>
@@ -16,7 +17,13 @@ import modbus.server;
 
 namespace modbus::server::freertos {
 
-export template <typename S>
+struct NotifyingRegisterStorageSettings {
+  bool external_event_group =
+      false;   //!< Whether the event group is a reference or an internally
+               //!< contained value
+};
+
+export template <typename S, NotifyingRegisterStorageSettings Opts = {}>
   requires PlainMemoryRegisterStorage<S, S>
 class NotifyingRegisterStorage {
  public:
@@ -24,15 +31,23 @@ class NotifyingRegisterStorage {
 
   explicit NotifyingRegisterStorage(
       std::tuple<S, ::rtos::EventGroup*, uint32_t> args) noexcept
+    requires(Opts.external_event_group)
       : storage{std::get<0>(args)}
-      , event_group{*std::get<1>(args)}
-      , event_bit{std::get<2>(args)} {}
+      , eg{*std::get<1>(args)}
+      , eb{std::get<2>(args)} {}
 
   explicit NotifyingRegisterStorage(
       std::tuple<::rtos::EventGroup*, uint32_t> args) noexcept
+    requires(Opts.external_event_group)
       : storage{}
-      , event_group{*std::get<0>(args)}
-      , event_bit{std::get<1>(args)} {}
+      , eg{*std::get<0>(args)}
+      , eb{std::get<1>(args)} {}
+
+  explicit NotifyingRegisterStorage() noexcept
+    requires(!Opts.external_event_group)
+      : storage{}
+      , eg{}
+      , eb{0b1UL} {}
 
   auto Read(std::size_t offset, std::size_t size) const noexcept {
     return ::modbus::server::ReadRegister(storage, offset, size);
@@ -43,24 +58,27 @@ class NotifyingRegisterStorage {
     const auto result =
         ::modbus::server::WriteRegister(storage, data, offset, size);
     if (result.has_value()) {
-      event_group.SetBits(event_bit);
+      eg.SetBits(eb);
     }
 
     return result;
   }
-
   static void SwapEndianness(std::span<std::byte> data, std::size_t offset,
                              std::size_t size) noexcept {
     server::SwapRegisterEndianness<S>(data, offset, size);
   }
 
+  rtos::EventGroup&  event_group() & noexcept { return eg; }
+  constexpr auto     event_bit() const noexcept { return eb; }
   constexpr const S& value() const& noexcept { return storage; }
 
  private:
   S storage;
 
-  ::rtos::EventGroup& event_group;
-  uint32_t            event_bit;
+  std::conditional_t<Opts.external_event_group, ::rtos::EventGroup&,
+                     ::rtos::EventGroup>
+           eg;
+  uint32_t eb;
 };
 
 export template <std::size_t BitCount, std::size_t FirstBit = 0>

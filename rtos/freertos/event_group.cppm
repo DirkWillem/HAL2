@@ -27,6 +27,16 @@ export class EventGroup {
   EventGroup()
       : handle{xEventGroupCreateStatic(&buffer)} {}
 
+  EventGroup(const EventGroup& rhs)
+      : handle{xEventGroupCreateStatic(&buffer)} {
+    SetBits(rhs.ReadBits());
+  }
+
+  EventGroup& operator=(const EventGroup& rhs) noexcept {
+    SetBits(rhs.ReadBits());
+    return *this;
+  }
+
   uint32_t SetBits(uint32_t bits) noexcept {
     return xEventGroupSetBits(handle, bits);
   }
@@ -53,9 +63,7 @@ export class EventGroup {
     }
   }
 
-  uint32_t ReadBits() const noexcept {
-    return xEventGroupGetBits(handle);
-  }
+  uint32_t ReadBits() const noexcept { return xEventGroupGetBits(handle); }
 
   std::optional<uint32_t> Wait(uint32_t            bits_to_wait,
                                hstd::Duration auto timeout,
