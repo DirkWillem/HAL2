@@ -16,3 +16,4 @@ export import :math;
 export import :memory;
 export import :ratio;
 export import :spans;
+export import :static_string_builder;

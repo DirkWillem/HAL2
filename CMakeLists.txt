@@ -1,6 +1,13 @@
 include(cmake/setup_python.cmake)
 include(cmake/utilities.cmake)
 
+if (NOT CMAKE_CROSSCOMPILING)
+    include(FetchContent)
+
+    FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.12.0/json.tar.xz)
+    FetchContent_MakeAvailable(json)
+endif()
+
 add_subdirectory(common)
 add_subdirectory(vendor)
 add_subdirectory(rtos)

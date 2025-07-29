@@ -29,6 +29,32 @@ target_sources(modbus_encoding_rtu PUBLIC
 target_link_libraries(modbus_encoding_rtu PUBLIC modbus_encoding)
 
 # MODBUS Server
+# - Specification
+add_library(modbus_server_spec)
+target_sources(modbus_server_spec
+        PUBLIC
+        FILE_SET CXX_MODULES
+        FILES
+        server/spec/server_spec.cppm
+
+        server/spec/array.cppm
+        server/spec/enumerate.cppm)
+target_link_libraries(modbus_server_spec PUBLIC hstd project_settings)
+
+if (NOT CMAKE_CROSSCOMPILING)
+    add_library(modbus_server_spec_gen)
+    target_sources(modbus_server_spec_gen
+            PUBLIC
+            FILE_SET CXX_MODULES
+            FILES
+            server/spec_gen/spec_gen.cppm)
+    target_link_libraries(modbus_server_spec_gen PUBLIC modbus_server_spec)
+
+    add_executable(modbus_server_spec_gen_main
+            server/spec_gen/spec_gen_main.cpp)
+    target_link_libraries(modbus_server_spec_gen_main modbus_server_spec_gen nlohmann_json::nlohmann_json)
+endif ()
+
 # - Core
 add_library(modbus_server)
 target_sources(modbus_server PUBLIC
@@ -39,7 +65,7 @@ target_sources(modbus_server PUBLIC
         server/core/bit.cppm
         server/core/register.cppm
         server/core/server_storage.cppm)
-target_link_libraries(modbus_server PUBLIC modbus_core)
+target_link_libraries(modbus_server PUBLIC modbus_server_spec modbus_core)
 
 # - FreeRTOS Implementation
 add_library(modbus_server_freertos)

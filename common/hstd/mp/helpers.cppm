@@ -141,16 +141,20 @@ StaticMap(std::equality_comparable_with<TIn> auto value,
 
 export template <std::size_t N>
 struct StaticString {
+  static constexpr auto Size = N;
+
   constexpr StaticString(const char (&str)[N]) noexcept {
     for (std::size_t i = 0; i < N; ++i) {
       value[i] = str[i];
     }
   }
 
+  [[nodiscard]] constexpr std::size_t size() const noexcept { return N; }
+
   constexpr auto operator<=>(const StaticString&) const noexcept = default;
 
   explicit(false) constexpr operator std::string_view() const noexcept {
-    return std::string_view{value.data(), N};
+    return std::string_view{value.data(), N - 1};
   }
 
   std::array<char, N> value;
@@ -158,5 +162,22 @@ struct StaticString {
 
 export template <std::size_t N>
 StaticString(const char (&)[N]) -> StaticString<N>;
+
+namespace concepts {
+
+template <typename T>
+inline constexpr bool IsStaticString = false;
+
+template <std::size_t N>
+inline constexpr bool IsStaticString<::hstd::StaticString<N>> = true;
+
+export template <typename T>
+concept StaticString = IsStaticString<T>;
+
+export template <typename Impl>
+concept ToStringView =
+    requires(const Impl& c_impl) { static_cast<std::string_view>(c_impl); };
+
+}   // namespace concepts
 
 }   // namespace hstd

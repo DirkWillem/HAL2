@@ -1,0 +1,83 @@
+module;
+
+#include <array>
+#include <cstdint>
+#include <string_view>
+#include <utility>
+
+export module modbus.server.spec;
+
+export import :array;
+export import :enumerate;
+
+import hstd;
+
+namespace modbus::server::spec {
+
+/**
+ * Returns the size of a given type in 16-bit registers
+ * @tparam T Type to return the data size of
+ * @return Size of the data type, in 16-bit registers
+ */
+export template <typename T>
+consteval uint16_t DataSize() noexcept {
+  return static_cast<uint16_t>(sizeof(T) / 2);
+}
+
+/**
+ * Options for overriding the specification of a register
+ * @tparam AEN Array element mapping type
+ * @tparam ED Enum definition type
+ */
+template <typename AEN = DefaultArrayElementNaming, typename ED = hstd::Empty>
+struct RegisterOpts {
+  AEN array_element_naming = {};   //!< Array element naming convention
+  ED  enum_def             = {};   //!< Enum definition
+};
+
+template <uint16_t A, typename D, hstd::StaticString N, RegisterOpts Opts>
+struct Register {
+  using Data = D;
+
+  static constexpr auto Options      = Opts;
+  static constexpr auto Name         = N;
+  static constexpr auto Size         = DataSize<D>();
+  static constexpr auto StartAddress = A;
+  static constexpr auto EndAddress   = A + Size;
+};
+
+/**
+ * Describes a holding register
+ * @tparam A Register address
+ * @tparam D Register contained data type
+ * @tparam N Register name
+ * @tparam Opts Register options
+ */
+export template <uint16_t A, typename D, hstd::StaticString N,
+                 RegisterOpts Opts = {}>
+struct HoldingRegister : Register<A, D, N, Opts> {};
+
+namespace concepts {
+
+template <typename T>
+inline constexpr auto IsHoldingRegister = false;
+
+template <uint16_t A, typename D, hstd::StaticString N, RegisterOpts Opts>
+inline constexpr auto IsHoldingRegister<HoldingRegister<A, D, N, Opts>> = true;
+
+/**
+ * Concept for determining if a type is a holding register description
+ */
+export template <typename T>
+concept HoldingRegister = IsHoldingRegister<T>;
+
+/**
+ * Concept for determining if a type is a register (input or holding)
+ * description
+ */
+export template <typename T>
+concept Register = HoldingRegister<T>;
+
+}   // namespace concepts
+
+}   // namespace modbus::server::spec

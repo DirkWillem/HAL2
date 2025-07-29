@@ -67,6 +67,24 @@ constexpr T Ones(std::size_t n) noexcept {
   }
 }
 
+export template <std::integral T>
+[[nodiscard]] constexpr unsigned NumDigits(T value, T base = 10) {
+  unsigned n_digits = 1;
+  T        compare  = base;
+
+  while (compare <= value) {
+    // Handle overflow
+    if (static_cast<T>(compare * base) < compare) {
+      return n_digits;
+    }
+
+    n_digits++;
+    compare *= base;
+  }
+
+  return n_digits;
+}
+
 namespace literals {
 
 export constexpr uint8_t operator""_u8(unsigned long long int x) noexcept {

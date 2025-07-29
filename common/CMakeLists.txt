@@ -32,6 +32,7 @@ target_sources(hstd
         hstd/memory.cppm
         hstd/ratio.cppm
         hstd/spans.cppm
+        hstd/static_string_builder.cppm
 
         hstd/halstd.cppm)
 target_link_libraries(hstd PRIVATE project_settings)

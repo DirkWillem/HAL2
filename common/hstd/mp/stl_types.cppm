@@ -4,6 +4,8 @@ module;
 
 export module hstd:mp.stl_types;
 
+import :mp.helpers;
+
 namespace hstd {
 
 export template <typename T>
@@ -18,5 +20,12 @@ export template <typename T>
 concept Array = IsArray<T>;
 
 }
+
+export template <typename T>
+  requires concepts::Array<T>
+inline constexpr auto ArraySize =
+    ([]<typename E, std::size_t N>(hstd::Marker<std::array<E, N>>) {
+      return N;
+    })(hstd::Marker<T>());
 
 }   // namespace hstd
