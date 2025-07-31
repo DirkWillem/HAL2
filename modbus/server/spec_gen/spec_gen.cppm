@@ -74,7 +74,7 @@ export json GetBitInfoJson(const BitInfo& info) {
 export json GetBitsInfoJson(const BitsInfo& info) {
   json result = {
       {"name", info.name},
-      {"address", info.address},
+      {"start_address", info.address},
       {"size", info.size},
   };
 

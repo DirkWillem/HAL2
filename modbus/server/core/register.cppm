@@ -16,6 +16,7 @@ export module modbus.server:reg;
 import hstd;
 
 import modbus.core;
+import modbus.server.spec;
 
 namespace modbus::server {
 
@@ -95,71 +96,61 @@ consteval std::size_t RegisterSize() noexcept {
 
 /**
  * Describes an input register
- * @tparam A Address
- * @tparam D Stored data type
+ * @tparam Spec Register specification
  * @tparam S Storage implementation
- * @tparam N Name of the register
  */
-export template <uint16_t A, typename D, ReadonlyRegisterStorage<D> S,
-                 hstd::StaticString N>
+export template <spec::concepts::InputRegister                Spec,
+                 ReadonlyRegisterStorage<typename Spec::Data> S>
 struct InputRegister {
-  using Data    = D;
+  using Data    = typename Spec::Data;
   using Storage = S;
 
-  static constexpr auto             StartAddress = A;
-  static constexpr auto             EndAddress   = A + RegisterSize<S>();
-  static constexpr std::string_view Name         = N;
+  static constexpr auto StartAddress = Spec::StartAddress;
+  static constexpr auto EndAddress   = StartAddress + RegisterSize<S>();
 };
 
 template <typename T>
 inline constexpr bool IsInputRegister = false;
 
-template <uint16_t A, typename D, MutableRegisterStorage<D> S,
-          hstd::StaticString N>
-inline constexpr bool IsInputRegister<InputRegister<A, D, S, N>> = true;
+template <spec::concepts::InputRegister                Spec,
+          ReadonlyRegisterStorage<typename Spec::Data> S>
+inline constexpr bool IsInputRegister<InputRegister<Spec, S>> = true;
 
 /**
  * Type alias for an in-memory input register
- * @tparam A Address
- * @tparam D Stored data type
- * @tparam N Name of the register
+ * @tparam Spec Register specification
  */
-export template <uint16_t A, typename D, hstd::StaticString N>
-using InMemInputRegister = InputRegister<A, D, D, N>;
+export template <spec::concepts::InputRegister Spec>
+using InMemInputRegister = InputRegister<Spec, typename Spec::Data>;
 
 /**
  * Describes a holding register
- * @tparam A Address
- * @tparam D Stored data type
+ * @tparam Spec Register specification
  * @tparam S Storage implementation
- * @tparam N Name of the register
  */
-export template <uint16_t A, typename D, MutableRegisterStorage<D> S,
-                 hstd::StaticString N>
+export template <spec::concepts::HoldingRegister             Spec,
+                 MutableRegisterStorage<typename Spec::Data> S>
 struct HoldingRegister {
-  using Data    = D;
+  using Data    = typename Spec::Data;
   using Storage = S;
 
-  static constexpr auto             StartAddress = A;
-  static constexpr auto             EndAddress   = A + (sizeof(D) / 2);
-  static constexpr std::string_view Name         = N;
+  static constexpr auto StartAddress = Spec::StartAddress;
+  static constexpr auto EndAddress   = StartAddress + RegisterSize<S>();
 };
 
 template <typename T>
 inline constexpr bool IsHoldingRegister = false;
 
-template <uint16_t A, typename D, MutableRegisterStorage<D> S,
-          hstd::StaticString N>
-inline constexpr bool IsHoldingRegister<HoldingRegister<A, D, S, N>> = true;
+template <spec::concepts::HoldingRegister             Spec,
+          MutableRegisterStorage<typename Spec::Data> S>
+inline constexpr bool IsHoldingRegister<HoldingRegister<Spec, S>> = true;
 
 /**
  * Type alias for an in-memory holding register
- * @tparam A Address
- * @tparam D Stored data type
- * @tparam N Name of the register
+ * @tparam Spec Register specification
  */
-export template <uint16_t A, typename D, hstd::StaticString N>
-using InMemHoldingRegister = HoldingRegister<A, D, D, N>;
+export template <spec::concepts::HoldingRegister Spec>
+using InMemHoldingRegister = HoldingRegister<Spec, typename Spec::Data>;
 
 template <typename T>
 [[nodiscard]] constexpr bool

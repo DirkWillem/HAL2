@@ -10,6 +10,7 @@ export module modbus.server:bit;
 import hstd;
 
 import modbus.core;
+import modbus.server.spec;
 
 namespace modbus::server {
 export template <typename T>
@@ -18,41 +19,39 @@ concept MutableBitStorage = std::is_same_v<T, uint8_t>;
 export template <typename T>
 concept ReadonlyBitStorage = MutableBitStorage<T>;
 
-export template <uint16_t A, ReadonlyBitStorage S, hstd::StaticString N>
+export template <spec::concepts::DiscreteInput Spec, ReadonlyBitStorage S>
 struct DiscreteInput {
   using Storage = S;
   using Bits    = S;
 
-  static constexpr auto             Address = A;
-  static constexpr std::string_view Name    = N;
+  static constexpr auto Address = Spec::StartAddress;
 };
 
 export template <typename T>
 inline constexpr bool IsDiscreteInput = false;
 
-export template <uint16_t A, MutableBitStorage S, hstd::StaticString N>
-inline constexpr bool IsDiscreteInput<DiscreteInput<A, S, N>> = true;
+export template <typename Spec, MutableBitStorage S>
+inline constexpr bool IsDiscreteInput<DiscreteInput<Spec, S>> = true;
 
-export template <uint16_t A, hstd::StaticString N>
-using InMemDiscreteInput = DiscreteInput<A, uint8_t, N>;
+export template <spec::concepts::Bit Spec>
+using InMemDiscreteInput = DiscreteInput<Spec, uint8_t>;
 
-export template <uint16_t A, MutableBitStorage S, hstd::StaticString N>
+export template <spec::concepts::Coil Spec, MutableBitStorage S>
 struct Coil {
   using Storage = S;
   using Bits    = S;
 
-  static constexpr auto             Address = A;
-  static constexpr std::string_view Name    = N;
+  static constexpr auto Address = Spec::StartAddress;
 };
 
 export template <typename T>
 inline constexpr bool IsCoil = false;
 
-export template <uint16_t A, MutableBitStorage S, hstd::StaticString N>
-inline constexpr bool IsCoil<Coil<A, S, N>> = true;
+export template <typename Spec, MutableBitStorage S>
+inline constexpr bool IsCoil<Coil<Spec, S>> = true;
 
-export template <uint16_t A, hstd::StaticString N>
-using InMemCoil = Coil<A, uint8_t, N>;
+export template <spec::concepts::Bit Spec>
+using InMemCoil = Coil<Spec, uint8_t>;
 
 export template <ReadonlyBitStorage S>
   requires(std::is_same_v<S, uint8_t>)
@@ -109,68 +108,69 @@ concept ReadonlyBitSetStorage =
     MutableBitSetStorage<T, C>
     || (CustomReadonlyBitSetStorage<T> && C <= T::MaxBitCount);
 
-template<typename T>
+template <typename T>
 struct UnderlyingBitType;
 
-template<std::unsigned_integral T>
+template <std::unsigned_integral T>
 struct UnderlyingBitType<T> {
   using Type = T;
 };
 
-template<CustomReadonlyBitSetStorage S>
+template <CustomReadonlyBitSetStorage S>
 struct UnderlyingBitType<S> {
   using Type = typename S::MemType;
 };
 
-export template <uint16_t A, uint16_t C, ReadonlyBitSetStorage<C> S,
-                 hstd::StaticString N>
+export template <spec::concepts::DiscreteInputs       Spec,
+                 ReadonlyBitSetStorage<(Spec::Count)> S>
 struct DiscreteInputSet {
   using Storage = S;
-  using Bits    = UnderlyingBitType<S>::Type;
+  using Bits    = typename UnderlyingBitType<S>::Type;
 
-  static constexpr auto             StartAddress = A;
-  static constexpr auto             EndAddress   = A + C;
-  static constexpr auto             Count        = C;
-  static constexpr std::string_view Name         = N;
+  static constexpr auto StartAddress = Spec::StartAddress;
+  static constexpr auto EndAddress   = Spec::EndAddress;
+  static constexpr auto Count        = Spec::Count;
 
-  static_assert(A % 8 == 0,
+  static_assert(Spec::StartAddress % 8 == 0,
                 "Discrete input set starting addresses must be byte-aligned");
 };
 
 export template <typename T>
 inline constexpr bool IsDiscreteInputSet = false;
 
-export template <uint16_t A, uint16_t C, MutableBitSetStorage<C> S,
-                 hstd::StaticString N>
-inline constexpr bool IsDiscreteInputSet<DiscreteInputSet<A, C, S, N>> = true;
-export template <uint16_t A, uint16_t C, hstd::StaticString N>
-  requires(C <= 32)
-using InMemDiscreteInputSet = DiscreteInputSet<A, C, hstd::UintN_t<C>, N>;
+export template <spec::concepts::Bits                 Spec,
+                 ReadonlyBitSetStorage<(Spec::Count)> S>
+inline constexpr bool IsDiscreteInputSet<DiscreteInputSet<Spec, S>> = true;
 
-export template <uint16_t A, uint16_t C, MutableBitSetStorage<C> S,
-                 hstd::StaticString N>
+export template <spec::concepts::Bits Spec>
+  requires(Spec::Count <= 32)
+using InMemDiscreteInputSet =
+    DiscreteInputSet<Spec, hstd::UintN_t<(Spec::Count)>>;
+
+export template <spec::concepts::Coils               Spec,
+                 MutableBitSetStorage<(Spec::Count)> S>
 struct CoilSet {
   using Storage = S;
-  using Bits    = UnderlyingBitType<S>::Type;
+  using Bits    = typename UnderlyingBitType<S>::Type;
 
-  static constexpr auto             StartAddress = A;
-  static constexpr auto             EndAddress   = A + C;
-  static constexpr auto             Count        = C;
-  static constexpr std::string_view Name         = N;
+  static constexpr auto StartAddress = Spec::StartAddress;
+  static constexpr auto EndAddress   = Spec::EndAddress;
+  static constexpr auto Count        = Spec::Count;
 
-  static_assert(A % 8 == 0, "Coil set starting addresses must be byte-aligned");
+  static_assert(Spec::StartAddress % 8 == 0,
+                "Coil set starting addresses must be byte-aligned");
 };
 
 export template <typename T>
 inline constexpr bool IsCoilSet = false;
 
-export template <uint16_t A, uint16_t C, MutableBitSetStorage<C> S,
-                 hstd::StaticString N>
-inline constexpr bool IsCoilSet<CoilSet<A, C, S, N>> = true;
+export template <spec::concepts::Coils               Spec,
+                 MutableBitSetStorage<(Spec::Count)> S>
+inline constexpr bool IsCoilSet<CoilSet<Spec, S>> = true;
 
-export template <uint16_t A, uint16_t C, hstd::StaticString N>
-  requires(C <= 32)
-using InMemCoilSet = CoilSet<A, C, hstd::UintN_t<C>, N>;
+export template <spec::concepts::Bits Spec>
+  requires(Spec::Count <= 32)
+using InMemCoilSet = CoilSet<Spec, hstd::UintN_t<(Spec::Count)>>;
 
 export template <typename S>
   requires(std::is_unsigned_v<S>)

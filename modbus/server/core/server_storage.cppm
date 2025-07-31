@@ -292,7 +292,7 @@ concept MutableRegisterTable =
 }   // namespace concepts
 
 export template <typename DIs, typename Cs, typename IRs, typename HRs>
-class ServerStorage {};
+class ServerStorage;
 
 export template <concepts::DiscreteInput... UDI, concepts::Coil... UC,
                  concepts::InputRegister... UIR,

@@ -1,6 +1,8 @@
 module;
 
 #include <string_view>
+#include <tuple>
+#include <utility>
 
 export module modbus.server.spec:array;
 
@@ -20,6 +22,21 @@ export struct DefaultArrayElementNaming {
     result.Append("_");
     result.Append(Idx);
     return result;
+  }
+};
+
+/**
+ * Naming convention for array elements where an array of names is provided
+ */
+export template <hstd::StaticString... Names>
+struct ArrayArrayElementNaming {
+  template <hstd::StaticString, std::size_t Idx>
+  constexpr auto ElementName() const noexcept {
+    if (Idx >= sizeof...(Names)) {
+      std::unreachable();
+    }
+
+    return std::get<Idx>(std::make_tuple(Names...));
   }
 };
 

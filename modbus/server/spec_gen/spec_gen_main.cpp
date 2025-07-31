@@ -50,8 +50,9 @@ using StatusLed =
 using StatusLeds = modbus::server::spec::HoldingRegister<
     0x0100, std::array<LedState, 3>, "status_leds",
     {
-        .array_element_naming = StatusLedElementNaming{},
-        .enum_def             = LedStateDef{},
+        .array_element_naming = ArrayArrayElementNaming<
+            "status_led_green", "status_led_yellow", "status_led_red">{},
+        .enum_def = LedStateDef{},
     }>;
 
 using AxisEnables =

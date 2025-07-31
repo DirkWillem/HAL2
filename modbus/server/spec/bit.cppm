@@ -4,6 +4,7 @@ module;
 #include <cstdint>
 #include <string_view>
 #include <tuple>
+#include <utility>
 
 export module modbus.server.spec:bit;
 
@@ -29,7 +30,7 @@ export struct DefaultBitNaming {
  */
 export template <hstd::StaticString... Names>
 struct ArrayBitNaming {
-  template <hstd::StaticString Root, std::size_t Idx>
+  template <hstd::StaticString, std::size_t Idx>
   constexpr auto BitName() const noexcept {
     if (Idx >= sizeof...(Names)) {
       std::unreachable();
@@ -136,6 +137,9 @@ inline constexpr auto IsDiscreteInputs<DiscreteInputs<A, C, N, Opts>> = true;
 export template <typename T>
 concept DiscreteInputs = IsDiscreteInputs<T>;
 
+export template <typename T>
+concept DiscreteInput = DiscreteInputs<T> && (T::Count == 1);
+
 template <typename T>
 inline constexpr auto IsCoils = false;
 
@@ -149,7 +153,13 @@ export template <typename T>
 concept Coils = IsCoils<T>;
 
 export template <typename T>
+concept Coil = Coils<T> && (T::Count == 1);
+
+export template <typename T>
 concept Bits = DiscreteInputs<T> || Coils<T>;
+
+export template <typename T>
+concept Bit = Bits<T> && (T::Count == 1);
 
 }   // namespace concepts
 
