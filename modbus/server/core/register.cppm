@@ -1,14 +1,12 @@
 module;
 
 #include <algorithm>
-#include <bit>
 #include <concepts>
 #include <cstdint>
 #include <cstring>
 #include <expected>
 #include <ranges>
 #include <span>
-#include <string_view>
 #include <utility>
 
 export module modbus.server:reg;
@@ -20,10 +18,7 @@ import modbus.server.spec;
 
 namespace modbus::server {
 
-/**
- * Concept for a custom read-only register storage
- * @tparam Impl Implementation type
- */
+/** Concept for a custom read-only register storage */
 template <typename Impl>
 concept CustomReadonlyRegisterStorage = requires(const Impl& impl) {
   { Impl::Size } -> std::convertible_to<std::size_t>;
@@ -38,10 +33,7 @@ concept CustomReadonlyRegisterStorage = requires(const Impl& impl) {
                        std::declval<std::size_t>());
 };
 
-/**
- * Concept for a custom mutable register storage
- * @tparam Impl Implementation type
- */
+/** Concept for a custom mutable register storage */
 template <typename Impl>
 concept CustomMutableRegisterStorage =
     CustomReadonlyRegisterStorage<Impl> && requires(Impl& impl) {
@@ -102,13 +94,19 @@ consteval std::size_t RegisterSize() noexcept {
 export template <spec::concepts::InputRegister                Spec,
                  ReadonlyRegisterStorage<typename Spec::Data> S>
 struct InputRegister {
-  using Data    = typename Spec::Data;
-  using Storage = S;
+  using Data    = typename Spec::Data;   //!< Register data type
+  using Storage = S;                     //!< Register storage implementation
 
-  static constexpr auto StartAddress = Spec::StartAddress;
-  static constexpr auto EndAddress   = StartAddress + RegisterSize<S>();
+  static constexpr auto StartAddress =
+      Spec::StartAddress;   //!< Register start address
+  static constexpr auto EndAddress =
+      StartAddress + RegisterSize<S>();   //!< Register end address
 };
 
+/**
+ * Whether a type is an input register
+ * @tparam T Type to check
+ */
 template <typename T>
 inline constexpr bool IsInputRegister = false;
 
@@ -131,13 +129,19 @@ using InMemInputRegister = InputRegister<Spec, typename Spec::Data>;
 export template <spec::concepts::HoldingRegister             Spec,
                  MutableRegisterStorage<typename Spec::Data> S>
 struct HoldingRegister {
-  using Data    = typename Spec::Data;
-  using Storage = S;
+  using Data    = typename Spec::Data;   //!< Register data type
+  using Storage = S;                     //!< Register storage implementation
 
-  static constexpr auto StartAddress = Spec::StartAddress;
-  static constexpr auto EndAddress   = StartAddress + RegisterSize<S>();
+  static constexpr auto StartAddress =
+      Spec::StartAddress;   //!< Register start address
+  static constexpr auto EndAddress =
+      StartAddress + RegisterSize<S>();   //!< Register end address
 };
 
+/**
+ * Whether a type is a holding register
+ * @tparam T Type to check
+ */
 template <typename T>
 inline constexpr bool IsHoldingRegister = false;
 
@@ -163,6 +167,14 @@ IsAlignedRegisterAccess(std::size_t offset, std::size_t size) noexcept {
   }
 }
 
+/**
+ * Reads from a register storage, implementation for in-memory registers
+ * @tparam S Storage type
+ * @param storage Reference to register storage
+ * @param offset Offset into the register from the register start address
+ * @param size Number of bytes to read
+ * @return Read bytes, or exception code on failure
+ */
 export template <typename S>
   requires PlainMemoryRegisterStorage<S, S>
 std::expected<std::span<const std::byte>, ExceptionCode>
@@ -178,12 +190,29 @@ ReadRegister(const S& storage, std::size_t offset, std::size_t size) noexcept {
   return hstd::ByteViewOver<std::byte>(storage).subspan(offset, size);
 }
 
+/**
+ * Reads from a register storage, implementation for custom registers
+ * @tparam S Storage type
+ * @param storage Reference to register storage
+ * @param offset Offset into the register from the register start address
+ * @param size Number of bytes to read
+ * @return Read bytes, or exception code on failure
+ */
 export template <CustomReadonlyRegisterStorage S>
 std::expected<std::span<const std::byte>, ExceptionCode>
 ReadRegister(const S& storage, std::size_t offset, std::size_t size) noexcept {
   return storage.Read(offset, size);
 }
 
+/**
+ * Writes to a register, implementation for in-memory registers
+ * @tparam S Storage type
+ * @param storage Reference to storage
+ * @param data Data to write
+ * @param offset Offset into the register to write at, from the register start
+ * @param size Number of bytes to write
+ * @return true on success, or exception code on failure
+ */
 export template <typename S>
   requires PlainMemoryRegisterStorage<S, S>
 std::expected<bool, ExceptionCode>
@@ -203,6 +232,15 @@ WriteRegister(S& storage, std::span<const std::byte> data, std::size_t offset,
   return true;
 }
 
+/**
+ * Writes to a register, implementation for custom register storage
+ * @tparam S Storage type
+ * @param storage Reference to storage
+ * @param data Data to write
+ * @param offset Offset into the register to write at, from the register start
+ * @param size Number of bytes to write
+ * @return true on success, or exception code on failure
+ */
 export template <CustomMutableRegisterStorage S>
 std::expected<bool, ExceptionCode>
 WriteRegister(S& storage, std::span<const std::byte> data, std::size_t offset,
@@ -210,6 +248,16 @@ WriteRegister(S& storage, std::span<const std::byte> data, std::size_t offset,
   return storage.Write(data, offset, size);
 }
 
+/**
+ * Performs an endianness swap on a byte array as if it were the raw contents of
+ * a register, taking into account the register data type. Implementation for
+ * in-memory register storage
+ *
+ * @tparam S Register storage type
+ * @param data Byte view over the register data
+ * @param offset Offset into the register where to perform the endianness swap
+ * @param size Number of bytes to perform the endianness swap on
+ */
 export template <typename S>
   requires PlainMemoryRegisterStorage<S, S>
 void SwapRegisterEndianness(std::span<std::byte> data, std::size_t offset,
@@ -230,6 +278,16 @@ void SwapRegisterEndianness(std::span<std::byte> data, std::size_t offset,
   }
 }
 
+/**
+ * Performs an endianness swap on a byte array as if it were the raw contents of
+ * a register, taking into account the register data type. Implementation for
+ * custom register storage
+ *
+ * @tparam S Register storage type
+ * @param data Byte view over the register data
+ * @param offset Offset into the register where to perform the endianness swap
+ * @param size Number of bytes to perform the endianness swap on
+ */
 export template <CustomReadonlyRegisterStorage S>
 void SwapRegisterEndianness(std::span<std::byte> data, std::size_t offset,
                             std::size_t size) {
@@ -238,12 +296,15 @@ void SwapRegisterEndianness(std::span<std::byte> data, std::size_t offset,
 
 namespace concepts {
 
+/** Concept describing an input register */
 export template <typename T>
 concept InputRegister = IsInputRegister<T>;
 
+/** Concept describing a holding register */
 export template <typename T>
 concept HoldingRegister = IsHoldingRegister<T>;
 
+/** Concept describing a register (either input or holding register) */
 export template <typename T>
 concept Register = InputRegister<T> || HoldingRegister<T>;
 

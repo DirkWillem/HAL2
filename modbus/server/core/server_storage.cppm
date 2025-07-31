@@ -63,7 +63,7 @@ struct InitStorages {
       static_assert(sizeof...(Is) > 0);
 
       constexpr auto Idx =
-          ([]<std::size_t... Idxs>(std::index_sequence<Idxs...>) constexpr{
+          ([]<std::size_t... Idxs>(std::index_sequence<Idxs...>) constexpr {
             constexpr std::array<bool, sizeof...(Idxs)> Arr{
                 {std::is_same_v<typename Is::Element, E>...}};
 
@@ -291,6 +291,13 @@ concept MutableRegisterTable =
 
 }   // namespace concepts
 
+/**
+ * Storage for a MODBUS server
+ * @tparam DIs Discrete inputs
+ * @tparam Cs Coils
+ * @tparam IRs Input registers
+ * @tparam HRs Holding registers
+ */
 export template <typename DIs, typename Cs, typename IRs, typename HRs>
 class ServerStorage;
 
@@ -464,11 +471,21 @@ class ServerStorage<hstd::Types<UDI...>, hstd::Types<UC...>,
       , RegisterImpl<UHR>{inits.template GetInit<UHR>()}... {}
 
  public:
+  /**
+   * Returns the storage for a given Bits
+   * @tparam B Bits to return storage for
+   * @return Bits storage
+   */
   template <concepts::Bits B>
   auto& GetStorage() & noexcept {
     return BitImpl<B>::storage;
   }
 
+  /**
+   * Returns the storage for a given Register
+   * @tparam R Register to return storage for
+   * @return Register storage
+   */
   template <concepts::Register R>
   auto& GetStorage() & noexcept {
     return RegisterImpl<R>::storage;

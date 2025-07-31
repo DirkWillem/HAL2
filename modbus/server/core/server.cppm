@@ -21,6 +21,13 @@ export import :server_storage;
 
 namespace modbus::server {
 
+/**
+ * MODBUS Server
+ * @tparam DIs Discrete inputs
+ * @tparam Cs Coils
+ * @tparam IRs Input registers
+ * @tparam HRs Holding registers
+ */
 export template <typename DIs, typename Cs, typename IRs, typename HRs>
 class Server : public ServerStorage<DIs, Cs, IRs, HRs> {
   using Res = ResponsePdu;
@@ -195,12 +202,24 @@ class Server : public ServerStorage<DIs, Cs, IRs, HRs> {
   };
 
  public:
+  /**
+   * Constructor. Default-initializes all storages
+   */
   explicit Server()
       : ServerStorage<DIs, Cs, IRs, HRs>{InitStorages<>{}} {}
 
+  /**
+   * Constructor
+   * @param init Initializations for specific storages
+   */
   explicit Server(auto init)
       : ServerStorage<DIs, Cs, IRs, HRs>{init} {}
 
+  /**
+   * Handles a request/response PDU pair
+   * @param request Request PDU to handle
+   * @param response Response PDU to put the repsonse in
+   */
   void HandleFrame(const RequestPdu& request, ResponsePdu& response) {
     std::visit(FrameHandler{*this, response}, request);
   }
@@ -216,6 +235,7 @@ inline constexpr bool IsServer = false;
 template <typename UDI, typename UC, typename UIR, typename UHR>
 inline constexpr bool IsServer<Server<UDI, UC, UIR, UHR>> = true;
 
+/** Concept describing a MODBUS server */
 export template <typename T>
 concept Server = IsServer<T>;
 
