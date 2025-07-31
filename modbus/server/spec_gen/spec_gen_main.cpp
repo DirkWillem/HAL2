@@ -8,7 +8,7 @@ import modbus.server.spec.gen;
 using namespace modbus::server::spec::gen;
 using namespace modbus::server::spec;
 
-enum class LedState : uint16_t {
+enum class LedState {
   Off               = 0,
   On                = 1,
   BlinkInPhase      = 2,
@@ -51,24 +51,32 @@ using StatusLeds = modbus::server::spec::HoldingRegister<
     0x0100, std::array<LedState, 3>, "status_leds",
     {
         .array_element_naming = StatusLedElementNaming{},
+        .enum_def             = LedStateDef{},
     }>;
 
+using Server = ServerSpec<hstd::Types<>, hstd::Types<>, hstd::Types<>,
+                          hstd::Types<StatusLeds>>;
+
 int main() {
-  const auto info = GetRegisterInfo<StatusLed>();
+  // const auto info = GetRegisterInfo<StatusLed>();
+  //
+  // std::cout << info.name << std::endl;
+  //
+  // for (const auto& child : info.children) {
+  //   std::cout << child.name << ", " << child.address << std::endl;
+  // }
+  //
+  // if (info.enum_info) {
+  //   const auto ei = *info.enum_info;
+  //   std::cout << ei.name << std::endl;
+  //   for (const auto& member : ei.members) {
+  //     std::cout << "  " << member.name << std::endl;
+  //   }
+  // }
 
-  std::cout << info.name << std::endl;
+  const auto spec = GetServerSpecJson<Server>();
 
-  for (const auto& child : info.children) {
-    std::cout << child.name << ", " << child.address << std::endl;
-  }
-
-  if (info.enum_info) {
-    const auto ei = *info.enum_info;
-    std::cout << ei.name << std::endl;
-    for (const auto& member : ei.members) {
-      std::cout << "  " << member.name << std::endl;
-    }
-  }
+  std::cout << spec.dump(2) << std::endl;
 
   return 0;
 }

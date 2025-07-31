@@ -47,12 +47,14 @@ if (NOT CMAKE_CROSSCOMPILING)
             PUBLIC
             FILE_SET CXX_MODULES
             FILES
-            server/spec_gen/spec_gen.cppm)
-    target_link_libraries(modbus_server_spec_gen PUBLIC modbus_server_spec)
+            server/spec_gen/spec_gen.cppm
+
+            server/spec_gen/registers.cppm)
+    target_link_libraries(modbus_server_spec_gen PUBLIC modbus_server_spec nlohmann_json::nlohmann_json)
 
     add_executable(modbus_server_spec_gen_main
             server/spec_gen/spec_gen_main.cpp)
-    target_link_libraries(modbus_server_spec_gen_main modbus_server_spec_gen nlohmann_json::nlohmann_json)
+    target_link_libraries(modbus_server_spec_gen_main modbus_server_spec_gen)
 endif ()
 
 # - Core

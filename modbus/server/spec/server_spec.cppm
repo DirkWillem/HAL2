@@ -80,4 +80,37 @@ concept Register = HoldingRegister<T>;
 
 }   // namespace concepts
 
+/**
+ * Specification of a MODBUS server
+ * @tparam DIs Discrete input list
+ * @tparam Cs Coils list
+ * @tparam IRs Input registers list
+ * @tparam HRs Holding registers list
+ */
+export template <hstd::concepts::Types DIs, hstd::concepts::Types Cs,
+                 hstd::concepts::Types IRs, hstd::concepts::Types HRs>
+struct ServerSpec {
+  using DiscreteInputs   = DIs;   //!< Discrete input specs
+  using Coils            = Cs;    //!< Coil specs
+  using InputRegisters   = IRs;   //!< Input register specs
+  using HoldingRegisters = HRs;   //!< Holding register specs
+};
+
+namespace concepts {
+
+template <typename>
+inline constexpr bool IsServerSpec = false;
+
+template <typename DIs, typename Cs, typename IRs, typename HRs>
+inline constexpr bool IsServerSpec<ServerSpec<DIs, Cs, IRs, HRs>> = true;
+
+/**
+ * Concept that determines if a type is a valid server specification
+ * @tparam T Checked type
+ */
+export template <typename T>
+concept ServerSpec = IsServerSpec<T>;
+
+}   // namespace concepts
+
 }   // namespace modbus::server::spec

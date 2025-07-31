@@ -63,7 +63,7 @@ inline constexpr auto IsEnumDef = false;
 template <typename E, hstd::StaticString N, typename... Ms>
 inline constexpr auto IsEnumDef<EnumDef<E, N, Ms...>> = true;
 
-template <typename T>
+export template <typename T>
 concept EnumDef = IsEnumDef<std::decay_t<T>>;
 
 /**

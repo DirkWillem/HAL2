@@ -6,6 +6,8 @@ module;
 
 export module hstd:mp.types;
 
+import :mp.helpers;
+
 namespace hstd {
 
 template <std::size_t I, typename... Ts>
@@ -41,13 +43,13 @@ struct FindIndexHelper<I, TSearch> {
 
 }   // namespace hstd
 
-export namespace hstd {
+namespace hstd {
 
 /**
  * Represents a list of type
  * @tparam Ts Types
  */
-template <typename... Ts>
+export template <typename... Ts>
 struct Types {
   /**
    * Returns a type from the list by its index
@@ -80,6 +82,18 @@ struct Types {
   template <typename T>
   static constexpr bool Contains() noexcept {
     return FindIndexHelper<0, T, Ts...>::Result.has_value();
+  }
+
+  /**
+   * Applies a given function with a hstd::Marker for each of the types in the
+   * list
+   * @tparam F Function type
+   * @param fn Function to apply
+   */
+  template <typename F>
+    requires(... && std::invocable<F, Marker<Ts>>)
+  static constexpr void ForEach(F&& fn) noexcept {
+    (..., fn(hstd::Marker<Ts>()));
   }
 
   /** In the case where all types are equal, returns the singular type in the
@@ -133,13 +147,13 @@ struct IsInstantiationOfVariadicHelper<T<Ts...>, T<Us...>> : std::true_type {};
 
 }   // namespace hstd
 
-export namespace hstd {
+namespace hstd {
 
 /**
  * Returns a list of types of the given types with all duplicates removed
  * @tparam Ts List of types
  */
-template <typename... Ts>
+export template <typename... Ts>
 using UniqueTypes = typename UniqueTypesHelper<Types<>, Ts...>::Result;
 
 /**
@@ -147,7 +161,7 @@ using UniqueTypes = typename UniqueTypesHelper<Types<>, Ts...>::Result;
  * @tparam T Subset list
  * @tparam U Complete list
  */
-template <typename T, typename U>
+export template <typename T, typename U>
 inline constexpr auto TypesIsSubset = IsSubsetHelper<T, U>::Result;
 
 /**
@@ -156,7 +170,7 @@ inline constexpr auto TypesIsSubset = IsSubsetHelper<T, U>::Result;
  * @tparam T Variadic type to transmute, with the type variables
  * @tparam U Variadic type template, instantiated with arbitrary types
  */
-template <typename T, typename U>
+export template <typename T, typename U>
 using TransmuteVariadic = typename TransmuteVariadicHelper<T, U>::Result;
 
 /**
@@ -164,7 +178,7 @@ using TransmuteVariadic = typename TransmuteVariadicHelper<T, U>::Result;
  * @tparam T Type to check
  * @tparam U Arbitrary instantiation of the variadic template
  */
-template <typename T, typename U>
+export template <typename T, typename U>
 inline constexpr auto IsInstantiationOfVariadic =
     IsInstantiationOfVariadicHelper<T, U>::value;
 
@@ -176,23 +190,51 @@ static_assert(
  * Creates a variant of the given types
  * @tparam Ts List of types to create a variant of
  */
-template <typename... Ts>
+export template <typename... Ts>
 using VariantOf = TransmuteVariadic<UniqueTypes<Ts...>, std::variant<>>;
 
 static_assert(std::is_same_v<VariantOf<bool, int, bool, int, int>,
                              std::variant<bool, int>>);
 
-template <typename T>
+export template <typename T>
 inline constexpr bool IsTypes = false;
 
-template <typename... Ts>
+export template <typename... Ts>
 inline constexpr bool IsTypes<Types<Ts...>> = true;
 
 namespace concepts {
 
-template <typename T>
+export template <typename T>
 concept Types = IsTypes<T>;
 
 }
+
+template <typename... Ts>
+struct ConcatTypesHelper {};
+
+template <typename A, typename B, typename... Rest>
+struct ConcatTypesHelper<A, B, Rest...> {
+  using Result =
+      typename ConcatTypesHelper<typename ConcatTypesHelper<A, B>::Result,
+                                 Rest...>::Result;
+};
+
+template <typename... As, typename... Bs>
+struct ConcatTypesHelper<Types<As...>, Types<Bs...>> {
+  using Result = Types<As..., Bs...>;
+};
+
+template <typename... As>
+struct ConcatTypesHelper<Types<As...>> {
+  using Result = Types<As...>;
+};
+
+template <>
+struct ConcatTypesHelper<> {
+  using Result = Types<>;
+};
+
+export template <typename... Ts>
+using ConcatTypes = typename ConcatTypesHelper<Ts...>::Result;
 
 }   // namespace hstd

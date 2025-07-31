@@ -1,172 +1,185 @@
 module;
 
-#include <cstdint>
-#include <optional>
-#include <string>
-#include <string_view>
-#include <utility>
-#include <variant>
+#include <algorithm>
+#include <map>
+#include <ranges>
 #include <vector>
+
+#include <nlohmann/json.hpp>
 
 export module modbus.server.spec.gen;
 
-import hstd;
-
-import modbus.server.spec;
+export import :registers;
 
 namespace modbus::server::spec::gen {
 
-/**
- * Possible kinds of data supported by the MODBUS server
- */
-enum DataKind {
-  Scalar,   //!< Scalar type (integer, floating point)
-  Enum,     //!< Enumerated type
-  Array,    //!< Array of other types
-};
+using namespace nlohmann;
 
 /**
- * Given a type, returns its data kind
- * @tparam T Type to get the data kind of
- * @return Data kind
+ * Returns the register info for a given register
+ * @tparam Reg Register to get info for
+ * @return Register info for the register type
  */
-template <typename T>
-consteval DataKind GetDataKind() noexcept {
-  if constexpr (std::is_integral_v<T> || std::is_floating_point_v<T>) {
-    return Scalar;
-  } else if constexpr (std::is_enum_v<T>) {
-    return Enum;
-  } else if constexpr (hstd::concepts::Array<T>) {
-    return Array;
-  } else {
-    std::unreachable();
-  }
-}
-
-/**
- * Contains information on an enumerate member
- */
-struct EnumMemberInfo {
-  std::variant<int64_t, uint64_t> value;   //!< Associated value
-  std::string                     name;    //!< Member name
-};
-
-/**
- * Contains information on an enum
- */
-struct EnumInfo {
-  std::string                 name;      //!< Enum name
-  std::vector<EnumMemberInfo> members;   //!< Enum members
-};
-
-/**
- * Contains information on a register
- */
-struct RegisterInfo {
-  DataKind                  data_kind;   //!< Register data kind
-  uint16_t                  address;     //!< Register starting address
-  uint16_t                  size;        //!< Register size in registers
-  std::string               name;        //!< Register name
-  std::optional<EnumInfo>   enum_info;   //!< Register type enum info
-  std::vector<RegisterInfo> children;    //!< Child registers
-};
-
-/**
- * Obtains the enum type info for an enum type register
- * @tparam Reg Register to obtain the enum info from
- * @return Enum info
- */
-template <concepts::Register Reg>
-EnumInfo GetEnumInfo() {
-  static_assert(concepts::HasEnumDef<decltype(Reg::Options)>);
-
-  using ED = std::decay_t<decltype(Reg::Options.enum_def)>;
-  using UT = typename ED::UnderlyingType;
-
-  using Members    = typename ED::Members;
-  constexpr auto N = Members::Count;
-
-  std::vector<EnumMemberInfo> members;
-  ([&members]<std::size_t... Idxs>(std::index_sequence<Idxs...>) {
-    (..., ([&members]<std::size_t Idx>(hstd::ValueMarker<Idx>) {
-       using M = typename Members::template NthType<Idx>;
-
-       if constexpr (std::is_signed_v<UT>) {
-         members.push_back({
-             .value = static_cast<int64_t>(M::Value),
-             .name  = std::string{static_cast<std::string_view>(M::Name)},
-         });
-       } else {
-         members.push_back({
-             .value = static_cast<uint64_t>(M::Value),
-             .name  = std::string{static_cast<std::string_view>(M::Name)},
-         });
-       }
-     })(hstd::ValueMarker<Idxs>()));
-  })(std::make_index_sequence<N>());
-
-  return EnumInfo{
-      .name    = std::string{static_cast<std::string_view>(ED::Name)},
-      .members = members,
+export template <typename Reg>
+RegisterInfo GetRegisterInfo() {
+  return RegisterInfo{
+      .name    = Reg::Name,
+      .address = Reg::Address,
   };
 }
-
-/**
- * Obtains the register children for an array type register
- * @tparam Reg Register to obtain children for
- * @return Register children
- */
-template <concepts::Register Reg>
-std::vector<RegisterInfo> GetArrayRegisterChildren() {
-  using Arr = std::decay_t<typename Reg::Data>;
-  using DT  = typename Arr::value_type;
-
+export template <hstd::concepts::Types Regs>
+std::vector<RegisterInfo> GetRegistersInfo() {
   std::vector<RegisterInfo> result{};
-  result.reserve(hstd::ArraySize<Arr>);
+  result.reserve(Regs::Count);
 
-  ([&result]<std::size_t... Idxs>(std::index_sequence<Idxs...>) {
-    (..., ([&result]<std::size_t Idx>(hstd::ValueMarker<Idx>) {
-       result.push_back(RegisterInfo{
-           .data_kind = GetDataKind<DT>(),
-           .address   = Reg::StartAddress + DataSize<DT>() * Idx,
-           .size      = DataSize<DT>(),
-           .name      = std::string{static_cast<std::string_view>(
-               Reg::Options.array_element_naming
-                   .template ElementName<Reg::Name, Idx>())},
-       });
-     })(hstd::ValueMarker<Idxs>{}));
-  })(std::make_index_sequence<hstd::ArraySize<Arr>>{});
+  Regs::ForEach([&result]<typename Reg>(hstd::Marker<Reg>) {
+    result.emplace_back(GetRegisterInfo<Reg>());
+  });
 
   return result;
 }
 
 /**
- * Obtains the RegisterInfo for a given register
- * @tparam Reg Register to determine info for
- * @return Register info
+ * Returns the JSON name for a given ScalarType
+ * @param st Scalar type to get JSON name for
+ * @return JSON name for the scalar type
  */
-export template <concepts::Register Reg>
-RegisterInfo GetRegisterInfo() noexcept {
-  constexpr auto DataKind = GetDataKind<typename Reg::Data>();
-  RegisterInfo   result   = {
-          .data_kind = GetDataKind<typename Reg::Data>(),
-          .address   = Reg::StartAddress,
-          .size      = Reg::Size,
-          .name      = std::string{static_cast<std::string_view>(Reg::Name)},
-          .enum_info = {},
-          .children  = {},
-  };
+export std::string GetScalarTypeJsonName(ScalarType st) {
+  switch (st) {
+  case ScalarType::U8: return "uint8";
+  case ScalarType::U16: return "uint16";
+  case ScalarType::U32: return "uint32";
+  case ScalarType::U64: return "uint64";
+  case ScalarType::I8: return "int8";
+  case ScalarType::I16: return "int16";
+  case ScalarType::I32: return "int32";
+  case ScalarType::I64: return "int64";
+  case ScalarType::F32: return "float32";
+  case ScalarType::F64: return "float64";
+  default: std::unreachable();
+  }
+}
 
-  // Handle specific data types
-  if constexpr (DataKind == Array) {
-    result.children = GetArrayRegisterChildren<Reg>();
+/**
+ * Returns a JSON representation of a DataType
+ * @param type Data type to get JSON for
+ * @return JSON representation of the data type
+ */
+export json GetDataTypeJson(const DataType& type) {
+  if (const auto scalar = std::get_if<ScalarType>(&type.type); scalar) {
+    return {{"type", GetScalarTypeJsonName(*scalar)}};
   }
 
-  if constexpr (DataKind == Enum) {
-    result.enum_info = GetEnumInfo<Reg>();
+  if (const auto enum_ref = std::get_if<EnumRef>(&type.type); enum_ref) {
+    return {
+        {"type", "enum"},
+        {"enum_name", enum_ref->name},
+    };
+  }
+
+  if (const auto array_type = std::get_if<ArrayType>(&type.type); array_type) {
+    return {
+        {"type", "array"},
+        {"size", array_type->size},
+        {"element_type", GetDataTypeJson(*array_type->element_type)},
+    };
+  }
+
+  std::unreachable();
+}
+
+/**
+ * Returns a JSON representation of an EnumInfo
+ * @param info Enum info to get JSON for
+ * @return JSON representation of the enum info
+ */
+export json GetEnumSpecJson(const EnumInfo& info) {
+  const auto members =
+      info.members
+      | std::views::transform([](const EnumMemberInfo& member) -> json {
+          if (const auto i64 = std::get_if<int64_t>(&member.value); i64) {
+            return {{"name", member.name}, {"value", *i64}};
+          }
+
+          if (const auto u64 = std::get_if<uint64_t>(&member.value); u64) {
+            return {{"name", member.name}, {"value", *u64}};
+          }
+
+          std::unreachable();
+        })
+      | std::ranges::to<std::vector<json>>();
+
+  return {
+      {"name", info.name},
+      {"underlying_type", GetScalarTypeJsonName(info.underlying_type)},
+      {"members", members},
+  };
+}
+
+/**
+ * Returns a JSON representation of all enums in the given registers
+ * @tparam Regs Registers to get enums for
+ * @param regs Registers to get enums for
+ * @return JSON representation of all enums in the given registers
+ */
+export template <std::ranges::view... Regs>
+json GetEnumSpecsJson(Regs... regs) {
+  std::map<std::string, json> enums{};
+
+  (..., std::ranges::for_each(regs, [&enums](const RegisterInfo& reg_info) {
+     if (reg_info.enum_info.has_value()) {
+       const auto& enum_info = *reg_info.enum_info;
+
+       if (!enums.contains(enum_info.name)) {
+         enums[enum_info.name] = GetEnumSpecJson(enum_info);
+       };
+     }
+   }));
+
+  return enums;
+}
+
+/**
+ * Returns a JSON representation of a RegisterInfo
+ * @param info Register info to get JSON for
+ * @return JSON representation of the register info
+ */
+export json GetRegisterInfoJson(const RegisterInfo& info) {
+  json result{
+      {"name", info.name},
+      {"start_address", info.address},
+      {"size", info.size},
+      {"type", GetDataTypeJson(*info.data_type)},
+  };
+
+  if (!info.children.empty()) {
+    result["children"] = info.children
+                         | std::views::transform([](const RegisterInfo& info) {
+                             return GetRegisterInfoJson(info);
+                           })
+                         | std::ranges::to<std::vector<json>>();
   }
 
   return result;
+}
+
+export template <concepts::ServerSpec Spec>
+json GetServerSpecJson() {
+  auto input_registers   = GetRegistersInfo<typename Spec::InputRegisters>();
+  auto holding_registers = GetRegistersInfo<typename Spec::HoldingRegisters>();
+
+  std::vector<json> holding_registers_json{};
+  holding_registers_json.reserve(holding_registers.size());
+
+  std::ranges::transform(
+      holding_registers, std::back_inserter(holding_registers_json),
+      [](const auto& info) { return GetRegisterInfoJson(info); });
+
+  return {
+      {"enums", GetEnumSpecsJson(std::views::all(input_registers),
+                                 std::views::all(holding_registers))},
+      {"holding_registers", holding_registers_json},
+  };
 }
 
 }   // namespace modbus::server::spec::gen
