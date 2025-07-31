@@ -9,6 +9,7 @@ export module modbus.server.spec;
 
 export import :array;
 export import :enumerate;
+export import :bit;
 
 import hstd;
 
@@ -47,6 +48,17 @@ struct Register {
 };
 
 /**
+ * Describes an input register
+ * @tparam A Register address
+ * @tparam D Register contained data type
+ * @tparam N Register name
+ * @tparam Opts Register options
+ */
+export template <uint16_t A, typename D, hstd::StaticString N,
+                 RegisterOpts Opts = {}>
+struct InputRegister : Register<A, D, N, Opts> {};
+
+/**
  * Describes a holding register
  * @tparam A Register address
  * @tparam D Register contained data type
@@ -58,6 +70,18 @@ export template <uint16_t A, typename D, hstd::StaticString N,
 struct HoldingRegister : Register<A, D, N, Opts> {};
 
 namespace concepts {
+
+template <typename T>
+inline constexpr auto IsInputRegister = false;
+
+template <uint16_t A, typename D, hstd::StaticString N, RegisterOpts Opts>
+inline constexpr auto IsInputRegister<InputRegister<A, D, N, Opts>> = true;
+
+/**
+ * Concept for determining if a type is an input register description
+ */
+export template <typename T>
+concept InputRegister = IsInputRegister<T>;
 
 template <typename T>
 inline constexpr auto IsHoldingRegister = false;
@@ -76,7 +100,7 @@ concept HoldingRegister = IsHoldingRegister<T>;
  * description
  */
 export template <typename T>
-concept Register = HoldingRegister<T>;
+concept Register = InputRegister<T> || HoldingRegister<T>;
 
 }   // namespace concepts
 

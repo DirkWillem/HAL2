@@ -38,6 +38,7 @@ target_sources(modbus_server_spec
         server/spec/server_spec.cppm
 
         server/spec/array.cppm
+        server/spec/bit.cppm
         server/spec/enumerate.cppm)
 target_link_libraries(modbus_server_spec PUBLIC hstd project_settings)
 
@@ -49,6 +50,7 @@ if (NOT CMAKE_CROSSCOMPILING)
             FILES
             server/spec_gen/spec_gen.cppm
 
+            server/spec_gen/bits.cppm
             server/spec_gen/registers.cppm)
     target_link_libraries(modbus_server_spec_gen PUBLIC modbus_server_spec nlohmann_json::nlohmann_json)
 

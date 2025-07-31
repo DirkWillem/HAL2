@@ -180,4 +180,17 @@ concept ToStringView =
 
 }   // namespace concepts
 
+/**
+ * Invokes a callable with a ValueMarker for each number in the range [0, N]
+ * @tparam N Number up to which to count
+ * @param fn Callable to invoke
+ */
+export template <std::size_t N>
+void InvokeForIndexSequence(
+    std::invocable<hstd::ValueMarker<std::size_t{0}>> auto&& fn) {
+  ([&fn]<std::size_t... Idxs>(std::index_sequence<Idxs...>) {
+    (..., fn(ValueMarker<Idxs>{}));
+  })(std::make_index_sequence<N>());
+}
+
 }   // namespace hstd

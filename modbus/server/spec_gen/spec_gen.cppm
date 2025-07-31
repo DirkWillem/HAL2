@@ -9,6 +9,7 @@ module;
 
 export module modbus.server.spec.gen;
 
+export import :bits;
 export import :registers;
 
 namespace modbus::server::spec::gen {
@@ -16,17 +17,84 @@ namespace modbus::server::spec::gen {
 using namespace nlohmann;
 
 /**
- * Returns the register info for a given register
- * @tparam Reg Register to get info for
- * @return Register info for the register type
+ * Returns the bits info for all bits in a given type
+ * @tparam Bits Bits to get info for
+ * @return Bits info for all registers in the given type
  */
-export template <typename Reg>
-RegisterInfo GetRegisterInfo() {
-  return RegisterInfo{
-      .name    = Reg::Name,
-      .address = Reg::Address,
-  };
+export template <hstd::concepts::Types Bits>
+std::vector<BitsInfo> GetBitsInfo() {
+  std::vector<BitsInfo> result{};
+  result.reserve(Bits::Count);
+
+  Bits::ForEach([&result]<typename Bit>(hstd::Marker<Bit>) {
+    result.emplace_back(GetBitsInfo<Bit>());
+  });
+
+  return result;
 }
+
+/**
+ * Returns the JSON string for a given BitAccess
+ * @param access Bit access to get JSON string for
+ * @return JSON string for the bit access
+ */
+export std::string GetBitAccessJsonString(BitAccess access) {
+  switch (access) {
+  case BitAccess::ReadWrite: return "rw";
+  case BitAccess::ReadWrite0: return "rw0";
+  case BitAccess::ReadWrite1: return "rw1";
+  case BitAccess::DiscreteInput: return "";
+  default: std::unreachable();
+  }
+}
+
+/**
+ * Returns a JSON representation of a BitInfo
+ * @param info Bit info to get JSON for
+ * @return JSON representation of the bit info
+ */
+export json GetBitInfoJson(const BitInfo& info) {
+  json result = {
+      {"name", info.name},
+      {"address", info.address},
+  };
+
+  if (info.access != BitAccess::DiscreteInput) {
+    result["access"] = GetBitAccessJsonString(info.access);
+  }
+
+  return result;
+}
+
+/**
+ * Returns a JSON representation of a BitsInfo
+ * @param info Bits info to get JSON for
+ * @return JSON representation of the bits info
+ */
+export json GetBitsInfoJson(const BitsInfo& info) {
+  json result = {
+      {"name", info.name},
+      {"address", info.address},
+      {"size", info.size},
+  };
+
+  if (!info.bits.empty()) {
+    result["bits"] = info.bits | std::views::transform(GetBitInfoJson)
+                     | std::ranges::to<std::vector<json>>();
+  }
+
+  if (info.access != BitAccess::DiscreteInput) {
+    result["access"] = GetBitAccessJsonString(info.access);
+  }
+
+  return result;
+}
+
+/**
+ * Returns the register info for all registers in a given type
+ * @tparam Regs Registers to get info for
+ * @return Register info for all registers in the given type
+ */
 export template <hstd::concepts::Types Regs>
 std::vector<RegisterInfo> GetRegistersInfo() {
   std::vector<RegisterInfo> result{};
@@ -154,9 +222,7 @@ export json GetRegisterInfoJson(const RegisterInfo& info) {
 
   if (!info.children.empty()) {
     result["children"] = info.children
-                         | std::views::transform([](const RegisterInfo& info) {
-                             return GetRegisterInfoJson(info);
-                           })
+                         | std::views::transform(GetRegisterInfoJson)
                          | std::ranges::to<std::vector<json>>();
   }
 
@@ -165,20 +231,27 @@ export json GetRegisterInfoJson(const RegisterInfo& info) {
 
 export template <concepts::ServerSpec Spec>
 json GetServerSpecJson() {
+  auto discrete_inputs   = GetBitsInfo<typename Spec::DiscreteInputs>();
+  auto coils             = GetBitsInfo<typename Spec::Coils>();
   auto input_registers   = GetRegistersInfo<typename Spec::InputRegisters>();
   auto holding_registers = GetRegistersInfo<typename Spec::HoldingRegisters>();
-
-  std::vector<json> holding_registers_json{};
-  holding_registers_json.reserve(holding_registers.size());
-
-  std::ranges::transform(
-      holding_registers, std::back_inserter(holding_registers_json),
-      [](const auto& info) { return GetRegisterInfoJson(info); });
 
   return {
       {"enums", GetEnumSpecsJson(std::views::all(input_registers),
                                  std::views::all(holding_registers))},
-      {"holding_registers", holding_registers_json},
+      {"discrete_inputs", discrete_inputs
+                              | std::views::transform(GetBitsInfoJson)
+                              | std::ranges::to<std::vector<json>>()},
+
+      {"coils", coils | std::views::transform(GetBitsInfoJson)
+                    | std::ranges::to<std::vector<json>>()},
+      {"input_registers", input_registers
+                              | std::views::transform(GetRegisterInfoJson)
+                              | std::ranges::to<std::vector<json>>()},
+      {"holding_registers", holding_registers
+                                | std::views::transform(GetRegisterInfoJson)
+                                | std::ranges::to<std::vector<json>>()},
+
   };
 }
 
