@@ -8,6 +8,7 @@ import hstd;
 
 import modbus.core;
 import modbus.server;
+import modbus.server.spec;
 
 import testing.helpers;
 
@@ -16,42 +17,55 @@ using namespace testing;
 using namespace modbus;
 using namespace modbus::server;
 
-using DiscreteInput0  = InMemDiscreteInput<0x0000, "DiscreteInput1">;
-using DiscreteInput1  = InMemDiscreteInput<0x0001, "DiscreteInput2">;
-using DiscreteInput4  = InMemDiscreteInput<0x0004, "DiscreteInput4">;
-using DiscreteInput7  = InMemDiscreteInput<0x0007, "DiscreteInput7">;
-using DiscreteInputs1 = InMemDiscreteInputSet<0x0008, 8, "DiscreteInputs1">;
+using DiscreteInput0 =
+    InMemDiscreteInput<spec::DiscreteInput<0x0000, "DiscreteInput1">>;
+using DiscreteInput1 =
+    InMemDiscreteInput<spec::DiscreteInput<0x0001, "DiscreteInput2">>;
+using DiscreteInput4 =
+    InMemDiscreteInput<spec::DiscreteInput<0x0004, "DiscreteInput4">>;
+using DiscreteInput7 =
+    InMemDiscreteInput<spec::DiscreteInput<0x0007, "DiscreteInput7">>;
+using DiscreteInputs1 =
+    InMemDiscreteInputSet<spec::DiscreteInputs<0x0008, 8, "DiscreteInputs1">>;
 
-using Coil1      = InMemCoil<0x0000, "Coil1">;
-using Coil2      = InMemCoil<0x0001, "Coil2">;
-using Coil4      = InMemCoil<0x0004, "Coil4">;
-using Coil7      = InMemCoil<0x0007, "Coil7">;
-using CoilGroup1 = InMemCoilSet<0x0008, 4, "Coils">;
-using CoilGroup2 = InMemCoilSet<0x0020, 16, "Coils2">;
+using Coil1      = InMemCoil<spec::Coil<0x0000, "Coil1">>;
+using Coil2      = InMemCoil<spec::Coil<0x0001, "Coil2">>;
+using Coil4      = InMemCoil<spec::Coil<0x0004, "Coil4">>;
+using Coil7      = InMemCoil<spec::Coil<0x0007, "Coil7">>;
+using CoilGroup1 = InMemCoilSet<spec::Coils<0x0008, 4, "Coils">>;
+using CoilGroup2 = InMemCoilSet<spec::Coils<0x0020, 16, "Coils2">>;
 
-using U16HR1 = InMemHoldingRegister<0x0000, uint16_t, "U16 HR 1">;
-using U16HR2 = InMemHoldingRegister<0x0001, uint16_t, "U16 HR 2">;
+using U16HR1 =
+    InMemHoldingRegister<spec::HoldingRegister<0x0000, uint16_t, "U16 HR 1">>;
+using U16HR2 =
+    InMemHoldingRegister<spec::HoldingRegister<0x0001, uint16_t, "U16 HR 2">>;
 
-using U16ArrayHR =
-    InMemHoldingRegister<0x0004, std::array<uint16_t, 4>, "U16 Array HR">;
+using U16ArrayHR = InMemHoldingRegister<
+    spec::HoldingRegister<0x0004, std::array<uint16_t, 4>, "U16 Array HR">>;
 
-using F32HR1 = InMemHoldingRegister<0x0010, float, "F32 HR 1">;
-using F32HR2 = InMemHoldingRegister<0x0012, float, "F32 HR 2">;
+using F32HR1 =
+    InMemHoldingRegister<spec::HoldingRegister<0x0010, float, "F32 HR 1">>;
+using F32HR2 =
+    InMemHoldingRegister<spec::HoldingRegister<0x0012, float, "F32 HR 2">>;
 
-using F32ArrayHR =
-    InMemHoldingRegister<0x0018, std::array<float, 4>, "F32 Array HR">;
+using F32ArrayHR = InMemHoldingRegister<
+    spec::HoldingRegister<0x0018, std::array<float, 4>, "F32 Array HR">>;
 
-using U16IR0 = InMemInputRegister<0x0000, uint16_t, "U16 IR 1">;
-using U16IR1 = InMemInputRegister<0x0001, uint16_t, "U16 IR 2">;
+using U16IR0 =
+    InMemInputRegister<spec::InputRegister<0x0000, uint16_t, "U16 IR 1">>;
+using U16IR1 =
+    InMemInputRegister<spec::InputRegister<0x0001, uint16_t, "U16 IR 2">>;
 
-using U16ArrayIR =
-    InMemInputRegister<0x0004, std::array<uint16_t, 4>, "U16 Array IR">;
+using U16ArrayIR = InMemInputRegister<
+    spec::InputRegister<0x0004, std::array<uint16_t, 4>, "U16 Array IR">>;
 
-using F32IR0 = InMemInputRegister<0x0010, float, "F32 IR 1">;
-using F32IR1 = InMemInputRegister<0x0012, float, "F32 IR 2">;
+using F32IR0 =
+    InMemInputRegister<spec::InputRegister<0x0010, float, "F32 IR 1">>;
+using F32IR1 =
+    InMemInputRegister<spec::InputRegister<0x0012, float, "F32 IR 2">>;
 
-using F32ArrayIR =
-    InMemInputRegister<0x0018, std::array<float, 4>, "F32 Array IR">;
+using F32ArrayIR = InMemInputRegister<
+    spec::InputRegister<0x0018, std::array<float, 4>, "F32 Array IR">>;
 
 using Srv =
     Server<hstd::Types<DiscreteInput0, DiscreteInput1, DiscreteInput4,
@@ -469,7 +483,7 @@ TEST_F(ModbusServerFrames, ReadInputRegisterReadFloats) {
 TEST_F(ModbusServerFrames, ReadInputRegisterUnalignedRead) {
   // Handle frame
   const auto response = HandleFrame(ReadInputRegistersRequest{
-      .starting_addr         = 0x0010,
+      .starting_addr       = 0x0010,
       .num_input_registers = 1,
   });
 

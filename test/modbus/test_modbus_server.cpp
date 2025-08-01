@@ -1,3 +1,4 @@
+#include <expected>
 #include <memory>
 
 #include <gmock/gmock.h>
@@ -7,6 +8,7 @@ import hstd;
 
 import modbus.core;
 import modbus.server;
+import modbus.server.spec;
 
 using namespace testing;
 
@@ -15,43 +17,69 @@ using namespace modbus::server;
 
 using namespace hstd::literals;
 
-using DiscreteInput1 = InMemDiscreteInput<0x0000, "DiscreteInput1">;
-using DiscreteInput2 = InMemDiscreteInput<0x0001, "DiscreteInput2">;
+namespace {
+struct MockCustomBitSetStorage {
+  static constexpr std::size_t MaxBitCount = 32;
+  using MemType                            = uint32_t;
 
-using Coil1      = InMemCoil<0x0000, "Coil1">;
-using Coil2      = InMemCoil<0x0001, "Coil2">;
-using CoilGroup1 = InMemCoilSet<0x0008, 4, "Coils">;
-using CoilGroup2 = InMemCoilSet<0x0020, 16, "Coils2">;
+  MOCK_METHOD((std::expected<uint32_t, ExceptionCode>), Read, (uint32_t mask),
+              (const));
+  MOCK_METHOD((std::expected<uint32_t, ExceptionCode>), Write,
+              (uint32_t mask, uint32_t value));
+};
 
-using U16HR1 = InMemHoldingRegister<0x0000, uint16_t, "U16 HR 1">;
-using U16HR2 = InMemHoldingRegister<0x0001, uint16_t, "U16 HR 2">;
+using DiscreteInput1 =
+    InMemDiscreteInput<spec::DiscreteInput<0x0000, "DiscreteInput1">>;
+using DiscreteInput2 =
+    InMemDiscreteInput<spec::DiscreteInput<0x0001, "DiscreteInput2">>;
 
-using U16ArrayHR =
-    InMemHoldingRegister<0x0004, std::array<uint16_t, 4>, "U16 Array HR">;
+using Coil1      = InMemCoil<spec::Coil<0x0000, "Coil1">>;
+using Coil2      = InMemCoil<spec::Coil<0x0001, "Coil2">>;
+using CoilGroup1 = InMemCoilSet<spec::Coils<0x0008, 4, "Coils">>;
+using CoilGroup2 = InMemCoilSet<spec::Coils<0x0020, 16, "Coils2">>;
 
-using F32HR1 = InMemHoldingRegister<0x0010, float, "F32 HR 1">;
-using F32HR2 = InMemHoldingRegister<0x0012, float, "F32 HR 2">;
+using CustomCoils =
+    CoilSet<spec::Coils<0x0040, 32, "CustomCoils">, MockCustomBitSetStorage>;
 
-using F32ArrayHR =
-    InMemHoldingRegister<0x0018, std::array<float, 4>, "F32 Array HR">;
+using U16HR1 =
+    InMemHoldingRegister<spec::HoldingRegister<0x0000, uint16_t, "U16 HR 1">>;
+using U16HR2 =
+    InMemHoldingRegister<spec::HoldingRegister<0x0001, uint16_t, "U16 HR 2">>;
 
-using U16IR0 = InMemInputRegister<0x0000, uint16_t, "U16 IR 1">;
-using U16IR1 = InMemInputRegister<0x0001, uint16_t, "U16 IR 2">;
+using U16ArrayHR = InMemHoldingRegister<
+    spec::HoldingRegister<0x0004, std::array<uint16_t, 4>, "U16 Array HR">>;
 
-using U16ArrayIR =
-    InMemInputRegister<0x0004, std::array<uint16_t, 4>, "U16 Array IR">;
+using F32HR1 =
+    InMemHoldingRegister<spec::HoldingRegister<0x0010, float, "F32 HR 1">>;
+using F32HR2 =
+    InMemHoldingRegister<spec::HoldingRegister<0x0012, float, "F32 HR 2">>;
 
-using F32IR0 = InMemInputRegister<0x0010, float, "F32 IR 1">;
-using F32IR1 = InMemInputRegister<0x0012, float, "F32 IR 2">;
+using F32ArrayHR = InMemHoldingRegister<
+    spec::HoldingRegister<0x0018, std::array<float, 4>, "F32 Array HR">>;
 
-using F32ArrayIR =
-    InMemInputRegister<0x0018, std::array<float, 4>, "F32 Array IR">;
+using U16IR0 =
+    InMemInputRegister<spec::InputRegister<0x0000, uint16_t, "U16 IR 1">>;
+using U16IR1 =
+    InMemInputRegister<spec::InputRegister<0x0001, uint16_t, "U16 IR 2">>;
+
+using U16ArrayIR = InMemInputRegister<
+    spec::InputRegister<0x0004, std::array<uint16_t, 4>, "U16 Array IR">>;
+
+using F32IR0 =
+    InMemInputRegister<spec::InputRegister<0x0010, float, "F32 IR 1">>;
+using F32IR1 =
+    InMemInputRegister<spec::InputRegister<0x0012, float, "F32 IR 2">>;
+
+using F32ArrayIR = InMemInputRegister<
+    spec::InputRegister<0x0018, std::array<float, 4>, "F32 Array IR">>;
 
 using Srv =
     Server<hstd::Types<DiscreteInput1, DiscreteInput2>,
-           hstd::Types<Coil2, Coil1, CoilGroup1, CoilGroup2>,
+           hstd::Types<Coil2, Coil1, CoilGroup1, CoilGroup2, CustomCoils>,
            hstd::Types<U16IR0, U16IR1, U16ArrayIR, F32IR0, F32IR1, F32ArrayIR>,
            hstd::Types<U16HR1, U16HR2, U16ArrayHR, F32HR1, F32HR2, F32ArrayHR>>;
+
+}   // namespace
 
 class ModbusServer : public Test {
  public:
