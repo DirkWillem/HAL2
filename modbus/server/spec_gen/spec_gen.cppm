@@ -1,11 +1,16 @@
 module;
 
 #include <algorithm>
+#include <filesystem>
+#include <fstream>
 #include <map>
 #include <ranges>
+#include <utility>
 #include <vector>
 
 #include <nlohmann/json.hpp>
+
+#include <argparse/argparse.hpp>
 
 export module modbus.server.spec.gen;
 
@@ -237,8 +242,14 @@ json GetServerSpecJson() {
   auto holding_registers = GetRegistersInfo<typename Spec::HoldingRegisters>();
 
   return {
-      {"enums", GetEnumSpecsJson(std::views::all(input_registers),
-                                 std::views::all(holding_registers))},
+      {
+          "types",
+          {{
+              "enums",
+              GetEnumSpecsJson(std::views::all(input_registers),
+                               std::views::all(holding_registers)),
+          }},
+      },
       {"discrete_inputs", discrete_inputs
                               | std::views::transform(GetBitsInfoJson)
                               | std::ranges::to<std::vector<json>>()},
@@ -253,6 +264,42 @@ json GetServerSpecJson() {
                                 | std::ranges::to<std::vector<json>>()},
 
   };
+}
+
+/**
+ * Implementation for generating a server spec from the command line
+ * @tparam Spec Specification type
+ * @param app_name Name of the application the function is invoked from
+ * @param argc argument count
+ * @param argv Pointer to arguments
+ * @return Exit code
+ */
+export template <concepts::ServerSpec Spec>
+int GenerateServerSpecCli(std::string app_name, int argc, const char** argv) {
+  argparse::ArgumentParser parser{std::move(app_name)};
+
+  parser.add_argument("-o", "--output")
+      .help("Output file")
+      .required()
+      .help("File to which to write the MODBUS server specification");
+
+  try {
+    parser.parse_args(argc, argv);
+
+    const auto server_json = GetServerSpecJson<Spec>();
+
+    std::filesystem::path output_path{parser.get<std::string>("output")};
+    std::ofstream         output{output_path};
+    output << std::setw(2) << server_json << std::endl;
+
+    std::cout << "Wrote MODBUS Server Specification to " << output_path
+              << std::endl;
+  } catch (const std::exception& e) {
+    std::cerr << e.what() << std::endl;
+    return 1;
+  }
+
+  return 0;
 }
 
 }   // namespace modbus::server::spec::gen
