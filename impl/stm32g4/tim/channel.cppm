@@ -25,17 +25,25 @@ namespace stm32g4 {
  */
 template <typename Impl>
 concept TimChannel = requires(Impl impl) {
+  // Channel number
   { Impl::Channel } -> std::convertible_to<unsigned>;
+
+  // Whether the channel is a PWM channel
   { Impl::IsPwm } -> std::convertible_to<bool>;
+
+  // Whether the channel uses DMA
   { Impl::UsesDma } -> std::convertible_to<bool>;
+
+  // Whether the channel uses the timer interrupt
+  { Impl::UsesInterrupt } -> std::convertible_to<bool>;
 };
 
 /**
  * Modes for controlling PWM on a timer channel
  */
 export enum class PwmControlMode {
-  Direct,
-  Dma,
+  Direct,   //!< Control PWM by writing to the compare register
+  Dma,      //!< Control PWM through DMA
 };
 
 /**
@@ -146,9 +154,10 @@ export struct PwmOutputChannelSettings {
 export template <unsigned Ch, PwmOutputChannelSettings S>
 class TimPwmOutputChannel {
  public:
-  static constexpr auto Channel = Ch;
-  static constexpr auto IsPwm   = true;
-  static constexpr auto UsesDma = S.control_mode == PwmControlMode::Dma;
+  static constexpr auto Channel       = Ch;
+  static constexpr auto IsPwm         = true;
+  static constexpr auto UsesDma       = S.control_mode == PwmControlMode::Dma;
+  static constexpr auto UsesInterrupt = true;
 
   static constexpr auto ControlMode = S.control_mode;
   static constexpr auto PwmMode     = S.pwm_mode;
@@ -212,9 +221,6 @@ class TimPwmOutputChannel {
         hal::DmaDirection::MemToPeriph, hal::DmaMode::Normal,
         hal::DmaDataWidth::HalfWord, false, hal::DmaDataWidth::HalfWord, true);
     __HAL_LINKDMA(&htim, hdma[TIM_DMA_ID_UPDATE], hdma);
-
-    // Enable timer interrupt
-    EnableTimInterrupt(Tim, 0);
 
     return true;
   }
@@ -294,9 +300,10 @@ struct BurstDmaChannelsSettings {
 export template <BurstDmaChannelsSettings S>
 class TimBurstDmaOutputChannels {
  public:
-  static constexpr auto Channel = S.first_channel;
-  static constexpr auto IsPwm   = true;
-  static constexpr auto UsesDma = true;
+  static constexpr auto Channel       = S.first_channel;
+  static constexpr auto IsPwm         = true;
+  static constexpr auto UsesDma       = true;
+  static constexpr auto UsesInterrupt = true;
 
   static_assert(hstd::Implies(S.include_repetition_counter,
                               S.first_channel == 1),
@@ -320,9 +327,6 @@ class TimBurstDmaOutputChannels {
         hal::DmaDirection::MemToPeriph, hal::DmaMode::Normal,
         hal::DmaDataWidth::Word, false, hal::DmaDataWidth::Word, true);
     __HAL_LINKDMA(&htim, hdma[TIM_DMA_ID_UPDATE], hdma);
-
-    // Enable timer interrupt
-    EnableTimInterrupt(Tim, 0);
 
     return true;
   }

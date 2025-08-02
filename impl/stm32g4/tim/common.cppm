@@ -40,69 +40,35 @@ export void EnableTimClock(TimId tim) {
   }
 }
 
-export void EnableTimInterrupt(TimId id, uint32_t prio) noexcept {
+export template <typename Impl>
+void EnableTimInterrupt(TimId id) noexcept {
   switch (id) {
   case TimId::Tim1:
-    NVIC_SetPriority(TIM1_BRK_TIM15_IRQn, prio);
-    NVIC_SetPriority(TIM1_UP_TIM16_IRQn, prio);
-    NVIC_SetPriority(TIM1_TRG_COM_TIM17_IRQn, prio);
-    NVIC_SetPriority(TIM1_CC_IRQn, prio);
-    NVIC_EnableIRQ(TIM1_BRK_TIM15_IRQn);
-    NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
-    NVIC_EnableIRQ(TIM1_TRG_COM_TIM17_IRQn);
-    NVIC_EnableIRQ(TIM1_CC_IRQn);
+    EnableInterrupt<TIM1_BRK_TIM15_IRQn, Impl>();
+    EnableInterrupt<TIM1_UP_TIM16_IRQn, Impl>();
+    EnableInterrupt<TIM1_TRG_COM_TIM17_IRQn, Impl>();
+    EnableInterrupt<TIM1_CC_IRQn, Impl>();
     break;
-  case TimId::Tim2:
-    NVIC_SetPriority(TIM2_IRQn, prio);
-    NVIC_EnableIRQ(TIM2_IRQn);
-    break;
-  case TimId::Tim3:
-    NVIC_SetPriority(TIM3_IRQn, prio);
-    NVIC_EnableIRQ(TIM3_IRQn);
-    break;
-  case TimId::Tim4:
-    NVIC_SetPriority(TIM4_IRQn, prio);
-    NVIC_EnableIRQ(TIM4_IRQn);
-    break;
-  case TimId::Tim5:
-    NVIC_SetPriority(TIM5_IRQn, prio);
-    NVIC_EnableIRQ(TIM5_IRQn);
-    break;
-  case TimId::Tim6:
-    NVIC_SetPriority(TIM6_DAC_IRQn, prio);
-    NVIC_EnableIRQ(TIM6_DAC_IRQn);
-    break;
-  case TimId::Tim7:
-    NVIC_SetPriority(TIM7_DAC_IRQn, prio);
-    NVIC_EnableIRQ(TIM7_DAC_IRQn);
-    break;
+  case TimId::Tim2: EnableInterrupt<TIM2_IRQn, Impl>(); break;
+  case TimId::Tim3: EnableInterrupt<TIM3_IRQn, Impl>(); break;
+  case TimId::Tim4: EnableInterrupt<TIM4_IRQn, Impl>(); break;
+  case TimId::Tim5: EnableInterrupt<TIM5_IRQn, Impl>(); break;
+  case TimId::Tim6: EnableInterrupt<TIM6_DAC_IRQn, Impl>(); break;
+  case TimId::Tim7: EnableInterrupt<TIM7_DAC_IRQn, Impl>(); break;
   case TimId::Tim8:
-    NVIC_SetPriority(TIM8_BRK_IRQn, prio);
-    NVIC_SetPriority(TIM8_UP_IRQn, prio);
-    NVIC_SetPriority(TIM8_TRG_COM_IRQn, prio);
-    NVIC_SetPriority(TIM8_CC_IRQn, prio);
-    NVIC_EnableIRQ(TIM8_BRK_IRQn);
-    NVIC_EnableIRQ(TIM8_UP_IRQn);
-    NVIC_EnableIRQ(TIM8_TRG_COM_IRQn);
-    NVIC_EnableIRQ(TIM8_CC_IRQn);
+    EnableInterrupt<TIM8_BRK_IRQn, Impl>();
+    EnableInterrupt<TIM8_UP_IRQn, Impl>();
+    EnableInterrupt<TIM8_TRG_COM_IRQn, Impl>();
+    EnableInterrupt<TIM8_CC_IRQn, Impl>();
     break;
-  case TimId::Tim15:
-    NVIC_SetPriority(TIM1_BRK_TIM15_IRQn, prio);
-    NVIC_EnableIRQ(TIM1_BRK_TIM15_IRQn);
-    break;
-  case TimId::Tim16:
-    NVIC_SetPriority(TIM1_UP_TIM16_IRQn, prio);
-    NVIC_EnableIRQ(TIM1_UP_TIM16_IRQn);
-    break;
+  case TimId::Tim15: EnableInterrupt<TIM1_BRK_TIM15_IRQn, Impl>(); break;
+  case TimId::Tim16: EnableInterrupt<TIM1_UP_TIM16_IRQn, Impl>(); break;
+  case TimId::Tim17: EnableInterrupt<TIM1_TRG_COM_TIM17_IRQn, Impl>(); break;
   case TimId::Tim20:
-    NVIC_SetPriority(TIM20_BRK_IRQn, prio);
-    NVIC_SetPriority(TIM20_UP_IRQn, prio);
-    NVIC_SetPriority(TIM20_TRG_COM_IRQn, prio);
-    NVIC_SetPriority(TIM20_CC_IRQn, prio);
-    NVIC_EnableIRQ(TIM20_BRK_IRQn);
-    NVIC_EnableIRQ(TIM20_UP_IRQn);
-    NVIC_EnableIRQ(TIM20_TRG_COM_IRQn);
-    NVIC_EnableIRQ(TIM20_CC_IRQn);
+    EnableInterrupt<TIM20_BRK_IRQn, Impl>();
+    EnableInterrupt<TIM20_UP_IRQn, Impl>();
+    EnableInterrupt<TIM20_TRG_COM_IRQn, Impl>();
+    EnableInterrupt<TIM20_CC_IRQn, Impl>();
     break;
   }
 }

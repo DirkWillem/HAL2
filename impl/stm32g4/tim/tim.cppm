@@ -173,7 +173,7 @@ class TimImpl
         hstd::Freq<hstd::Hz::Rep, std::ratio<OutFreqNumerator, 1>>>();
   }
 
-  void EnableInterrupt() noexcept { EnableTimInterrupt(Id, 0); }
+  void EnableInterrupt() noexcept { EnableTimInterrupt<Impl>(Id); }
   void DisableInterrupt() noexcept { DisableTimInterrupt(Id); }
 
  protected:
@@ -190,6 +190,11 @@ class TimImpl
 
     // Configure channels
     (..., Chs::template Configure<Id>(FSrc));
+
+    // Enable interrupts
+    if ((... || Chs::UsesInterrupt)) {
+      EnableInterrupt();
+    }
   }
 
   explicit TimImpl(hal::Dma auto& dma)

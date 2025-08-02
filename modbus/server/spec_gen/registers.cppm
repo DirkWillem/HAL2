@@ -251,7 +251,7 @@ std::vector<RegisterInfo> GetArrayRegisterChildren() {
     (..., ([&result]<std::size_t Idx>(hstd::ValueMarker<Idx>) {
        result.push_back(RegisterInfo{
            .data_kind = GetDataKind<DT>(),
-           .data_type = GetDataType<Reg>(),
+           .data_type = GetDataType<Reg, DT>(),
            .address   = Reg::StartAddress + DataSize<DT>() * Idx,
            .size      = DataSize<DT>(),
            .name      = std::string{static_cast<std::string_view>(
