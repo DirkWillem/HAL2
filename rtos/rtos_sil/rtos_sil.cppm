@@ -36,12 +36,12 @@ class EventGroup {
 
   void SetBits(uint32_t bits) {
     state->bits.fetch_or(bits);
-    sched().CheckSyncPrimitivePreemption(state.get());
+    sched().CheckSyncPrimitivePreemption();
   }
 
   void ClearBits(uint32_t bits) {
     state->bits.fetch_and(~bits);
-    sched().CheckSyncPrimitivePreemption(state.get());
+    sched().CheckSyncPrimitivePreemption();
   }
 
   uint32_t ReadBits() const { return state->bits.load(); }

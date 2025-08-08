@@ -374,6 +374,9 @@ if (NOT CMAKE_CROSSCOMPILING)
             sil/gpio.cppm
             sil/scheduler.cppm
             sil/system.cppm
-            sil/uart.cppm)
+            sil/uart.cppm
+
+            PRIVATE
+            sil/scheduler_thread_item.cpp)
     target_link_libraries(hal_sil PUBLIC hal_abstract hstd)
 endif()
