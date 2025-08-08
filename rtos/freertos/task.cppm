@@ -74,6 +74,14 @@ class Task {
  public:
   TaskRef& ref() & noexcept { return task_ref; }
 
+  /**
+   * Returns whether a stop of the task was requested
+   * @return Whether a stop of the task was requested
+   *
+   * @note For FreeRTOS tasks, stops are never requested
+   */
+  [[nodiscard]] constexpr bool StopRequested() const noexcept { return false; }
+
  protected:
   /**
    * Constructor

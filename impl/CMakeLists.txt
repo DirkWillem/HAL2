@@ -362,3 +362,18 @@ endif ()
 if ("${TARGET}" STREQUAL "arm-cortex-m33")
     add_stm32h5_hal(stm32h533 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32H533RETx.xml")
 endif ()
+
+if (NOT CMAKE_CROSSCOMPILING)
+    add_library(hal_sil)
+    target_sources(hal_sil
+            PUBLIC
+            FILE_SET CXX_MODULES
+            FILES
+            sil/sil.cppm
+
+            sil/gpio.cppm
+            sil/scheduler.cppm
+            sil/system.cppm
+            sil/uart.cppm)
+    target_link_libraries(hal_sil PUBLIC hal_abstract hstd)
+endif()

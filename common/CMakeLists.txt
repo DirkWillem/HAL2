@@ -35,7 +35,7 @@ target_sources(hstd
         hstd/static_string_builder.cppm
 
         hstd/halstd.cppm)
-target_link_libraries(hstd PRIVATE project_settings)
+target_link_libraries(hstd PUBLIC project_settings)
 
 # Proxy library for CMSIS-DSP which allows disabling it under certain build conditions
 add_library(cmsis_dsp INTERFACE)

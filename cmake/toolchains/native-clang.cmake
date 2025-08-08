@@ -1,5 +1,7 @@
 set(TOOLCHAIN_PREFIX "")
 
+unset(CMAKE_OSX_SYSROOT CACHE)
+
 # Find llvm from homebrew if running under macOS
 find_program(HOMEBREW brew)
 if (HOMEBREW)
@@ -38,6 +40,10 @@ if (NOT "${CLANG_EXPLICIT_VERSION}" STREQUAL "")
 else()
     set(CLANG_VERSION_SUFFIX "")
 endif()
+
+set(CMAKE_CXX_FLAGS "-stdlib=libc++ -fexperimental-library")
+set(CMAKE_EXE_LINKER_FLAGS "-stdlib=libc++ -fexperimental-library")
+
 
 
 set(CMAKE_AR           ${TOOLCHAIN_PREFIX}llvm-ar${CLANG_VERSION_SUFFIX}${TOOLCHAIN_SUFFIX})

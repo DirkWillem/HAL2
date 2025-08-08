@@ -34,3 +34,13 @@ target_sources(rtos_concepts
         concepts/rtos_concepts.cppm)
 target_link_libraries(rtos_concepts PRIVATE project_settings)
 
+
+if (NOT CMAKE_CROSSCOMPILING)
+    add_library(rtos_sil)
+    target_sources(rtos_sil
+            PUBLIC
+            FILE_SET CXX_MODULES
+            FILES
+            rtos_sil/rtos_sil.cppm)
+    target_link_libraries(rtos_sil PRIVATE hstd rtos_concepts hal_sil)
+endif()

@@ -8,6 +8,8 @@ module;
 
 export module rtos.freertos;
 
+import rtos.concepts;
+
 export import :event_group;
 export import :queue;
 export import :system;
@@ -40,6 +42,17 @@ export [[noreturn]] inline void StartScheduler() noexcept {
 export struct FreeRtos {
   using TaskRef    = TaskRef;
   using EventGroup = EventGroup;
+
+  static constexpr auto MiniStackSize       = rtos::MiniStackSize;
+  static constexpr auto SmallStackSize      = rtos::SmallStackSize;
+  static constexpr auto MediumStackSize     = rtos::MediumStackSize;
+  static constexpr auto LargeStackSize      = rtos::LargeStackSize;
+  static constexpr auto ExtraLargeStackSize = rtos::ExtraLargeStackSize;
+
+  template <typename Impl, std::size_t StackSize = MediumStackSize>
+  using Task = rtos::Task<Impl, StackSize>;
 };
+
+static_assert(rtos::concepts::Rtos<FreeRtos>);
 
 }   // namespace rtos
