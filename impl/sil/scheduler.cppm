@@ -5,10 +5,12 @@ module;
 #include <chrono>
 #include <deque>
 #include <format>
+#include <functional>
 #include <latch>
 #include <map>
 #include <mutex>
 #include <thread>
+#include <variant>
 
 export module hal.sil:scheduler;
 
@@ -69,7 +71,7 @@ export class Scheduler {
 
     std::ranges::sort(priority_brackets,
                       [](const PriorityBracket& a, const PriorityBracket& b) {
-                        return a.prio < b.prio;
+                        return a.prio > b.prio;
                       });
 
     // Start the scheduler
@@ -166,10 +168,62 @@ export class Scheduler {
     BlockCurrentThreadUntilWoken();
   }
 
+  template <std::invocable T>
+    requires hstd::concepts::Optional<std::decay_t<std::invoke_result_t<T>>>
+  std::variant<TimeoutExpired, typename std::invoke_result_t<T>::value_type>
+  BlockCurrentThreadOnSynchronizationPrimitive(void*    primitive,
+                                               const T& check_unblock,
+                                               hstd::Duration auto timeout) {
+    // Set timeout
+    const auto time_us = std::chrono::duration_cast<DurationUs>(timeout);
+    SetCurrentThreadBlockTimeout(now.load() + time_us);
+
+    auto& ts                = GetCurrentThreadState();
+    ts.sync_primitive_block = {.ptr           = primitive,
+                               .check_unblock = [check_unblock]() {
+                                 return check_unblock().has_value();
+                               }};
+
+    // Wait until woken
+    const auto reason = BlockCurrentThreadUntilWoken();
+
+    // Return unblock reason
+    switch (reason) {
+    case UnblockReason::Timeout: return TimeoutExpired{};
+    case UnblockReason::SyncPrimitive: return *check_unblock();
+    }
+
+    throw std::runtime_error{"Invalid unblock reason"};
+  }
+
+  /**
+   * Should be called when a thread changes a synchronization primitive. Allows
+   * the current thread to be preempted by higher-priority threads
+   * @param primitive Primitive that was changed
+   */
+  void CheckSyncPrimitivePreemption(void* primitive) {
+    const auto& ts = GetCurrentThreadState();
+
+    for (const auto& bracket : priority_brackets) {
+      if (bracket.prio <= ts.prio) {
+        return;
+      }
+
+      for (const auto& thread : bracket.threads) {
+        if (thread->sync_primitive_block.has_value()
+            && thread->sync_primitive_block->ptr == primitive
+            && thread->sync_primitive_block->check_unblock()) {
+          YieldCurrentThread();
+          return;
+        }
+      }
+    }
+  }
+
   /**
    * Initializes the current thread. Must be called at the simulated epoch.
    */
-  void InitializeThread() {
+  void InitializeThread(unsigned prio) {
     if (now.load() != Epoch || state.load() != SchedulerState::Stopped) {
       throw std::runtime_error{std::format(
           "Scheduler::InitializeThread() can only be called when the scheduler "
@@ -184,7 +238,7 @@ export class Scheduler {
     }
 
     threads.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
-                    std::forward_as_tuple(tid, sys_mtx));
+                    std::forward_as_tuple(tid, prio, sys_mtx));
 
     // Obtain a system mutex lock for the current thread
     auto& ts = GetCurrentThreadState();
@@ -229,21 +283,37 @@ export class Scheduler {
   TimePointUs Now() const noexcept { return now.load(); }
 
  private:
+  enum class UnblockReason {
+    Timeout,
+    SyncPrimitive,
+  };
+
+  struct SyncPrimitiveBlock {
+    void*                 ptr;
+    std::function<bool()> check_unblock;
+  };
+
   struct ThreadState {
-    ThreadState(std::thread::id id, std::mutex& mtx)
+    ThreadState(std::thread::id id, unsigned prio, std::mutex& mtx)
         : id{id}
+        , prio{prio}
         , cv{}
         , lk{mtx, std::defer_lock} {}
 
-    unsigned prio;            //!< Thread priority
-    bool     running{true};   //!< Whether the thread is running
+    std::thread::id   id;              //!< Thread ID
+    unsigned          prio;            //!< Thread priority
+    bool              running{true};   //!< Whether the thread is running
+    std::atomic<bool> wakeup_requested{
+        false};   //!< Whether a wakeup of the thread is requested
 
-    std::thread::id              id;   //!< Thread ID
     std::condition_variable      cv;   //!< Thread condition variable
     std::unique_lock<std::mutex> lk;   //!< Thread lock on system mutex
 
     std::optional<TimePointUs>
         block_timeout_at{};   //!< Timeout expiry time point
+    std::optional<SyncPrimitiveBlock>
+        sync_primitive_block{};   //!< Blocking condition due to synchronization
+                                  //!< primitive
   };
 
   struct PriorityBracket {
@@ -281,25 +351,35 @@ export class Scheduler {
   /**
    * Blocks the current thread until it is woken
    */
-  void BlockCurrentThreadUntilWoken() {
+  UnblockReason BlockCurrentThreadUntilWoken() {
     // Block the condition variable until the requested time point
     auto& ts = GetCurrentThreadState();
     running_thread_is_blocked.store(true);
     running_thread_is_blocked.notify_one();
 
-    ts.cv.wait(ts.lk, [&ts, this] {
-      const auto sched_state = state.load();
-      const auto at_timeout =
-          ts.block_timeout_at.has_value() && *ts.block_timeout_at == now.load();
+    ts.cv.wait(ts.lk, [&ts] { return ts.wakeup_requested.exchange(false); });
 
-      const auto cond = at_timeout
-                        && (sched_state == SchedulerState::Started
-                            || sched_state == SchedulerState::Stopping);
-      return cond;
-    });
+    // Determine unblock reason
+    auto reason = UnblockReason::Timeout;
+
+    if (ts.sync_primitive_block.has_value()
+        && ts.sync_primitive_block->check_unblock()) {
+      reason = UnblockReason::SyncPrimitive;
+    }
 
     // Clear the block reasons
-    ts.block_timeout_at = std::nullopt;
+    ts.block_timeout_at     = std::nullopt;
+    ts.sync_primitive_block = std::nullopt;
+
+    return reason;
+  }
+
+  /**
+   * Yields the current thread, allowing higher-priority threads to run
+   */
+  void YieldCurrentThread() {
+    GetCurrentThreadState().block_timeout_at = now.load();
+    BlockCurrentThreadUntilWoken();
   }
 
   /**
@@ -317,11 +397,19 @@ export class Scheduler {
           continue;
         }
 
-        if (thread->block_timeout_at == now.load()) {
+        const auto thread_is_at_timeout =
+            thread->block_timeout_at.has_value()
+            && *thread->block_timeout_at == now.load();
+        const auto thread_is_unblocked_by_primitive =
+            thread->sync_primitive_block.has_value()
+            && thread->sync_primitive_block->check_unblock();
+
+        if (thread_is_at_timeout || thread_is_unblocked_by_primitive) {
           // Mark the scheduler as running
           running_thread_is_blocked.store(false);
 
           // Wake up the thread
+          thread->wakeup_requested.store(true);
           thread->cv.notify_all();
 
           // Wait until the woken thread is blocked again

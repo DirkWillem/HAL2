@@ -7,6 +7,7 @@ module;
 #include <string>
 #include <string_view>
 #include <thread>
+#include <variant>
 
 export module rtos.sil;
 
@@ -18,14 +19,84 @@ import hal.sil;
 
 namespace rtos::sil {
 
+struct EventGroupState {
+  std::atomic<uint32_t> bits;
+};
+
+class EventGroup {
+ public:
+  EventGroup()
+      : state{std::make_unique<EventGroupState>()} {}
+
+  EventGroup(const EventGroup&)            = default;
+  EventGroup(EventGroup&& rhs)             = default;
+  EventGroup& operator=(const EventGroup&) = default;
+  EventGroup& operator=(EventGroup&& rhs)  = default;
+  ~EventGroup()                            = default;
+
+  void SetBits(uint32_t bits) {
+    state->bits.fetch_or(bits);
+    sched().CheckSyncPrimitivePreemption(state.get());
+  }
+
+  void ClearBits(uint32_t bits) {
+    state->bits.fetch_and(~bits);
+    sched().CheckSyncPrimitivePreemption(state.get());
+  }
+
+  uint32_t ReadBits() const { return state->bits.load(); }
+
+  std::optional<uint32_t> Wait(uint32_t            bits_to_wait,
+                               hstd::Duration auto timeout,
+                               bool                clear_on_exit = true,
+                               bool                wait_for_all  = false) {
+    const auto unblock_reason =
+        sched().BlockCurrentThreadOnSynchronizationPrimitive(
+            state.get(),
+            [this, bits_to_wait, wait_for_all]() -> std::optional<uint32_t> {
+              const auto bits     = ReadBits();
+              const auto set_bits = bits & bits_to_wait;
+
+              if (wait_for_all && set_bits == bits_to_wait) {
+                return bits;
+              } else if (!wait_for_all && set_bits != 0) {
+                return bits;
+              } else {
+                return {};
+              }
+            },
+            timeout);
+
+    if (std::holds_alternative<::sil::TimeoutExpired>(unblock_reason)) {
+      return std::nullopt;
+    } else if (const auto bits = std::get_if<uint32_t>(&unblock_reason);
+               bits != nullptr) {
+      if (clear_on_exit) {
+        state->bits.fetch_and(~bits_to_wait);
+      }
+
+      return *bits;
+    }
+
+    std::unreachable();
+  }
+
+ private:
+  static ::sil::Scheduler& sched() {
+    return ::sil::System::instance().GetScheduler();
+  }
+
+  std::shared_ptr<EventGroupState> state;
+};
+
 template <typename Impl, std::size_t StackSize = 0>
 class Task {
  public:
-  explicit Task(std::string_view name)
+  explicit Task(std::string_view name, unsigned priority = 0)
       : name{name}
-      , thread{[this]() {
+      , thread{[this, priority]() {
         auto& sched = ::sil::System::instance().GetScheduler();
-        sched.InitializeThread();
+        sched.InitializeThread(priority);
         static_cast<Impl*>(this)->operator()();
         sched.DeInitializeThread();
       }} {
@@ -98,6 +169,8 @@ export struct Rtos {
   static constexpr auto MediumStackSize     = 0;
   static constexpr auto LargeStackSize      = 0;
   static constexpr auto ExtraLargeStackSize = 0;
+
+  using EventGroup = EventGroup;
 
   template <typename Impl, std::size_t StackSize = 0>
   using Task = Task<Impl, StackSize>;

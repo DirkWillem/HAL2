@@ -48,7 +48,7 @@ class TaskImpl : public Bsp::template Task<TaskImpl<Bsp>> {
 export template <typename T>
 concept Rtos = requires {
   // TaskRef<std::decay_t<typename T::TaskRef>>;
-  // EventGroup<std::decay_t<typename T::EventGroup>>;
+  EventGroup<std::decay_t<typename T::EventGroup>>;
 
   { T::MiniStackSize } -> std::convertible_to<std::size_t>;
   { T::SmallStackSize } -> std::convertible_to<std::size_t>;
