@@ -63,11 +63,23 @@ export class System {
 
 extern "C" {
 
-[[maybe_unused]] std::size_t GetGpioCount() {
+[[maybe_unused]] void Sched_Start() {
+  sil::System::instance().GetScheduler().Start();
+}
+
+[[maybe_unused]] void Sched_RunUntil(uint64_t time_us) {
+  sil::System::instance().GetScheduler().RunUntil(sil::TimePointUs{time_us});
+}
+
+[[maybe_unused]] void Sched_Shutdown(std::size_t max_iters) {
+  sil::System::instance().GetScheduler().Shutdown(max_iters);
+}
+
+[[maybe_unused]] std::size_t Gpio_GetGpioCount() {
   return sil::System::instance().GetGpioCount();
 }
 
-[[maybe_unused]] const char* GetGpioName(std::size_t index) {
+[[maybe_unused]] const char* Gpio_GetGpioName(std::size_t index) {
   auto& sys = sil::System::instance();
 
   const auto* gpio = sys.GetGpio(index);
