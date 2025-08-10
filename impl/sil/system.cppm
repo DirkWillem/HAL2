@@ -8,6 +8,7 @@ export module hal.sil:system;
 
 import :gpio;
 import :scheduler;
+import :uart;
 
 namespace sil {
 
@@ -45,6 +46,23 @@ export class System {
     return gpios[index].get();
   }
 
+  template <std::derived_from<Uart> U>
+  U& DefineUart(std::string_view name, unsigned baud = 115'200,
+                hal::UartParity   parity    = hal::UartParity::None,
+                hal::UartStopBits stop_bits = hal::UartStopBits::One) {
+    return static_cast<U&>(*uarts.emplace_back(
+        std::make_unique<U>(sched, name, baud, parity, stop_bits)));
+  }
+
+  std::size_t GetUartCount() const noexcept { return uarts.size(); }
+
+  Uart* GetUart(std::size_t index) {
+    if (index >= uarts.size()) {
+      return nullptr;
+    }
+    return uarts[index].get();
+  }
+
   /**
    * Returns a reference to the scheduler
    * @return Reference to the scheduler
@@ -57,6 +75,7 @@ export class System {
   Scheduler sched{};
 
   std::vector<std::unique_ptr<Gpio>> gpios{};
+  std::vector<std::unique_ptr<Uart>> uarts{};
 };
 
 }   // namespace sil
@@ -88,5 +107,34 @@ extern "C" {
   }
 
   return gpio->GetName().c_str();
+}
+
+[[maybe_unused]] std::size_t Uart_GetUartCount() {
+  return sil::System::instance().GetUartCount();
+}
+
+[[maybe_unused]] const char* Uart_GetUartName(std::size_t index) {
+  auto&       sys  = sil::System::instance();
+  const auto* uart = sys.GetUart(index);
+  if (!uart) {
+    return nullptr;
+  }
+  return uart->GetName().c_str();
+}
+
+[[maybe_unused]] bool Uart_SimulateReceive(std::size_t index,
+                                           uint64_t    timestamp_us,
+                                           const char* data,
+                                           std::size_t data_len) {
+  auto& sys  = sil::System::instance();
+  auto* uart = sys.GetUart(index);
+
+  if (!uart) {
+    return false;
+  }
+
+  uart->SimulateRx(sil::TimePointUs{timestamp_us},
+                   hstd::ReinterpretSpan<std::byte>(std::span{data, data_len}));
+  return true;
 }
 }

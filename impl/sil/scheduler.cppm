@@ -4,7 +4,6 @@ module;
 #include <atomic>
 #include <chrono>
 #include <deque>
-#include <format>
 #include <functional>
 #include <latch>
 #include <map>
@@ -30,7 +29,13 @@ export enum class SchedulerState {
   Stopping,
 };
 
-inline constexpr unsigned ThreadPriorityLevel = 1;
+enum class RunType {
+  Synchronous,
+  Asynchronous,
+};
+
+inline constexpr unsigned ExternalEventPriorityLevel = 0;
+inline constexpr unsigned ThreadPriorityLevel        = 1;
 
 export class Scheduler;
 
@@ -69,7 +74,7 @@ class SchedulerItem {
   /**
    * Runs the scheduler item until it enters a blocking state
    */
-  virtual void Run() = 0;
+  virtual RunType Run() = 0;
 };
 
 class ThreadItem final : public SchedulerItem {
@@ -100,7 +105,7 @@ class ThreadItem final : public SchedulerItem {
   bool                       IsPending(TimePointUs time) const final;
   std::optional<TimePointUs> GetTimeout() const final;
 
-  void Run() final;
+  RunType Run() final;
 
   /**
    * Initializes the thread. This sets its timeout to the epoch and acquires
@@ -176,122 +181,54 @@ class ThreadItem final : public SchedulerItem {
   //!< primitive
 };
 
+class ExternalEventItem final : public SchedulerItem {
+ public:
+  explicit ExternalEventItem(unsigned prio = 0);
+
+  void RegisterPendingAction(TimePointUs           timestamp,
+                             std::function<void()> callback);
+
+  [[nodiscard]] bool HasPendingAction() const;
+
+  [[nodiscard]] ItemPrio GetPriority() const final;
+  [[nodiscard]] bool     IsRunning() const final;
+  [[nodiscard]] bool     IsPending(TimePointUs time) const final;
+  [[nodiscard]] std::optional<TimePointUs> GetTimeout() const final;
+
+  RunType Run() final;
+
+ private:
+  struct Action {
+    std::function<void()> callback;
+    TimePointUs           timestamp;
+  };
+
+  std::optional<Action> pending_action{};   //!< Pending external action
+  unsigned              priority{0};        //!< External action priority
+};
+
 /**
  * Discrete event scheduler. Can simulate at microsecond granularity. Only one
  * task is allowed to run at a time
  */
 export class Scheduler {
  public:
-  [[nodiscard]] SchedulerState GetState() const noexcept {
-    return state.load();
-  }
+  [[nodiscard]] SchedulerState GetState() const noexcept;
 
-  void Start() {
-    // Create a startup latch with the amount of announced threads
-    startup_latch = std::make_unique<std::latch>(announced_threads_count);
-
-    // Unlock the system mutex such that the tasks can start initialization
-    sys_lk.unlock();
-
-    // Wait untill all threads have passed the startup latch. At this point,
-    // the last task to initialize is guaranteed to have the system mutex
-    startup_latch->wait();
-
-    // Unlock the system mutex. This will return once all tasks are blocking
-    // until the Epoch event
-    sys_lk.lock();
-
-    // Build the priority brackets
-    for (auto& [_, thread] : threads) {
-      auto bracket_it = std::ranges::find_if(
-          priority_brackets, [&thread](const PriorityBracket& pb) {
-            return pb.prio == thread.GetPriority();
-          });
-
-      if (bracket_it == priority_brackets.end()) {
-        priority_brackets.emplace_back(PriorityBracket{
-            .prio = thread.GetPriority(), .rr_idx = 0, .items = {&thread}});
-      } else {
-        bracket_it->items.push_back(&thread);
-      }
-    }
-
-    std::ranges::sort(priority_brackets,
-                      [](const PriorityBracket& a, const PriorityBracket& b) {
-                        return a.prio > b.prio;
-                      });
-
-    // Start the scheduler
-    state.store(SchedulerState::Started);
-
-    // Validate that the expected amount of threads was created
-    if (threads.size() != announced_threads_count) {
-      throw std::runtime_error{std::format(
-          "Expected {} threads to have been created, but {} are initialized",
-          threads.size(), announced_threads_count)};
-    }
-
-    // Unlock the system lock
-    sys_lk.unlock();
-  }
+  void Start();
 
   /**
    * Simulates up to the given time point
    * @param time Time until which to simulate
    */
-  void RunUntil(TimePointUs time) {
-    // Ensure RunUntil is not called from one of the simulated task threads
-    if (threads.contains(std::this_thread::get_id())) {
-      throw std::runtime_error{
-          "Scheduler::RunUntil() cannot be called from a simulated task "
-          "thread."};
-    }
+  void RunUntil(TimePointUs time);
 
-    while (now.load() < time) {
-      const auto thread_ran = HandleNextThread();
-
-      if (!thread_ran) {
-        const auto next_block_timeout = GetNextBlockTimeout();
-        if (next_block_timeout.has_value()) {
-          now.store(std::min(time, *next_block_timeout));
-        } else {
-          now.store(time);
-          return;
-        }
-      }
-    }
-  }
-
-  void Shutdown(std::size_t max_wakeups = 100) {
-    // Mark scheduler as stopped
-    state.store(SchedulerState::Stopping);
-
-    // Keep on handling threads until all threads are shut down
-    std::size_t wakeups = 0;
-    while (!AllThreadsStopped()) {
-      const auto thread_ran = HandleNextThread();
-
-      if (thread_ran) {
-        wakeups++;
-      } else {
-        const auto next_block_timeout = GetNextBlockTimeout();
-        if (!next_block_timeout.has_value()) {
-          throw std::runtime_error{
-              "Error in Scheduler::Shutdown, no threads have a timeout set for "
-              "unblocking, but not all threads are stopped"};
-        } else {
-          now.store(*next_block_timeout);
-        }
-      }
-
-      if (wakeups > max_wakeups) {
-        throw std::runtime_error{
-            std::format("Error in Scheduler::Shutdown, not all threads are "
-                        "stopped within {} wakeups.",
-                        max_wakeups)};
-      }
-    }
-  }
+  /**
+   * Shuts down the scheduler and lets all threads finish
+   * @param max_wakeups Maximum amount of wakeups that may occur before all
+   * threads are shut down
+   */
+  void Shutdown(std::size_t max_wakeups = 100);
 
   /**
    * Blocks the current thread until the simulated point in time
@@ -313,71 +250,34 @@ export class Scheduler {
    * Should be called when a thread changes a synchronization primitive. Allows
    * the current thread to be preempted by higher-priority threads
    */
-  void CheckSyncPrimitivePreemption() {
-    const auto preempted_prio = GetCurrentThread().GetPriority();
-
-    for (const auto& bracket : priority_brackets) {
-      if (bracket.prio <= preempted_prio) {
-        return;
-      }
-
-      for (const auto& thread : bracket.items) {
-        if (thread->IsPending(Now())) {
-          YieldCurrentThread();
-          return;
-        }
-      }
-    }
-  }
+  void CheckSyncPrimitivePreemption();
 
   /**
-   * Initializes the current thread. Must be called at the simulated epoch.
+   * Registers an external event with the scheduler
+   * @param prio Priority of the external event
+   * @return Created external event item
    */
-  void InitializeThread(unsigned prio) {
-    if (now.load() != Epoch || state.load() != SchedulerState::Stopped) {
-      throw std::runtime_error{std::format(
-          "Scheduler::InitializeThread() can only be called when the scheduler "
-          "is still at the simulated epoch and is not started, got {} and {}.",
-          now.load(), std::to_underlying(state.load()))};
-    }
-
-    const auto tid = std::this_thread::get_id();
-    if (threads.contains(tid)) {
-      throw std::runtime_error{
-          std::format("Thread {} was already initialized.", tid)};
-    }
-
-    threads.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
-                    std::forward_as_tuple(tid, prio, sys_mtx));
-
-    // Initialize the thread and block until simulation started
-    GetCurrentThread().Initialize(*this, *startup_latch);
-  }
+  ExternalEventItem& RegisterExternalEvent(unsigned prio = 0) &;
 
   /**
    * Announces the presence of an additional thread
    */
-  void AnnounceThread() { announced_threads_count++; }
+  void AnnounceThread();
+
+  /**
+   * Initializes the current thread. Must be called at the simulated epoch.
+   */
+  void InitializeThread(unsigned prio);
 
   /**
    * Announces that the current thread is done and can be joined
    */
-  void DeInitializeThread() {
-    GetCurrentThread().MarkStopped();
-
-    // Indicate current thread is "blocked", so that the scheduler thread
-    // can continue
-    running_thread_is_blocked.store(true);
-    running_thread_is_blocked.notify_one();
-  }
+  void DeInitializeThread();
 
   /**
    * Marks the current action as having entered a blocking state
    */
-  void MarkCurrentActionBlocked() {
-    running_thread_is_blocked.store(true);
-    running_thread_is_blocked.notify_one();
-  }
+  void MarkCurrentItemBlocked();
 
   /**
    * Returns the current simulated time of the scheduler
@@ -394,65 +294,25 @@ export class Scheduler {
 
   static constexpr auto Epoch = TimePointUs{};
 
+  void InitializePriorityBrackets();
+
   /**
    * Returns the ThreadState associated with the thread in which the function
    * is called
    * @return Current thread state
    */
-  ThreadItem& GetCurrentThread() & {
-    const auto tid = std::this_thread::get_id();
-    if (!threads.contains(tid)) {
-      throw std::runtime_error{std::format(
-          "No ThreadState was constructed for this thread (id {}).", tid)};
-    }
-
-    return threads.at(tid);
-  }
+  ThreadItem& GetCurrentThread() &;
 
   /**
    * Yields the current thread, allowing higher-priority threads to run
    */
-  void YieldCurrentThread() { GetCurrentThread().Yield(*this); }
+  void YieldCurrentThread();
 
   /**
-   * Handles a single thread
-   * @returns Whether a thread was woken
+   * Handles a single scheduler item
+   * @returns Whether an item was run
    */
-  bool HandleNextThread() {
-    bool thread_ran = false;
-    for (auto& bracket : priority_brackets) {
-      for (std::size_t i = 0; i < bracket.items.size(); i++) {
-        auto& item =
-            bracket.items.at((i + bracket.rr_idx) % bracket.items.size());
-
-        if (!item->IsRunning()) {
-          continue;
-        }
-
-        if (item->IsPending(now.load())) {
-          // Mark the scheduler as running
-          running_thread_is_blocked.store(false);
-
-          // Wake up the thread
-          item->Run();
-
-          // Wait until the woken thread is blocked again
-          running_thread_is_blocked.wait(false);
-
-          // Restart the full iteration
-          thread_ran = true;
-          break;
-        }
-      }
-
-      if (thread_ran) {
-        bracket.rr_idx = (bracket.rr_idx + 1) % bracket.items.size();
-        return thread_ran;
-      }
-    }
-
-    return thread_ran;
-  }
+  bool HandleNextItem();
 
   /**
    * Returns the earliest time point at which any thread will unblock due to
@@ -460,35 +320,19 @@ export class Scheduler {
    * waiting on a timeout
    * @return Earliest time point at which any thread will unblock due to timeout
    */
-  std::optional<TimePointUs> GetNextBlockTimeout() {
-    std::optional<TimePointUs> next_timeout{std::nullopt};
-
-    for (const auto& bracket : priority_brackets) {
-      for (const auto& thread : bracket.items) {
-        const auto to = thread->GetTimeout();
-        if (to && (next_timeout == std::nullopt || to < next_timeout)) {
-          next_timeout = to;
-        }
-      }
-    }
-
-    return next_timeout;
-  }
-
+  std::optional<TimePointUs> GetNextBlockTimeout() const;
   /**
    * Returns whether all threads have stopped
    * @return Whether all threads have stopped
    */
-  bool AllThreadsStopped() const {
-    return std::ranges::all_of(
-        threads, [](const auto& kvp) { return !kvp.second.IsRunning(); });
-  }
+  bool AllThreadsStopped() const;
 
   std::size_t                 announced_threads_count{0};
   std::atomic<SchedulerState> state{SchedulerState::Stopped};
   std::atomic<TimePointUs>    now{Epoch};
 
   std::map<std::thread::id, ThreadItem> threads{};
+  std::deque<ExternalEventItem>         external_events{};
   std::deque<PriorityBracket>           priority_brackets{};
   std::mutex                            sys_mtx{};
   std::atomic<bool>                     running_thread_is_blocked{};

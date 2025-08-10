@@ -377,6 +377,8 @@ if (NOT CMAKE_CROSSCOMPILING)
             sil/uart.cppm
 
             PRIVATE
+            sil/scheduler_external_event_item.cpp
+            sil/scheduler_scheduler.cpp
             sil/scheduler_thread_item.cpp)
-    target_link_libraries(hal_sil PUBLIC hal_abstract hstd)
+    target_link_libraries(hal_sil PUBLIC hal_abstract hstd rtos_concepts)
 endif()

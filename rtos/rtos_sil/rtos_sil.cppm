@@ -39,6 +39,8 @@ class EventGroup {
     sched().CheckSyncPrimitivePreemption();
   }
 
+  void SetBitsFromInterrupt(uint32_t bits) { state->bits.fetch_or(bits); }
+
   void ClearBits(uint32_t bits) {
     state->bits.fetch_and(~bits);
     sched().CheckSyncPrimitivePreemption();
