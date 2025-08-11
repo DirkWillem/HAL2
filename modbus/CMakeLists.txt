@@ -68,17 +68,17 @@ target_sources(modbus_server PUBLIC
 target_link_libraries(modbus_server PUBLIC modbus_server_spec modbus_core)
 
 # - FreeRTOS Implementation
-add_library(modbus_server_freertos)
-target_sources(modbus_server_freertos PUBLIC
+add_library(modbus_server_rtos)
+target_sources(modbus_server_rtos PUBLIC
         FILE_SET CXX_MODULES
         FILES
-        server/freertos/freertos_server.cppm
+        server/rtos/rtos_server.cppm
 
-        server/freertos/helpers.cppm)
-target_link_libraries(modbus_server_freertos
+        server/rtos/helpers.cppm)
+target_link_libraries(modbus_server_rtos
         PUBLIC
         modbus_server
         modbus_encoding
         modbus_encoding_rtu
-        rtos_freertos
+        rtos_concepts
         hal_abstract)

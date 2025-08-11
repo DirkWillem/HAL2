@@ -7,15 +7,15 @@ module;
 #include <span>
 #include <tuple>
 
-export module modbus.server.freertos:helpers;
+export module modbus.server.rtos:helpers;
 
 import hstd;
 
-import rtos.freertos;
+import rtos.concepts;
 
 import modbus.server;
 
-namespace modbus::server::freertos {
+namespace modbus::server::rtos {
 
 struct NotifyingRegisterStorageSettings {
   bool external_event_group =
@@ -23,21 +23,22 @@ struct NotifyingRegisterStorageSettings {
                //!< contained value
 };
 
-export template <typename S, NotifyingRegisterStorageSettings Opts = {}>
+export template <::rtos::concepts::Rtos             OS, typename S,
+                 NotifyingRegisterStorageSettings Opts = {}>
   requires PlainMemoryRegisterStorage<S, S>
 class NotifyingRegisterStorage {
+  using EG = typename OS::EventGroup;
+
  public:
   static constexpr std::size_t Size = sizeof(S);
 
-  explicit NotifyingRegisterStorage(
-      std::tuple<S, ::rtos::EventGroup*, uint32_t> args) noexcept
+  explicit NotifyingRegisterStorage(std::tuple<S, EG*, uint32_t> args) noexcept
     requires(Opts.external_event_group)
       : storage{std::get<0>(args)}
       , eg{*std::get<1>(args)}
       , eb{std::get<2>(args)} {}
 
-  explicit NotifyingRegisterStorage(
-      std::tuple<::rtos::EventGroup*, uint32_t> args) noexcept
+  explicit NotifyingRegisterStorage(std::tuple<EG*, uint32_t> args) noexcept
     requires(Opts.external_event_group)
       : storage{}
       , eg{*std::get<0>(args)}
@@ -68,21 +69,22 @@ class NotifyingRegisterStorage {
     server::SwapRegisterEndianness<S>(data, offset, size);
   }
 
-  rtos::EventGroup&  event_group() & noexcept { return eg; }
+  EG&                event_group() & noexcept { return eg; }
   constexpr auto     event_bit() const noexcept { return eb; }
   constexpr const S& value() const& noexcept { return storage; }
 
  private:
   S storage;
 
-  std::conditional_t<Opts.external_event_group, ::rtos::EventGroup&,
-                     ::rtos::EventGroup>
-           eg;
-  uint32_t eb;
+  std::conditional_t<Opts.external_event_group, EG&, EG> eg;
+  uint32_t                                               eb;
 };
 
-export template <std::size_t BitCount, std::size_t FirstBit = 0>
+export template <::rtos::concepts::Rtos OS, std::size_t BitCount,
+                 std::size_t FirstBit = 0>
 class EventGroupBitStorage {
+  using EG = typename OS::EventGroup;
+
  public:
   static constexpr std::size_t MaxBitCount = BitCount;
   using MemType                            = uint32_t;
@@ -107,7 +109,7 @@ class EventGroupBitStorage {
   const auto& event_group() const& noexcept { return eg; }
 
  private:
-  rtos::EventGroup eg;
+  EG eg;
 };
 
 }   // namespace modbus::server::freertos

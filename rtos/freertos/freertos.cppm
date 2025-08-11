@@ -42,6 +42,7 @@ export [[noreturn]] inline void StartScheduler() noexcept {
 export struct FreeRtos {
   using TaskRef    = TaskRef;
   using EventGroup = EventGroup;
+  using System     = System;
 
   static constexpr auto MiniStackSize       = rtos::MiniStackSize;
   static constexpr auto SmallStackSize      = rtos::SmallStackSize;

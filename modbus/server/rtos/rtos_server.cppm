@@ -4,11 +4,11 @@ module;
 #include <chrono>
 #include <variant>
 
-export module modbus.server.freertos;
+export module modbus.server.rtos;
 
 import hal.abstract;
 
-import rtos.freertos;
+import rtos.concepts;
 
 import modbus.core;
 export import modbus.server;
@@ -17,18 +17,20 @@ import modbus.encoding.rtu;
 
 export import :helpers;
 
-namespace modbus::server::freertos {
+namespace modbus::server::rtos {
 
-export template <concepts::Server Srv, hal::RtosUart Uart,
+export template <::rtos::concepts::Rtos OS, concepts::Server Srv,
+                 hal::RtosUart          Uart,
                  encoding::UartEncoding E = encoding::rtu::Encoding>
 class UartServer
-    : public rtos::Task<UartServer<Srv, Uart>, rtos::MediumStackSize> {
+    : public OS::template Task<UartServer<OS, Srv, Uart>, OS::MediumStackSize> {
   using Encoder = typename E::Encoder;
   using Decoder = typename E::Decoder;
 
  public:
   UartServer(Srv& server, Uart& uart, uint8_t address) noexcept
-      : rtos::Task<UartServer, rtos::MediumStackSize>{"ModbusServer"}
+      : OS::template Task<UartServer<OS, Srv, Uart>,
+                          OS::MediumStackSize>{"ModbusServer"}
       , server{server}
       , uart{uart}
       , address{address} {}
@@ -72,4 +74,4 @@ class UartServer
   uint8_t address;
 };
 
-}   // namespace modbus::server::freertos
+}   // namespace modbus::server::rtos

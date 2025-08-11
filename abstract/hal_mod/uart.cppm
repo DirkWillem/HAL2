@@ -22,7 +22,8 @@ export enum class UartParity { Even, Odd, None };
 export enum class UartStopBits { Half, One, OneAndHalf, Two };
 
 export template <typename Impl>
-concept UartBase = Peripheral<Impl> && IsPeripheralInUse<Impl>();
+concept UartBase =
+    Peripheral<std::decay_t<Impl>> && IsPeripheralInUse<std::decay_t<Impl>>();
 
 export template <typename Impl>
 concept AsyncUart = UartBase<Impl> && requires(Impl& impl) {
