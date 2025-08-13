@@ -26,7 +26,7 @@ namespace sil {
 
 export class Uart;
 
-export class Uart {
+export class Uart : public ::hal::UsedPeripheral {
  public:
   Uart()          = default;
   virtual ~Uart() = default;
@@ -73,21 +73,20 @@ class RtosUart final : public Uart {
     return event_group.Wait(TxDoneBit, timeout).has_value();
   }
 
-  void Write(std::string_view data, typename OS::EventGroup& eg,
-             uint32_t bitmask) {
+  void Write(std::string_view data, OS::EventGroup& eg, uint32_t bitmask) {
     Write(hstd::ReinterpretSpan<std::byte>(
               std::span<const char>{data.data(), data.size()}),
           eg, bitmask);
   }
 
-  void Write(std::span<const std::byte> data, typename OS::EventGroup& eg,
+  void Write(std::span<const std::byte> data, OS::EventGroup& eg,
              uint32_t bitmask) {
     // Simulate no-op if still transmitting
     if (tx_evt.HasPendingAction()) {
       return;
     }
 
-    tx_event_group = std::make_tuple(&event_group, bitmask);
+    tx_event_group = std::make_tuple(&eg, bitmask);
     pending_tx_buf.resize(data.size());
     std::ranges::copy(data, pending_tx_buf.begin());
 
@@ -99,7 +98,7 @@ class RtosUart final : public Uart {
                                    }
 
                                    // Set transmitted bit
-                                   auto& [eg, bitmask] = rx_event_group;
+                                   auto& [eg, bitmask] = tx_event_group;
                                    if (eg != nullptr) {
                                      eg->SetBitsFromInterrupt(bitmask);
                                    }
@@ -215,7 +214,4 @@ class RtosUart final : public Uart {
 
 }   // namespace sil
 
-extern "C" {
-
-
-}
+extern "C" {}

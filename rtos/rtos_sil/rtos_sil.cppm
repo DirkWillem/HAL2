@@ -67,7 +67,7 @@ class EventGroup {
                 return {};
               }
             },
-            timeout);
+            sched().Now() + timeout);
 
     if (std::holds_alternative<::sil::TimeoutExpired>(unblock_reason)) {
       return std::nullopt;

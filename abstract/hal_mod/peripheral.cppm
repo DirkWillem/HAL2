@@ -12,9 +12,12 @@ concept PeripheralId = std::equality_comparable<PId>;
 export template <typename P>
 concept Peripheral = requires {
   { P::Used } -> std::convertible_to<bool>;
-} && (!P::Used || requires {
-                       { P::instance() } -> std::convertible_to<P&>;
-                     });
+};
+
+export template <typename P>
+concept SingletonPeripheral = Peripheral<P> && (!P::Used || requires {
+                                { P::instance() } -> std::convertible_to<P&>;
+                              });
 
 export template <typename Impl>
 struct UnusedPeripheral {

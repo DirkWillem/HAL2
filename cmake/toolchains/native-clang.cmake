@@ -41,8 +41,8 @@ else()
     set(CLANG_VERSION_SUFFIX "")
 endif()
 
-set(CMAKE_CXX_FLAGS "-stdlib=libc++ -fexperimental-library")
-set(CMAKE_EXE_LINKER_FLAGS "-stdlib=libc++ -fexperimental-library")
+set(CMAKE_CXX_FLAGS "-std=c++23 -stdlib=libc++ -fexperimental-library")
+set(CMAKE_EXE_LINKER_FLAGS "-std=c++23 -stdlib=libc++ -fexperimental-library -L${LLVM_PREFIX}/lib/c++")
 
 
 

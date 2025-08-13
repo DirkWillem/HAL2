@@ -575,6 +575,7 @@ class ServerStorage<hstd::Types<UDI...>, hstd::Types<UC...>,
     requires(sizeof(T) % sizeof(uint16_t) == 0)
   std::expected<T, ExceptionCode>
   ReadInputRegister(uint16_t addr) const noexcept {
+    static_assert(!std::is_same_v<std::decay_t<T>, void>);
     return ReadRegister<T, InputRegistersTable, E>(addr);
   }
 
@@ -605,6 +606,7 @@ class ServerStorage<hstd::Types<UDI...>, hstd::Types<UC...>,
     requires(sizeof(T) % sizeof(uint16_t) == 0)
   std::expected<T, ExceptionCode>
   ReadHoldingRegister(uint16_t addr) const noexcept {
+    static_assert(!std::is_same_v<std::decay_t<T>, void>);
     return ReadRegister<T, HoldingRegistersTable, E>(addr);
   }
 
@@ -850,6 +852,7 @@ class ServerStorage<hstd::Types<UDI...>, hstd::Types<UC...>,
             std::endian E = std::endian::native>
     requires(sizeof(T) % sizeof(uint16_t) == 0)
   std::expected<T, ExceptionCode> ReadRegister(uint16_t addr) const noexcept {
+    static_assert(!std::is_same_v<std::decay_t<T>, void>);
     std::array<std::byte, sizeof(T)> dst_buf{};
     const auto                       read_result =
         ReadRegisters<RegTable, E>(dst_buf, addr, sizeof(T) / sizeof(uint16_t));

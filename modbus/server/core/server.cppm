@@ -185,6 +185,7 @@ class Server : public ServerStorage<DIs, Cs, IRs, HRs> {
     constexpr void HandleResult(const auto&                            req,
                                 const std::expected<T, ExceptionCode>& result,
                                 F&& transform) noexcept {
+      static_assert(!std::is_same_v<std::decay_t<T>, void>);
       static_assert(
           std::convertible_to<std::invoke_result_t<F, const T&>, Res>);
 

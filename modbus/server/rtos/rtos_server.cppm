@@ -35,10 +35,11 @@ class UartServer
       , uart{uart}
       , address{address} {}
 
-  [[noreturn]] void operator()() noexcept {
+  void operator()() noexcept {
     using namespace std::chrono_literals;
 
-    while (true) {
+    while (!OS::template Task<UartServer<OS, Srv, Uart>,
+                              OS::MediumStackSize>::StopRequested()) {
       if (const auto recv = uart.Receive(buffer, 1000ms); recv.has_value()) {
         const auto decode_result = Decoder{*recv}.DecodeRequest();
 
