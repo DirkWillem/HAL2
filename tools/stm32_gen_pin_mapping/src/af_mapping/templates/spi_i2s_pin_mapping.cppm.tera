@@ -1,0 +1,44 @@
+{% import "spi_i2s_macros" as spi_i2s -%}
+module;
+
+#include <array>
+
+#include <pin_macros.h>
+
+export module hal.{{family}}:pin_mapping.spi_i2s;
+
+import hal.abstract;
+
+import :peripherals;
+import :pin;
+
+namespace {{ family }} {
+
+export using SpiPinMapping = hal::AFMapping<PinId, SpiId>;
+export using I2sPinMapping = hal::AFMapping<PinId, I2sId>;
+
+/** SPI SCK pin mappings */
+export {{ spi_i2s::spi_pin_mappings(var_name="SpiSckPinMappings", pins=spi_pins.sck) }}
+
+/** SPI NSS pin mappings */
+export {{ spi_i2s::spi_pin_mappings(var_name="SpiNssPinMappings", pins=spi_pins.nss) }}
+
+/** SPI MOSI pin mappings */
+export {{ spi_i2s::spi_pin_mappings(var_name="SpiMosiPinMappings", pins=spi_pins.mosi) }}
+
+/** SPI MISO pin mappings */
+export {{ spi_i2s::spi_pin_mappings(var_name="SpiMisoPinMappings", pins=spi_pins.miso) }}
+
+/** I2S SD pin mappings */
+export {{ spi_i2s::i2s_pin_mappings(var_name="I2sSdPinMappings", pins=i2s_pins.sd) }}
+
+/** I2S WS pin mappings */
+export {{ spi_i2s::i2s_pin_mappings(var_name="I2sWsPinMappings", pins=i2s_pins.ws) }}
+
+/** I2S CK pin mappings */
+export {{ spi_i2s::i2s_pin_mappings(var_name="I2sCkPinMappings", pins=i2s_pins.ck) }}
+
+/** I2S MCK pin mappings */
+export {{ spi_i2s::i2s_pin_mappings(var_name="I2sMckPinMappings", pins=i2s_pins.mck) }}
+
+}

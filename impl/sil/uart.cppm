@@ -44,6 +44,18 @@ export class Uart : public ::hal::UsedPeripheral {
    */
   virtual void SimulateRx(TimePointUs                timestamp,
                           std::span<const std::byte> rx_data) = 0;
+
+  /**
+   * Sets the UART transmit callback
+   * @param callback Callback to be invoked upon UART transmission
+   */
+  virtual void
+  SetTxCallback(std::function<void(std::span<const std::byte>)> callback) = 0;
+
+  /**
+   * Clears the UART transmit callback
+   */
+  virtual void ClearTxCallback() = 0;
 };
 
 export template <rtos::concepts::Rtos OS>
@@ -156,6 +168,20 @@ class RtosUart final : public Uart {
       }
     });
   }
+
+  /**
+   * Sets the UART transmit callback
+   * @param callback Callback to be invoked upon UART transmission
+   */
+  void SetTxCallback(
+      std::function<void(std::span<const std::byte>)> callback) final {
+    tx_callback = callback;
+  }
+
+  /**
+   * Clears the UART transmit callback
+   */
+  void ClearTxCallback() final { tx_callback = {}; }
 
   const std::string& GetName() const& final { return name; }
 

@@ -18,6 +18,7 @@ enum GenType {
     UartPinMapping,
     UartPinMappingModule,
     SpiI2sPinMapping,
+    SpiI2sPinMappingModule,
     I2cPinMapping,
     UsbPinMapping,
     TimPinMapping,
@@ -66,6 +67,7 @@ fn main() -> anyhow::Result<()> {
             uart::gen_mapping_module(&pin_data, &cli.family, &cli.mcu)?
         }
         GenType::SpiI2sPinMapping => spi_i2s::gen_mapping_header(&pin_data, &cli.family, &cli.mcu)?,
+        GenType::SpiI2sPinMappingModule => spi_i2s::gen_mapping_module(&pin_data, &cli.family, &cli.mcu)?,
         GenType::I2cPinMapping => i2c::gen_mapping_header(&pin_data, &cli.family, &cli.mcu)?,
         GenType::UsbPinMapping => usb::gen_mapping_header(&pin_data, &cli.family, &cli.mcu)?,
         GenType::TimPinMapping => tim::gen_mapping_header(&pin_data, &cli.family, &cli.mcu)?,

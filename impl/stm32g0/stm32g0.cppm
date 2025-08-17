@@ -9,6 +9,7 @@ export import :clocks;
 export import :pin;
 export import :pin_interrupt;
 export import :peripherals;
+export import :spi;
 export import :system;
 export import :uart;
 export import :tim;

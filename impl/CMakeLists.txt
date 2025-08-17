@@ -74,6 +74,15 @@ function(add_stm32g0_hal VARIANT XMLFILE)
                 "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.cppm")
     endif()
 
+    if (NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/spi_i2s_pin_mapping.cppm")
+        add_generated_file(
+                stm32g0
+                "${VARIANT}"
+                "spi-i2s-pin-mapping-module"
+                "${XMLFILE}"
+                "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/spi_i2s_pin_mapping.cppm")
+    endif()
+
     if (NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.cppm")
         add_generated_file(
                 stm32g0
@@ -90,6 +99,7 @@ function(add_stm32g0_hal VARIANT XMLFILE)
             FILES
             "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.cppm"
             "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.cppm"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/spi_i2s_pin_mapping.cppm"
 
             stm32g0/tim/channel.cppm
             stm32g0/tim/common.cppm
@@ -100,6 +110,7 @@ function(add_stm32g0_hal VARIANT XMLFILE)
             stm32g0/peripherals.cppm
             stm32g0/pin_interrupt.cppm
             stm32g0/pin.cppm
+            stm32g0/spi.cppm
             stm32g0/system.cppm
             stm32g0/uart.cppm
 
@@ -344,7 +355,7 @@ endfunction()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
     add_stm32g0_hal(stm32g030 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G030K(6-8)Tx.xml")
-    add_stm32g0_hal(stm32g0b1 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G0B1R(B-C-E)Tx.xml")
+#    add_stm32g0_hal(stm32g0b1 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G0B1R(B-C-E)Tx.xml")
 endif ()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m4")

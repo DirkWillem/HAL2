@@ -127,10 +127,38 @@ pub fn gen_mapping_header(pin_data: &PinData, family: &str, mcu: &str) -> anyhow
 
     // Setup templates
     let mut tera = Tera::default();
-    tera.add_raw_template("spi_i2s_macros", include_str!("templates/spi_i2s_macros.tera"))?;
+    tera.add_raw_template(
+        "spi_i2s_macros",
+        include_str!("templates/spi_i2s_macros.tera"),
+    )?;
     tera.add_raw_template(
         "spi_i2s_pin_mapping",
         include_str!("templates/spi_i2s_pin_mapping.h.tera"),
+    )?;
+
+    let mut context = tera::Context::new();
+    context.insert("family", family);
+    context.insert("mcu", mcu);
+    context.insert("spi_pins", &spi_pin_mappings);
+    context.insert("i2s_pins", &i2s_pin_mappings);
+
+    Ok(tera.render("spi_i2s_pin_mapping", &context)?)
+}
+
+pub fn gen_mapping_module(pin_data: &PinData, family: &str, mcu: &str) -> anyhow::Result<String> {
+    // Get pin mappings
+    let spi_pin_mappings = get_spi_pin_mappings(&pin_data)?;
+    let i2s_pin_mappings = get_i2s_pin_mappings(&pin_data)?;
+
+    // Setup templates
+    let mut tera = Tera::default();
+    tera.add_raw_template(
+        "spi_i2s_macros",
+        include_str!("templates/spi_i2s_macros.tera"),
+    )?;
+    tera.add_raw_template(
+        "spi_i2s_pin_mapping",
+        include_str!("templates/spi_i2s_pin_mapping.cppm.tera"),
     )?;
 
     let mut context = tera::Context::new();

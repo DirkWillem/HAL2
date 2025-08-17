@@ -3,6 +3,7 @@ module;
 #include <algorithm>
 #include <format>
 #include <latch>
+#include <mutex>
 #include <ranges>
 #include <thread>
 
@@ -70,6 +71,47 @@ void Scheduler::RunUntil(TimePointUs time) {
       }
     }
   }
+}
+
+bool Scheduler::RunUntilNextTimePoint(TimePointUs upper_bound) {
+  // Ensure RunUntil is not called from one of the simulated task threads
+  if (threads.contains(std::this_thread::get_id())) {
+    throw std::runtime_error{
+        "Scheduler::RunUntil() cannot be called from a simulated task "
+        "thread."};
+  }
+
+  // Attempt to handle all entries for this time instance
+  auto handled_item             = true;
+  auto ran_item_at_current_time = false;
+
+  while (handled_item) {
+    handled_item = HandleNextItem();
+    if (handled_item) {
+      ran_item_at_current_time = true;
+    }
+  }
+
+  // If any item ran at this time, return. Otherwise, advance time
+  if (ran_item_at_current_time) {
+    return true;
+  }
+
+  const auto next_block_timeout = GetNextBlockTimeout();
+  if (next_block_timeout.has_value() && *next_block_timeout <= upper_bound) {
+    now.store(*next_block_timeout);
+  } else {
+    now.store(upper_bound);
+    return false;
+  }
+
+  // Handle any items at this time instance
+  handled_item = true;
+  while (handled_item) {
+    handled_item = HandleNextItem();
+  }
+
+  return true;
 }
 
 void Scheduler::Shutdown(std::size_t max_wakeups) {
@@ -146,8 +188,14 @@ void Scheduler::InitializeThread(unsigned prio) {
   threads.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
                   std::forward_as_tuple(tid, prio, sys_mtx));
 
-  // Initialize the thread and block until simulation started
-  GetCurrentThread().Initialize(*this, *startup_latch);
+  // Lock the system mutex to ensure the startup latch has been created
+  std::latch* startup_latch_ptr = nullptr;
+  {
+    std::scoped_lock lk{sys_mtx};
+    startup_latch_ptr = startup_latch.get();
+  }
+
+  GetCurrentThread().Initialize(*this, *startup_latch_ptr);
 }
 
 void Scheduler::DeInitializeThread() {

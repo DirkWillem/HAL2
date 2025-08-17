@@ -224,6 +224,20 @@ export class Scheduler {
   void RunUntil(TimePointUs time);
 
   /**
+   * Simulates up until the next time point. Behavior is dependent on whether
+   * all events for the current time point have been processed:
+   * - If the current time instance is done simulating, increases time to the
+   *    next time point and simulates all events for that time point.
+   * - If the current time instance is not done simulating, handles all events
+   *    for this time point and does not advance time.
+   *
+   * @param upper_bound Max time until which the scheduler is allowed to
+   *   simulate.
+   * @returns Whether any item was handled.
+   */
+  bool RunUntilNextTimePoint(TimePointUs upper_bound);
+
+  /**
    * Shuts down the scheduler and lets all threads finish
    * @param max_wakeups Maximum amount of wakeups that may occur before all
    * threads are shut down

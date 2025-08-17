@@ -54,6 +54,8 @@ export struct UartConfig {
   uint8_t                  rs485_assertion_time   = 0;
   uint8_t                  rs485_deassertion_time = 0;
 
+  bool swap_rx_tx = false;   //!< Jelte van Luenen mode 2.0
+
   [[nodiscard]] consteval bool Validate() const noexcept {
     // Validate RS-485-related parameters
     hstd::Assert(rs485_assertion_time <= 31,
@@ -248,8 +250,15 @@ void SetupUartNoFc(UartId id, UART_HandleTypeDef& huart, unsigned baud,
           .OverSampling   = UART_OVERSAMPLING_16,
           .OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE,
           .ClockPrescaler = UART_PRESCALER_DIV1,
-
   };
+
+  if (cfg.swap_rx_tx) {
+    huart.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_SWAP_INIT;
+    huart.AdvancedInit.Swap           = USART_CR2_SWAP;
+
+    UART_AdvFeatureConfig(&huart);
+  }
+
   HAL_UART_Init(&huart);
 }
 
