@@ -1,6 +1,7 @@
 module;
 
-#include <cstdint>
+#include <functional>
+#include <optional>
 #include <string>
 
 export module hal.sil:gpio;
@@ -18,6 +19,14 @@ export enum class GpioDirection {
 };
 
 /**
+ * Possible edges of a GPIO pin
+ */
+export enum class Edge {
+  Rising  = 0,   //!< Rising edge
+  Falling = 1,   //!< Falling edge
+};
+
+/**
  * General purpose input-output, can serve as a GPI, GPO or GPIO
  */
 export class Gpio {
@@ -31,7 +40,7 @@ export class Gpio {
   Gpio(std::string name, GpioDirection direction,
        bool initial_state = false) noexcept
       : name{name}
-      , direction{direction}
+      , dir{direction}
       , state{initial_state} {}
 
   /**
@@ -44,12 +53,42 @@ export class Gpio {
    * Writes to the pin
    * @param value Pin value to write
    */
-  void Write(bool value) noexcept { state = value; }
+  void Write(bool value) noexcept {
+    if (value != state && edge_callback.has_value()) {
+      (*edge_callback)(value ? Edge::Rising : Edge::Falling);
+    }
+    state = value;
+  }
 
   /**
    * Toggles the pin
    */
-  void Toggle() noexcept { state = !state; }
+  void Toggle() noexcept {
+    const auto new_state = !state;
+    if (edge_callback.has_value()) {
+      (*edge_callback)(new_state ? Edge::Rising : Edge::Falling);
+    }
+    state = new_state;
+  }
+
+  /**
+   * Sets the edge callback for the GPIO
+   * @param cb Callback to set
+   */
+  void SetEdgeCallback(std::function<void(Edge)> cb) { edge_callback = cb; }
+
+  /**
+   * Clears the edge callback of the GPIO
+   */
+  void ClearEdgeCallback() { edge_callback = std::nullopt; }
+
+  /**
+   * Returns the GPIO direction
+   * @return GPIO direction
+   */
+  [[nodiscard]] constexpr GpioDirection direction() const noexcept {
+    return dir;
+  }
 
   /**
    * Returns the GPIO name
@@ -58,9 +97,11 @@ export class Gpio {
   [[nodiscard]] const std::string& GetName() const& noexcept { return name; }
 
  private:
-  GpioDirection direction;
+  GpioDirection dir;
   bool          state;
   std::string   name;
+
+  std::optional<std::function<void(Edge)>> edge_callback{std::nullopt};
 };
 
 static_assert(hal::Gpi<Gpio>);

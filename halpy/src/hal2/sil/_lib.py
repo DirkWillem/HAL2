@@ -32,7 +32,7 @@ class SilLib:
             p.sched_shutdown(1000)
             p.app_deinit()
 
-    def proxy(self):
+    def proxy(self) -> proxy.SilProxy:
         """
         Returns a SIL proxy.
 

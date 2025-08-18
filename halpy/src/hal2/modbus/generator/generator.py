@@ -91,7 +91,7 @@ def _gen_enum_spec(e: jm.EnumJson, indent: int = 0):
         python_name = _upper_camel_case_to_upper_snake_case(m["name"])
         members.append(f"{' ' * (indent + 4)}{python_name} = {m['value']}")
 
-    result = f"""class {e["name"]}(spec.EnumReflection, enum.IntEnum):
+    result = f"""class {e["name"]}(spec.EnumReflection, enum.Enum):
 {"\n".join(members)}
 
     @staticmethod

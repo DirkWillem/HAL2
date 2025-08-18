@@ -113,8 +113,10 @@ export class System {
 }   // namespace sil
 
 using ErrorCallback        = void (*)(const char*);
+using GpioEdgeCallback     = void (*)(int);
 using UartTransmitCallback = void (*)(const uint8_t*, std::size_t);
 
+namespace {
 /**
  * Helper function for performing an action with a UART given its index
  * @tparam T Return type
@@ -143,6 +145,66 @@ T WithUart(std::size_t index, T err_value,
     return err_value;
   }
 }
+
+/**
+ * Helper function for performing an action with a GPIO given its index
+ * @tparam T Return type
+ * @param index GPIO index
+ * @param err_value Value to return in case the GPIO could not be found, or an
+ * error occurs
+ * @param inner Inner function
+ * @return Result of inner function, or error value in case of a failure
+ */
+template <typename T, std::invocable<sil::Gpio&> F>
+T WithGpio(std::size_t index, T err_value, F inner)
+  requires(!std::is_same_v<std::invoke_result_t<F, sil::Gpio&>, void>)
+{
+  auto& sys = sil::System::instance();
+
+  try {
+    auto* gpio = sys.GetGpio(index);
+
+    if (!gpio) {
+      sys.HandleError(std::format("{} is not a valid GPIO index", index));
+      return err_value;
+    }
+
+    return inner(*gpio);
+  } catch (std::exception& e) {
+    sys.HandleException(e);
+    return err_value;
+  }
+}
+
+/**
+ * Helper function for performing an action with a GPIO given its index
+ * @tparam T Return type
+ * @param index GPIO index
+ * @param err_value Value to return in case the GPIO could not be found, or an
+ * error occurs
+ * @param inner Inner function
+ * @return Result of inner function, or error value in case of a failure
+ */
+template <std::invocable<sil::Gpio&> F>
+void WithGpio(std::size_t index, F inner)
+  requires(std::is_same_v<std::invoke_result_t<F, sil::Gpio&>, void>)
+{
+  auto& sys = sil::System::instance();
+
+  try {
+    auto* gpio = sys.GetGpio(index);
+
+    if (!gpio) {
+      sys.HandleError(std::format("{} is not a valid GPIO index", index));
+    }
+
+    inner(*gpio);
+  } catch (std::exception& e) {
+    sys.HandleException(e);
+  }
+}
+
+}   // namespace
 
 extern "C" {
 
@@ -227,6 +289,54 @@ extern "C" {
     sys.HandleException(e);
     return nullptr;
   }
+}
+
+[[maybe_unused]] void Gpio_SetInputPinState(std::size_t index, bool state) {
+  WithGpio(index, [state](sil::Gpio& gpio) {
+    if (gpio.direction() != sil::GpioDirection::Input) {
+      throw std::runtime_error{std::format(
+          "Cannot set GPIO state for non-input pin {}", gpio.GetName())};
+    }
+
+    gpio.Write(state);
+  });
+}
+
+[[maybe_unused]] bool Gpio_GetOutputPinState(std::size_t index) {
+  return WithGpio(index, false, [](sil::Gpio& gpio) {
+    if (gpio.direction() != sil::GpioDirection::Output) {
+      throw std::runtime_error{std::format(
+          "Cannot get GPIO state for non-output pin {}", gpio.GetName())};
+    }
+
+    return gpio.Read();
+  });
+}
+
+[[maybe_unused]] void Gpio_SetOutputPinEdgeCallback(std::size_t      index,
+                                                    GpioEdgeCallback callback) {
+  WithGpio(index, [callback](sil::Gpio& gpio) {
+    if (gpio.direction() != sil::GpioDirection::Output) {
+      throw std::runtime_error{
+          std::format("Cannot set GPIO edge callback for non-output pin {}",
+                      gpio.GetName())};
+    }
+
+    gpio.SetEdgeCallback(
+        [callback](sil::Edge edge) { callback(static_cast<int>(edge)); });
+  });
+}
+
+[[maybe_unused]] void Gpio_ClearOutputPinEdgeCallback(std::size_t index) {
+  WithGpio(index, [](sil::Gpio& gpio) {
+    if (gpio.direction() != sil::GpioDirection::Output) {
+      throw std::runtime_error{
+          std::format("Cannot set GPIO edge callback for non-output pin {}",
+                      gpio.GetName())};
+    }
+
+    gpio.ClearEdgeCallback();
+  });
 }
 
 [[maybe_unused]] std::size_t Uart_GetUartCount() {

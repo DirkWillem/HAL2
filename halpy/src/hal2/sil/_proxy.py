@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Callable
 
 import ctypes
 
@@ -36,23 +36,50 @@ class SilProxy:
         self._sched_shutdown = _func_ptr(self._c.Sched_Shutdown, [ctypes.c_size_t], None)
 
         self._sched_run_until = _func_ptr(self._c.Sched_RunUntil, [ctypes.c_uint64], None)
-        self._sched_run_until_next_time_point = _func_ptr(self._c.Sched_RunUntilNextTimePoint, [ctypes.c_uint64],
-                                                          ctypes.c_bool)
+        self._sched_run_until_next_time_point = _func_ptr(
+            self._c.Sched_RunUntilNextTimePoint, [ctypes.c_uint64], ctypes.c_bool
+        )
         self._sched_now = _func_ptr(self._c.Sched_Now, [], ctypes.c_uint64)
+
+        self._gpio_get_count = _func_ptr(self._c.Gpio_GetGpioCount, [], ctypes.c_size_t)
+        self._gpio_get_name = _func_ptr(self._c.Gpio_GetGpioName, [ctypes.c_size_t], ctypes.c_char_p)
+        self._gpio_set_input_pin_state = _func_ptr(
+            self._c.Gpio_SetInputPinState, [ctypes.c_size_t, ctypes.c_bool], None
+        )
+        self._gpio_get_output_pin_state = _func_ptr(self._c.Gpio_GetOutputPinState, [ctypes.c_size_t], ctypes.c_bool)
+        self._gpio_set_output_pin_edge_callback = _func_ptr(
+            self._c.Gpio_SetOutputPinEdgeCallback, [ctypes.c_size_t, ctypes.c_void_p], None
+        )
+        self._gpio_clear_output_pin_edge_callback = _func_ptr(
+            self._c.Gpio_ClearOutputPinEdgeCallback, [ctypes.c_size_t], None
+        )
 
         self._uart_get_count = _func_ptr(self._c.Uart_GetUartCount, [], ctypes.c_size_t)
         self._uart_get_name = _func_ptr(self._c.Uart_GetUartName, [ctypes.c_size_t], ctypes.c_char_p)
-        self._uart_simulate_receive = _func_ptr(self._c.Uart_SimulateReceive,
-                                                [ctypes.c_size_t, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint8),
-                                                 ctypes.c_size_t], ctypes.c_bool)
-        self._uart_set_tx_callback = _func_ptr(self._c.Uart_SetTransmitCallback,
-                                               [ctypes.c_size_t, ctypes.c_void_p], ctypes.c_bool)
+        self._uart_simulate_receive = _func_ptr(
+            self._c.Uart_SimulateReceive,
+            [ctypes.c_size_t, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint8), ctypes.c_size_t],
+            ctypes.c_bool,
+        )
+        self._uart_set_tx_callback = _func_ptr(
+            self._c.Uart_SetTransmitCallback, [ctypes.c_size_t, ctypes.c_void_p], ctypes.c_bool
+        )
 
         self._set_err_callback = _func_ptr(self._c.SetErrorCallback, [ctypes.c_void_p], None)
         self._clear_err_callback = _func_ptr(self._c.ClearErrorCallback, [], None)
 
         callback_t = ctypes.CFUNCTYPE(None, ctypes.c_char_p, use_errno=False, use_last_error=False)
         self._err_callback = callback_t(self._err_callback)
+
+    def __enter__(self):
+        self._set_err_callback(self._err_callback)
+
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self._exception is not None:
+            raise self._exception
+        return None
 
     def app_init(self):
         """Initializes the SIL application."""
@@ -69,16 +96,6 @@ class SilProxy:
     def sched_shutdown(self, timeout_us: int):
         """Shuts down the scheduler."""
         self._sched_shutdown(timeout_us)
-
-    def __enter__(self):
-        self._set_err_callback(self._err_callback)
-
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if self._exception is not None:
-            raise self._exception
-        return None
 
     def simulate_until(self, timestamp_us: int):
         """
@@ -108,6 +125,70 @@ class SilProxy:
         """Current simulated time."""
 
         return self._sched_now()
+
+    @property
+    def gpio_count(self) -> int:
+        """Number of GPIOs in the simulated system."""
+
+        return self._gpio_get_count()
+
+    def get_gpio_name(self, index: int) -> str:
+        """
+        Returns the name of a GPIO
+
+        Args:
+            index: Index of the GPIO to get the name for
+
+        Returns:
+            GPIO name
+        """
+
+        return self._gpio_get_name(index).decode("utf-8")
+
+    def set_gpio_input_pin_state(self, index: int, state: bool):
+        """
+        Sets the state of a GPIO input pin.
+
+        Args:
+            index: Index of the GPIO to set the state for
+            state: New state of the pin
+        """
+
+        self._gpio_set_input_pin_state(index, state)
+
+    def get_gpio_output_pin_state(self, index: int) -> bool:
+        """
+        Gets the state of a GPIO output pin.
+
+        Args:
+            index: Index of the GPIO to get the state for
+
+        Returns:
+            Current state of the pin
+        """
+
+        return self._gpio_get_output_pin_state(index)
+
+    def set_gpio_output_pin_edge_callback(self, index: int, callback: Callable):
+        """
+        Sets the edge callback for a GPIO output pin.
+
+        Args:
+            index: Index of the GPIO to set the callback for
+            callback: Callback to be called on pin state changes
+        """
+
+        self._gpio_set_output_pin_edge_callback(index, callback)
+
+    def clear_gpio_output_pin_edge_callback(self, index: int):
+        """
+        Clears the edge callback for a GPIO output pin.
+
+        Args:
+            index: Index of the GPIO to clear the callback for
+        """
+
+        self._gpio_clear_output_pin_edge_callback(index)
 
     @property
     def uart_count(self) -> int:

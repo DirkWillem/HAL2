@@ -1,6 +1,7 @@
 import hal2.sil._lib as sil_lib
 
 import hal2.sil.peripherals.uart as uart
+import hal2.sil.peripherals.gpio as gpio
 
 
 class PeripheralNotFoundError(Exception):
@@ -43,6 +44,27 @@ class SilApp:
     def __exit__(self, exc_type, exc_val, exc_tb):
         return self._sil_lib.__exit__(exc_type, exc_val, exc_tb)
 
+    def get_gpo(self, index_or_name: int | str) -> gpio.Gpo:
+        """
+        Obtains a GPO by its index or name
+
+        Args:
+            index_or_name: GPO index or name
+
+        Returns:
+            Requested GPO
+
+        Raises:
+            PeripheralNotFoundError: Peripheral could not be found
+        """
+
+        if isinstance(index_or_name, int):
+            index = index_or_name
+        else:
+            index = self._find_gpio_index(index_or_name)
+
+        return gpio.Gpo(self._sil_lib, index)
+
     def get_uart(self, index_or_name: int | str) -> uart.Uart:
         """
         Obtains a UART by its index or name
@@ -52,6 +74,9 @@ class SilApp:
 
         Returns:
             Requested UART
+
+        Raises:
+            PeripheralNotFoundError: Peripheral could not be found
         """
 
         if isinstance(index_or_name, int):
@@ -69,6 +94,21 @@ class SilApp:
 
         return uart.Uart(self._sil_lib, index)
 
+    @property
+    def now(self) -> int:
+        """Simulated current time in microseconds."""
+
+        with self._sil_lib.proxy() as proxy:
+            return proxy.now
+
     def simulate_until(self, timestamp_us: int):
         with self._sil_lib.proxy() as proxy:
             proxy.simulate_until(timestamp_us)
+
+    def _find_gpio_index(self, name: str) -> int:
+        with self._sil_lib.proxy() as proxy:
+            for i in range(proxy.gpio_count):
+                if proxy.get_gpio_name(i) == name:
+                    return i
+
+        raise PeripheralNotFoundError("GPIO", name)

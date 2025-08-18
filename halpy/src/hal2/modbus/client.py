@@ -8,7 +8,9 @@ class Client:
     MODBUS Client.
     """
 
-    def __init__(self, c: modbus.ModbusSerialClient, addr: int):
+
+
+    def __init__(self, c: modbus.ModbusBaseSyncClient, addr: int):
         """
         Constructor.
 
@@ -31,9 +33,9 @@ class Client:
         """
 
         if reg.register_type == spec.RegisterType.INPUT_REGISTER:
-            result = self._c.read_input_registers(reg.start_address, count=reg.size, slave=self._addr)
+            result = self._c.read_input_registers(reg.start_address, count=reg.size, device_id=self._addr)
         elif reg.register_type == spec.RegisterType.HOLDING_REGISTER:
-            result = self._c.read_holding_registers(reg.start_address, count=reg.size, slave=self._addr)
+            result = self._c.read_holding_registers(reg.start_address, count=reg.size, device_id=self._addr)
         else:
             raise RuntimeError(f"Invalid register type: {reg.type}")
 
@@ -66,7 +68,7 @@ class Client:
 
     def _write_scalar(self, addr: int, value: int | list[int] | float | list[float], scalar_type: spec.ScalarType):
         self._c.write_registers(
-            addr, values=self._c.convert_to_registers(value, self._get_scalar_type(scalar_type)), slave=self._addr
+            addr, values=self._c.convert_to_registers(value, self._get_scalar_type(scalar_type)), device_id=self._addr
         )
 
     def _decode_register_value(self, dt: spec.DataType, data: list[int]):
