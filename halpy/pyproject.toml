@@ -9,6 +9,8 @@ requires-python = ">=3.13"
 classifiers = []
 license = "MIT"
 
+[project.scripts]
+"hal2.modbus_spec_gen" = "hal2.cli.modbus_spec_gen:main"
 
 [build-system]
 requires = ["hatchling >= 1.26"]
