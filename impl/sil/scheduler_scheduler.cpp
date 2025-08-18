@@ -179,19 +179,20 @@ void Scheduler::InitializeThread(unsigned prio) {
         now.load(), std::to_underlying(state.load()))};
   }
 
-  const auto tid = std::this_thread::get_id();
-  if (threads.contains(tid)) {
-    throw std::runtime_error{
-        std::format("Thread {} was already initialized.", tid)};
-  }
-
-  threads.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
-                  std::forward_as_tuple(tid, prio, sys_mtx));
-
   // Lock the system mutex to ensure the startup latch has been created
   std::latch* startup_latch_ptr = nullptr;
   {
     std::scoped_lock lk{sys_mtx};
+
+    const auto tid = std::this_thread::get_id();
+    if (threads.contains(tid)) {
+      throw std::runtime_error{
+          std::format("Thread {} was already initialized.", tid)};
+    }
+
+    threads.emplace(std::piecewise_construct, std::forward_as_tuple(tid),
+                    std::forward_as_tuple(tid, prio, sys_mtx));
+
     startup_latch_ptr = startup_latch.get();
   }
 
