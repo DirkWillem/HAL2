@@ -50,6 +50,14 @@ class Gpo:
         with self._lib.proxy() as proxy:
             return proxy.get_gpio_output_pin_state(self._index)
 
+    def monitor_edges(self, duration: float):
+        duration_us = int(round(duration * 1_000_000))
+        with _GpoEdgeMonitor(self._lib, self) as edge_monitor:
+            with self._lib.proxy() as proxy:
+                proxy.simulate_until(proxy.now + duration_us)
+
+            return edge_monitor.edges
+
     def register_edge_callback(self, callback: Callable[[Edge], None]):
         """
         Registers an edge callback with the GPIO pin
@@ -72,3 +80,25 @@ class Gpo:
 
         with self._lib.proxy() as proxy:
             proxy.clear_gpio_output_pin_edge_callback(self._index)
+
+
+class _GpoEdgeMonitor:
+    _gpo: Gpo
+    _lib: sil_lib.SilLib
+    edges: list[tuple[int, Edge]]
+
+    def __init__(self, lib: sil_lib.SilLib, gpo: Gpo):
+        self.edges = []
+        self._lib = lib
+        self._gpo = gpo
+
+    def __enter__(self):
+        self._gpo.register_edge_callback(self._edge_callback)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._gpo.clear_edge_callback()
+
+    def _edge_callback(self, edge: Edge):
+        with self._lib.proxy() as proxy:
+            self.edges.append((proxy.now, edge))

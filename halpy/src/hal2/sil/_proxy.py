@@ -17,9 +17,13 @@ class SilProxy:
 
     _c: ctypes.CDLL
 
-    _exception: Optional[Exception] = None
+    _exception: Optional[Exception]
 
-    def __init__(self, dll: ctypes.CDLL):
+    _parent: Optional["SilProxy"]
+
+    _active_proxy: Optional["SilProxy"] = None
+
+    def __init__(self, dll: ctypes.CDLL, parent: Optional["SilProxy"] = None):
         """
         Constructor.
 
@@ -28,6 +32,8 @@ class SilProxy:
         """
 
         self._c = dll
+        self._exception = None
+        self._parent = parent
 
         self._app_init = _func_ptr(self._c.App_Init, [], None)
         self._app_deinit = _func_ptr(self._c.App_DeInit, [], None)
@@ -71,14 +77,29 @@ class SilProxy:
         callback_t = ctypes.CFUNCTYPE(None, ctypes.c_char_p, use_errno=False, use_last_error=False)
         self._err_callback = callback_t(self._err_callback)
 
-    def __enter__(self):
+    def _activate(self):
         self._set_err_callback(self._err_callback)
+        self._parent = SilProxy._active_proxy
+        SilProxy._active_proxy = self
 
+    def _check_errors(self):
+        self._clear_err_callback()
+
+        if self._exception is not None:
+            raise self._exception
+
+    def __enter__(self):
+        self._activate()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        if self._exception is not None:
-            raise self._exception
+        self._check_errors()
+
+        if self._parent is not None:
+            self._parent._activate()  # noqa
+
+        SilProxy._active_proxy = self._parent
+
         return None
 
     def app_init(self):
