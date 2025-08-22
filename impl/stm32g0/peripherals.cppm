@@ -114,8 +114,6 @@ export [[nodiscard]] constexpr TIM_TypeDef* GetTimPointer(TimId id) noexcept {
   std::unreachable();
 }
 
-
-
 export enum class UartId {
   Usart1,
   Usart2,
@@ -214,14 +212,21 @@ export enum class SpiId {
 #endif
 };
 
-export [[nodiscard]] constexpr SPI_TypeDef* GetSpiPointer(SpiId id) noexcept {
-  switch (id) {
-  case SpiId::Spi1: return SPI1;
-  case SpiId::Spi2: return SPI2;
-#ifdef HAS_SPI3
-  case SpiId::Spi3: return SPI3;
-#endif
+export template <SpiId Id>
+[[nodiscard]] constexpr SPI_TypeDef* GetSpiPointer() noexcept {
+  using enum SpiId;
+
+  if constexpr (Id == Spi1) {
+    return SPI1;
   }
+  if constexpr (Id == Spi2) {
+    return SPI2;
+  }
+#ifdef HAS_SPI3
+  if constexpr (Id == Spi3) {
+    return SPI3;
+  }
+#endif
 
   std::unreachable();
 }
@@ -259,8 +264,9 @@ export [[nodiscard]] constexpr SpiId GetSpiForI2s(I2sId id) noexcept {
   std::unreachable();
 }
 
-export [[nodiscard]] constexpr SPI_TypeDef* GetI2sPointer(I2sId id) noexcept {
-  return GetSpiPointer(GetSpiForI2s(id));
+export template <I2sId Id>
+[[nodiscard]] constexpr SPI_TypeDef* GetI2sPointer() noexcept {
+  return GetSpiPointer<GetSpiForI2s(Id)>();
 }
 
 export [[nodiscard]] consteval I2sId

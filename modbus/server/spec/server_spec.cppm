@@ -83,6 +83,12 @@ inline constexpr auto IsInputRegister<InputRegister<A, D, N, Opts>> = true;
 export template <typename T>
 concept InputRegister = IsInputRegister<T>;
 
+export template <typename T, typename S>
+concept InputRegisterEntry = requires {
+  requires InputRegister<S>;
+  requires std::is_same_v<typename std::remove_cvref_t<T>::Specification, S>;
+};
+
 template <typename T>
 inline constexpr auto IsHoldingRegister = false;
 
@@ -94,6 +100,12 @@ inline constexpr auto IsHoldingRegister<HoldingRegister<A, D, N, Opts>> = true;
  */
 export template <typename T>
 concept HoldingRegister = IsHoldingRegister<T>;
+
+export template <typename T, typename S>
+concept HoldingRegisterEntry = requires {
+  requires HoldingRegister<S>;
+  requires std::is_same_v<typename std::remove_cvref_t<T>::Specification, S>;
+};
 
 /**
  * Concept for determining if a type is a register (input or holding)

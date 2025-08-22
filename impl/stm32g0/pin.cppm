@@ -208,7 +208,7 @@ export struct Pin {
         .Pin       = id.hal_pin(),
         .Mode      = ToHalAlternateMode(mode),
         .Pull      = ToHalPull(pull),
-        .Speed     = GPIO_SPEED_FREQ_VERY_HIGH,
+        .Speed     = GPIO_SPEED_FREQ_LOW,
         .Alternate = af,
     };
     HAL_GPIO_Init(id.hal_port(), &init);

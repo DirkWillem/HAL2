@@ -1,5 +1,6 @@
 module;
 
+#include <chrono>
 #include <optional>
 #include <span>
 #include <string_view>
@@ -29,6 +30,18 @@ extern "C" {
 
 namespace stm32g0 {
 
+export enum class SpiOperatingMode { Poll, Dma };
+
+export template <typename F = hstd::Hz>
+struct SpiSettings {
+  F                        frequency;             //!< SPI Frequency
+  SpiOperatingMode         operating_mode;        //!< SPI operating mode
+  hal::SpiMode             mode;                  //!< SPI mode
+  hal::SpiTransmissionType transmission_type;     //!< SPI transmission type
+  unsigned                 data_size;             //!< SPI data size
+  bool                     hardware_cs = false;   //!< Hardware Chip Select
+};
+
 enum class SpiBaudPrescaler : uint32_t {
   Prescale2   = SPI_BAUDRATEPRESCALER_2,
   Prescale4   = SPI_BAUDRATEPRESCALER_4,
@@ -40,138 +53,150 @@ enum class SpiBaudPrescaler : uint32_t {
   Prescale256 = SPI_BAUDRATEPRESCALER_256,
 };
 
-export template <SpiId Id, hal::SpiMode M, hal::SpiTransmissionType TT>
-struct SpiPinoutHelper;
+template <typename F>
+consteval bool CheckSpiConfig(SpiSettings<F> settings, hal::SpiMode mode,
+                              hal::SpiTransmissionType tt, bool hw_cs) {
+  return settings.mode == mode && settings.transmission_type == tt
+         && settings.hardware_cs == hw_cs;
+}
 
-export template <SpiId Id>
-struct SpiPinoutHelper<Id, hal::SpiMode::Master,
-                       hal::SpiTransmissionType::FullDuplex> {
+/**
+ * Struct that contains the pin configuration of a SPI instance. Exact pins
+ * that are expected is dependent on the SPI configuration.
+ * @tparam S SPI settings
+ */
+export template <SpiSettings S>
+struct SpiPinout;
+
+export template <SpiSettings S>
+  requires(CheckSpiConfig(S, hal::SpiMode::Master,
+                          hal::SpiTransmissionType::FullDuplex, false))
+struct SpiPinout<S> {
+  PinId mosi;   //!< MOSI pin
+  PinId miso;   //!< MISO pin
+  PinId sck;    //!< Clock pin
+
+  hal::PinPull pull_mosi = hal::PinPull::NoPull;   //!< MOSI pin pull
+  hal::PinPull pull_miso = hal::PinPull::NoPull;   //!< MISO pin pull
+  hal::PinPull pull_sck  = hal::PinPull::NoPull;   //!< SCK pin pull
+};
+
+export template <SpiSettings S>
+  requires(CheckSpiConfig(S, hal::SpiMode::Master,
+                          hal::SpiTransmissionType::FullDuplex, true))
+struct SpiPinout<S> {
+  PinId mosi;   //!< MOSI pin
+  PinId miso;   //!< MISO pin
+  PinId sck;    //!< Clock pin
+  PinId cs;     //!< Chip Select pin
+
+  hal::PinPull pull_mosi = hal::PinPull::NoPull;   //!< MOSI pin pull
+  hal::PinPull pull_miso = hal::PinPull::NoPull;   //!< MISO pin pull
+  hal::PinPull pull_sck  = hal::PinPull::NoPull;   //!< SCK pin pull
+  hal::PinPull pull_cs   = hal::PinPull::NoPull;   //!< Chip Select pin pull
+};
+
+template <typename PO>
+concept MosiPin = requires(PO p) {
+  { p.mosi } -> std::convertible_to<PinId>;
+  { p.pull_mosi } -> std::convertible_to<hal::PinPull>;
+};
+
+template <typename PO>
+concept MisoPin = requires(PO p) {
+  { p.miso } -> std::convertible_to<PinId>;
+  { p.pull_miso } -> std::convertible_to<hal::PinPull>;
+};
+
+template <typename PO>
+concept SckPin = requires(PO p) {
+  { p.sck } -> std::convertible_to<PinId>;
+  { p.pull_sck } -> std::convertible_to<hal::PinPull>;
+};
+
+template <typename PO>
+concept CsPin = requires(PO p) {
+  { p.cs } -> std::convertible_to<PinId>;
+  { p.pull_cs } -> std::convertible_to<hal::PinPull>;
+};
+
+export template <SpiId Id, SpiSettings S>
+struct SpiPinoutHelper {
   struct Pinout {
-    consteval Pinout(PinId mosi, PinId miso, PinId sck,
-                     hal::PinPull pull_mosi = hal::PinPull::NoPull,
-                     hal::PinPull pull_miso = hal::PinPull::NoPull,
-                     hal::PinPull pull_sck  = hal::PinPull::NoPull) noexcept
-        : mosi{mosi}
-        , miso{miso}
-        , sck{sck}
-        , pull_mosi{pull_mosi}
-        , pull_miso{pull_miso}
-        , pull_sck{pull_sck} {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-value"
-      assert(("MOSI pin must be valid",
-              hal::FindPinAFMapping(SpiMosiPinMappings, Id, mosi).has_value()));
-      assert(("MISO pin must be valid",
-              hal::FindPinAFMapping(SpiMisoPinMappings, Id, miso).has_value()));
-      assert(("SCK pin must be valid",
-              hal::FindPinAFMapping(SpiSckPinMappings, Id, sck).has_value()));
-#pragma GCC diagnostic pop
+    consteval Pinout(SpiPinout<S> pinout)
+        : pinout{pinout} {
+      // Validate pinout
+      if constexpr (MosiPin<SpiPinout<S>>) {
+        hstd::Assert(hal::FindPinAFMapping(SpiMosiPinMappings, Id, pinout.mosi)
+                         .has_value(),
+                     "MOSI pin must be valid");
+      }
+      if constexpr (MisoPin<SpiPinout<S>>) {
+        hstd::Assert(hal::FindPinAFMapping(SpiMisoPinMappings, Id, pinout.miso)
+                         .has_value(),
+                     "MISO pin must be valid");
+      }
+      if constexpr (SckPin<SpiPinout<S>>) {
+        hstd::Assert(hal::FindPinAFMapping(SpiSckPinMappings, Id, pinout.sck)
+                         .has_value(),
+                     "SCK pin must be valid");
+      }
+      if constexpr (CsPin<SpiPinout<S>>) {
+        hstd::Assert(
+            hal::FindPinAFMapping(SpiNssPinMappings, Id, pinout.cs).has_value(),
+            "CS pin must be valid");
+      }
     }
 
-    PinId mosi;
-    PinId miso;
-    PinId sck;
-
-    hal::PinPull pull_mosi;
-    hal::PinPull pull_miso;
-    hal::PinPull pull_sck;
+    SpiPinout<S> pinout;
   };
 
   static void SetupPins(const Pinout& p) {
-    Pin::InitializeAlternate(
-        p.mosi, hal::FindPinAFMapping(SpiMosiPinMappings, Id, p.mosi)->af,
-        p.pull_mosi);
-    Pin::InitializeAlternate(
-        p.miso, hal::FindPinAFMapping(SpiMisoPinMappings, Id, p.miso)->af,
-        p.pull_miso);
-    Pin::InitializeAlternate(
-        p.sck, hal::FindPinAFMapping(SpiSckPinMappings, Id, p.sck)->af,
-        p.pull_sck);
-  }
-};
-
-export template <SpiId Id>
-struct SpiPinoutHelper<Id, hal::SpiMode::Master,
-                       hal::SpiTransmissionType::TxOnly> {
-  struct Pinout {
-    consteval Pinout(PinId mosi, PinId sck,
-                     hal::PinPull pull_mosi = hal::PinPull::NoPull,
-                     hal::PinPull pull_sck  = hal::PinPull::NoPull) noexcept
-        : mosi{mosi}
-        , sck{sck}
-        , pull_mosi{pull_mosi}
-        , pull_sck{pull_sck} {
-      assert(("MOSI pin must be valid",
-              hal::FindPinAFMapping(SpiMosiPinMappings, Id, mosi).has_value()));
-      assert(("SCK pin must be valid",
-              hal::FindPinAFMapping(SpiSckPinMappings, Id, sck).has_value()));
+    if constexpr (MosiPin<SpiPinout<S>>) {
+      Pin::InitializeAlternate(
+          p.pinout.mosi,
+          hal::FindPinAFMapping(SpiMosiPinMappings, Id, p.pinout.mosi)->af,
+          p.pinout.pull_mosi);
     }
-
-    PinId mosi;
-    PinId sck;
-
-    hal::PinPull pull_mosi;
-    hal::PinPull pull_sck;
-  };
-
-  static void SetupPins(const Pinout& p) {
-    Pin::InitializeAlternate(
-        p.mosi, hal::FindPinAFMapping(SpiMosiPinMappings, Id, p.mosi)->af,
-        p.pull_mosi);
-    Pin::InitializeAlternate(
-        p.sck, hal::FindPinAFMapping(SpiSckPinMappings, Id, p.sck)->af,
-        p.pull_sck);
-  }
-};
-
-export template <SpiId Id>
-struct SpiPinoutHelper<Id, hal::SpiMode::Master,
-                       hal::SpiTransmissionType::RxOnly> {
-  struct Pinout {
-    consteval Pinout(PinId miso, PinId sck,
-                     hal::PinPull pull_miso = hal::PinPull::NoPull,
-                     hal::PinPull pull_sck  = hal::PinPull::NoPull) noexcept
-        : miso{miso}
-        , sck{sck}
-        , pull_miso{pull_miso}
-        , pull_sck{pull_sck} {
-      assert(("MISO pin must be valid",
-              hal::FindPinAFMapping(SpiMisoPinMappings, Id, miso).has_value()));
-      assert(("SCK pin must be valid",
-              hal::FindPinAFMapping(SpiSckPinMappings, Id, sck).has_value()));
+    if constexpr (MisoPin<SpiPinout<S>>) {
+      Pin::InitializeAlternate(
+          p.pinout.miso,
+          hal::FindPinAFMapping(SpiMisoPinMappings, Id, p.pinout.miso)->af,
+          p.pinout.pull_miso);
     }
-
-    PinId miso;
-    PinId sck;
-
-    hal::PinPull pull_miso;
-    hal::PinPull pull_sck;
-  };
-
-  static void SetupPins(const Pinout& p) {
-    Pin::InitializeAlternate(
-        p.miso, hal::FindPinAFMapping(SpiMisoPinMappings, Id, p.miso)->af,
-        p.pull_miso);
-    Pin::InitializeAlternate(
-        p.sck, hal::FindPinAFMapping(SpiMisoPinMappings, Id, p.sck)->af,
-        p.pull_sck);
+    if constexpr (SckPin<SpiPinout<S>>) {
+      Pin::InitializeAlternate(
+          p.pinout.sck,
+          hal::FindPinAFMapping(SpiSckPinMappings, Id, p.pinout.sck)->af,
+          p.pinout.pull_sck);
+    }
+    if constexpr (CsPin<SpiPinout<S>>) {
+      Pin::InitializeAlternate(
+          p.pinout.cs,
+          hal::FindPinAFMapping(SpiNssPinMappings, Id, p.pinout.cs)->af,
+          p.pinout.pull_cs);
+    }
   }
 };
 
-export template <SpiId Id>
-struct SpiPinoutHelper<Id, hal::SpiMode::Master,
-                       hal::SpiTransmissionType::HalfDuplex>
-    : public SpiPinoutHelper<Id, hal::SpiMode::Master,
-                             hal::SpiTransmissionType::TxOnly> {};
+template <SpiId Id>
+void EnableSpiClk() noexcept {
+  using enum SpiId;
 
-void EnableSpiClk(SpiId id) noexcept {
-  switch (id) {
-  case SpiId::Spi1: __HAL_RCC_SPI1_CLK_ENABLE(); break;
-  case SpiId::Spi2: __HAL_RCC_SPI2_CLK_ENABLE(); break;
+  if constexpr (Id == Spi1) {
+    __HAL_RCC_SPI1_CLK_ENABLE();
+    return;
+  }
+  if constexpr (Id == Spi2) {
+    __HAL_RCC_SPI2_CLK_ENABLE();
+    return;
+  }
 #ifdef HAS_SPI3
-  case SpiId::Spi3: __HAL_RCC_SPI3_CLK_ENABLE(); break;
-#endif
+  if constexpr (Id == Spi3) {
+    __HAL_RCC_SPI3_CLK_ENABLE();
+    return;
   }
+#endif
 }
 
 void EnableSpiInterrupt(SpiId id) noexcept {
@@ -195,7 +220,7 @@ void EnableSpiInterrupt(SpiId id) noexcept {
   }
 }
 
-[[nodiscard]] static constexpr uint32_t
+[[nodiscard]] constexpr uint32_t
 ToHalMasterDirection(const hal::SpiTransmissionType tt) noexcept {
   switch (tt) {
   case hal::SpiTransmissionType::FullDuplex: return SPI_DIRECTION_2LINES;
@@ -207,34 +232,9 @@ ToHalMasterDirection(const hal::SpiTransmissionType tt) noexcept {
   std::unreachable();
 }
 
-[[nodiscard]] static constexpr uint32_t ToHalDataSize(unsigned size) noexcept {
+[[nodiscard]] constexpr uint32_t ToHalDataSize(unsigned size) noexcept {
   // ReSharper disable once CppRedundantParentheses
   return (size - 1) << 8U;
-}
-
-void SetupSpiMaster(SpiId id, SPI_HandleTypeDef& hspi,
-                    SpiBaudPrescaler baud_prescaler, unsigned data_size,
-                    hal::SpiTransmissionType transmission_type) noexcept {
-  EnableSpiClk(id);
-
-  hspi.Instance = GetSpiPointer(id);
-  hspi.Init     = {
-          .Mode              = SPI_MODE_MASTER,
-          .Direction         = ToHalMasterDirection(transmission_type),
-          .DataSize          = ToHalDataSize(data_size),
-          .CLKPolarity       = SPI_POLARITY_LOW,
-          .CLKPhase          = SPI_PHASE_1EDGE,
-          .NSS               = SPI_NSS_SOFT,
-          .BaudRatePrescaler = static_cast<uint32_t>(baud_prescaler),
-          .FirstBit          = SPI_FIRSTBIT_MSB,
-          .TIMode            = SPI_TIMODE_DISABLE,
-          .CRCCalculation    = SPI_CRCCALCULATION_DISABLE,
-          .CRCPolynomial     = 7,
-          .CRCLength         = SPI_CRC_LENGTH_DATASIZE,
-          .NSSPMode          = SPI_NSS_PULSE_DISABLE,
-  };
-
-  HAL_SPI_Init(&hspi);
 }
 
 template <ClockSettings CS>
@@ -275,28 +275,51 @@ FindPrescalerValue(hstd::Frequency auto baud_rate) {
   return best_prescale;
 }
 
+template <SpiId Id, ClockSettings CS, SpiSettings SS>
+void SetupSpiMaster(SPI_HandleTypeDef& hspi) noexcept {
+  EnableSpiClk<Id>();
+
+  constexpr auto Presc = FindPrescalerValue<CS>(SS.frequency);
+
+  hspi.Instance = GetSpiPointer<Id>();
+  hspi.Init     = {
+          .Mode              = SPI_MODE_MASTER,
+          .Direction         = ToHalMasterDirection(SS.transmission_type),
+          .DataSize          = ToHalDataSize(SS.data_size),
+          .CLKPolarity       = SPI_POLARITY_LOW,
+          .CLKPhase          = SPI_PHASE_1EDGE,
+          .NSS               = SS.hardware_cs ? SPI_NSS_HARD_OUTPUT : SPI_NSS_SOFT,
+          .BaudRatePrescaler = static_cast<uint32_t>(Presc),
+          .FirstBit          = SPI_FIRSTBIT_MSB,
+          .TIMode            = SPI_TIMODE_DISABLE,
+          .CRCCalculation    = SPI_CRCCALCULATION_DISABLE,
+          .CRCPolynomial     = 7,
+          .CRCLength         = SPI_CRC_LENGTH_DATASIZE,
+          .NSSPMode          = SPI_NSS_PULSE_DISABLE,   // SPI_NSS_PULSE_ENABLE,
+  };
+
+  HAL_SPI_Init(&hspi);
+}
+
 export template <SpiId Id, hal::DmaPriority Prio = hal::DmaPriority::Low>
 using SpiTxDma = DmaChannel<Id, SpiDmaRequest::Tx, Prio>;
 
 export template <SpiId Id, hal::DmaPriority Prio = hal::DmaPriority::Low>
 using SpiRxDma = DmaChannel<Id, SpiDmaRequest::Rx, Prio>;
 
-export enum class SpiOperatingMode { Poll, Dma };
-
-export template <typename Impl, SpiId Id, ClockSettings CS, SpiOperatingMode OM,
-                 unsigned DS, hal::SpiMode M, hal::SpiTransmissionType TT>
-  requires(DS == 8 || DS == 16)
+export template <typename Impl, SpiId Id, ClockSettings CS, SpiSettings SS>
+  requires(SS.data_size == 8 || SS.data_size == 16)
 class SpiImpl : public hal::UsedPeripheral {
-  using PinoutHelper = SpiPinoutHelper<Id, M, TT>;
+  using PinoutHelper = SpiPinoutHelper<Id, SS>;
 
   friend void ::HAL_SPI_RxCpltCallback(SPI_HandleTypeDef*);
 
  public:
-  static constexpr auto Mode             = M;
-  static constexpr auto TransmissionType = TT;
-  static constexpr auto DataSize         = DS;
+  static constexpr auto Mode             = SS.mode;
+  static constexpr auto TransmissionType = SS.transmission_type;
+  static constexpr auto DataSize         = SS.data_size;
   using Pinout                           = PinoutHelper::Pinout;
-  using Data         = std::conditional_t<(DS > 8), uint16_t, uint8_t>;
+  using Data = std::conditional_t<(SS.data_size > 8), uint16_t, uint8_t>;
   using TxDmaChannel = DmaChannel<Id, SpiDmaRequest::Tx>;
   using RxDmaChannel = DmaChannel<Id, SpiDmaRequest::Rx>;
   using Type         = Impl;
@@ -308,34 +331,51 @@ class SpiImpl : public hal::UsedPeripheral {
     return inst;
   }
 
-  [[nodiscard]] bool ReceiveBlocking(std::span<Data> into,
-                                     uint32_t        timeout) noexcept
-    requires(hal::SpiReceiveEnabled(TT))
+  [[nodiscard]] bool ReceiveBlocking(std::span<Data>     into,
+                                     hstd::Duration auto timeout) noexcept
+    requires(hal::SpiReceiveEnabled(SS.transmission_type))
   {
-    return HAL_SPI_Receive(&hspi, reinterpret_cast<uint8_t*>(into.data()),
-                           into.size(), timeout)
+    return HAL_SPI_Receive(
+               &hspi, reinterpret_cast<uint8_t*>(into.data()), into.size(),
+               std::chrono::duration_cast<std::chrono::milliseconds>(timeout)
+                   .count())
            == HAL_OK;
   }
 
   [[nodiscard]] bool Receive(std::span<Data> into) noexcept
-    requires(OM == SpiOperatingMode::Dma && hal::SpiReceiveEnabled(TT))
+    requires(SS.operating_mode == SpiOperatingMode::Dma
+             && hal::SpiReceiveEnabled(SS.transmission_type))
   {
     return HAL_SPI_Receive_DMA(&hspi, reinterpret_cast<uint8_t*>(into.data()),
                                into.size())
            == HAL_OK;
   }
 
-  [[nodiscard]] bool TransmitBlocking(std::span<Data> data,
-                                      uint32_t        timeout) noexcept
-    requires(hal::SpiTransmitEnabled(TT))
+  [[nodiscard]] bool TransmitBlocking(std::span<Data>     data,
+                                      hstd::Duration auto timeout) noexcept
+    requires(hal::SpiTransmitEnabled(SS.transmission_type))
   {
-    return HAL_SPI_Transmit(&hspi, reinterpret_cast<uint8_t*>(data.data()),
-                            data.size(), timeout)
+    return HAL_SPI_Transmit(
+               &hspi, reinterpret_cast<uint8_t*>(data.data()), data.size(),
+               std::chrono::duration_cast<std::chrono::milliseconds>(timeout)
+                   .count())
            == HAL_OK;
+  }
+  [[nodiscard]] bool TransmitReceiveBlocking(std::span<Data> rx_data,
+                                             std::span<Data> tx_data,
+                                             uint32_t        timeout) noexcept
+    requires(hal::SpiTransmitEnabled(SS.transmission_type))
+  {
+    const volatile auto result = HAL_SPI_TransmitReceive(
+        &hspi, reinterpret_cast<uint8_t*>(tx_data.data()),
+        reinterpret_cast<uint8_t*>(rx_data.data()),
+        std::min(rx_data.size(), tx_data.size()), timeout);
+    return result == HAL_OK;
   }
 
   [[nodiscard]] bool Transmit(std::span<Data> data) noexcept
-    requires(OM == SpiOperatingMode::Dma && hal::SpiTransmitEnabled(TT))
+    requires(SS.operating_mode == SpiOperatingMode::Dma
+             && hal::SpiTransmitEnabled(SS.transmission_type))
   {
     return HAL_SPI_Transmit_DMA(&hspi, reinterpret_cast<uint8_t*>(data.data()),
                                 data.size())
@@ -349,25 +389,24 @@ class SpiImpl : public hal::UsedPeripheral {
     }
   }
 
-  SpiImpl(Pinout pinout, SpiBaudPrescaler baud_prescaler)
-    requires(OM == SpiOperatingMode::Poll)
+  SpiImpl(Pinout pinout)
+    requires(SS.operating_mode == SpiOperatingMode::Poll)
   {
     PinoutHelper::SetupPins(pinout);
-
-    SetupSpiMaster(Id, hspi, baud_prescaler, DS, TT);
+    SetupSpiMaster<Id, CS, SS>(hspi);
   }
 
   SpiImpl(hal::Dma auto& dma, Pinout pinout,
           hstd::Frequency auto clock_frequency)
-    requires(OM == SpiOperatingMode::Dma)
+    requires(SS.operating_mode == SpiOperatingMode::Dma)
   {
     // Validate DMA instance
     using Dma = std::decay_t<decltype(dma)>;
-    static_assert(hstd::Implies(hal::SpiTransmitEnabled(TT),
+    static_assert(hstd::Implies(hal::SpiTransmitEnabled(SS.transmission_type),
                                 Dma::template ChannelEnabled<TxDmaChannel>()),
                   "If the transmission mode allows transmission, the TX DMA "
                   "channel must be enabled");
-    static_assert(hstd::Implies(hal::SpiReceiveEnabled(TT),
+    static_assert(hstd::Implies(hal::SpiReceiveEnabled(SS.transmission_type),
                                 Dma::template ChannelEnabled<RxDmaChannel>()),
                   "If the transmission mode allows transmission, the RX DMA "
                   "channel must be enabled");
@@ -377,17 +416,17 @@ class SpiImpl : public hal::UsedPeripheral {
 
     // Initialize SPI master
     const auto presc = FindPrescalerValue<CS>(clock_frequency);
-    SetupSpiMaster(Id, hspi, presc, DS, TT);
+    SetupSpiMaster<Id, CS, SS>(hspi);
 
     // Set up DMA channels
-    if constexpr (hal::SpiTransmitEnabled(TT)) {
+    if constexpr (hal::SpiTransmitEnabled(SS.transmission_type)) {
       auto& htxdma = dma.template SetupChannel<TxDmaChannel>(
           hal::DmaDirection::MemToPeriph, hal::DmaMode::Normal,
           hal::DmaDataWidth::Byte, false, hal::DmaDataWidth::Byte, true);
       __HAL_LINKDMA(&hspi, hdmatx, htxdma);
     }
 
-    if constexpr (hal::SpiReceiveEnabled(TT)) {
+    if constexpr (hal::SpiReceiveEnabled(SS.transmission_type)) {
       auto& hrxdma = dma.template SetupChannel<RxDmaChannel>(
           hal::DmaDirection::PeriphToMem, hal::DmaMode::Normal,
           hal::DmaDataWidth::Byte, false, hal::DmaDataWidth::Byte, true);

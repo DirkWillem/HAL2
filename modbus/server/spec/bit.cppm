@@ -137,8 +137,20 @@ inline constexpr auto IsDiscreteInputs<DiscreteInputs<A, C, N, Opts>> = true;
 export template <typename T>
 concept DiscreteInputs = IsDiscreteInputs<T>;
 
+export template <typename T, typename S>
+concept DiscreteInputsEntry = requires {
+  requires DiscreteInputs<S>;
+  requires std::is_same_v<typename std::remove_cvref_t<T>::Specification, S>;
+};
+
 export template <typename T>
 concept DiscreteInput = DiscreteInputs<T> && (T::Count == 1);
+
+export template <typename T, typename S>
+concept DiscreteInputEntry = requires {
+  requires DiscreteInput<S>;
+  requires std::is_same_v<typename std::remove_cvref_t<T>::Specification, S>;
+};
 
 template <typename T>
 inline constexpr auto IsCoils = false;
@@ -152,8 +164,20 @@ inline constexpr auto IsCoils<Coils<A, C, N, Opts>> = true;
 export template <typename T>
 concept Coils = IsCoils<T>;
 
+export template <typename T, typename S>
+concept CoilsEntry = requires {
+  requires Coils<S>;
+  requires std::is_same_v<typename std::remove_cvref_t<T>::Specification, S>;
+};
+
 export template <typename T>
 concept Coil = Coils<T> && (T::Count == 1);
+
+export template <typename T, typename S>
+concept CoilEntry = requires {
+  requires Coil<S>;
+  requires std::is_same_v<typename std::remove_cvref_t<T>::Specification, S>;
+};
 
 export template <typename T>
 concept Bits = DiscreteInputs<T> || Coils<T>;

@@ -29,8 +29,9 @@ concept ReadonlyBitStorage = MutableBitStorage<T>;
  */
 export template <spec::concepts::DiscreteInput Spec, ReadonlyBitStorage S>
 struct DiscreteInput {
-  using Storage = S;   //!< Storage type
-  using Bits    = S;   //!< Type able to represent the bits in memory
+  using Specification = Spec;   //!< Specification type
+  using Storage       = S;      //!< Storage type
+  using Bits          = S;      //!< Type able to represent the bits in memory
 
   static constexpr auto Address = Spec::StartAddress;   //!< Bit start address
 };
@@ -59,8 +60,9 @@ using InMemDiscreteInput = DiscreteInput<Spec, uint8_t>;
  */
 export template <spec::concepts::Coil Spec, MutableBitStorage S>
 struct Coil {
-  using Storage = S;   //!< Storage type
-  using Bits    = S;   //!< Type able to represent the bits in memory
+  using Specification = Spec;   //!< Specification type
+  using Storage       = S;      //!< Storage type
+  using Bits          = S;      //!< Type able to represent the bits in memory
 
   static constexpr auto Address = Spec::StartAddress;   //!< Bit start address
 };
@@ -188,7 +190,8 @@ struct UnderlyingBitType<S> {
 export template <spec::concepts::DiscreteInputs       Spec,
                  ReadonlyBitSetStorage<(Spec::Count)> S>
 struct DiscreteInputSet {
-  using Storage = S;                                  //!< Storage type
+  using Specification = Spec;                         //!< Specification type
+  using Storage       = S;                            //!< Storage type
   using Bits = typename UnderlyingBitType<S>::Type;   //!< In-mem representation
 
   static constexpr auto StartAddress = Spec::StartAddress;   //!< Start address
@@ -227,7 +230,8 @@ using InMemDiscreteInputSet =
 export template <spec::concepts::Coils               Spec,
                  MutableBitSetStorage<(Spec::Count)> S>
 struct CoilSet {
-  using Storage = S;                                  //!< Storage type
+  using Specification = Spec;                         //!< Specification type
+  using Storage       = S;                            //!< Storage type
   using Bits = typename UnderlyingBitType<S>::Type;   //!< In-mem representation
 
   static constexpr auto StartAddress = Spec::StartAddress;   //!< Start address

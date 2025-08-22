@@ -110,6 +110,20 @@ concept AsyncTxSpiMaster = SpiMaster<Impl> && requires(Impl& impl) {
 };
 
 export template <typename Impl>
+concept BlockingTxSpiMaster = SpiMaster<Impl> && requires(Impl& impl) {
+  requires Impl::TransmissionType != SpiTransmissionType::TxOnly;
+
+  {
+    impl.TransmitBlocking(std::declval<std::span<typename Impl::Data>>(),
+                          std::declval<std::chrono::milliseconds>())
+  } -> std::convertible_to<bool>;
+};
+
+export template <typename Impl>
+concept BlockingDuplexSpiMaster =
+    BlockingRxSpiMaster<Impl> && BlockingTxSpiMaster<Impl>;
+
+export template <typename Impl>
 concept RegisterableSpiTxCallback = requires(Impl& impl) {
   impl.RegisterSpiTxCallback(std::declval<hstd::Callback<>&>());
 };

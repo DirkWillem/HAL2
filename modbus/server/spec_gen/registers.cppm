@@ -285,7 +285,7 @@ RegisterInfo GetRegisterInfo() noexcept {
         .size      = Reg::Size,
         .name      = std::string{static_cast<std::string_view>(Reg::Name)},
         .enum_info = {},
-        .children  = GetArrayRegisterChildren<Reg>(),
+        .children  = {},
     };
   }
 

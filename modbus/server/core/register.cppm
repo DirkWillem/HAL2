@@ -94,8 +94,9 @@ consteval std::size_t RegisterSize() noexcept {
 export template <spec::concepts::InputRegister                Spec,
                  ReadonlyRegisterStorage<typename Spec::Data> S>
 struct InputRegister {
-  using Data    = typename Spec::Data;   //!< Register data type
-  using Storage = S;                     //!< Register storage implementation
+  using Specification = Spec;                  //!< Specification type
+  using Data          = typename Spec::Data;   //!< Register data type
+  using Storage       = S;   //!< Register storage implementation
 
   static constexpr auto StartAddress =
       Spec::StartAddress;   //!< Register start address
@@ -129,8 +130,9 @@ using InMemInputRegister = InputRegister<Spec, typename Spec::Data>;
 export template <spec::concepts::HoldingRegister             Spec,
                  MutableRegisterStorage<typename Spec::Data> S>
 struct HoldingRegister {
-  using Data    = typename Spec::Data;   //!< Register data type
-  using Storage = S;                     //!< Register storage implementation
+  using Specification = Spec;                  //!< Specification type
+  using Data          = typename Spec::Data;   //!< Register data type
+  using Storage       = S;   //!< Register storage implementation
 
   static constexpr auto StartAddress =
       Spec::StartAddress;   //!< Register start address
