@@ -12,6 +12,7 @@ export module hal.sil:system;
 import :gpio;
 import :scheduler;
 import :uart;
+import :spi;
 
 namespace sil {
 
@@ -93,6 +94,21 @@ export class System {
     return uarts[index].get();
   }
 
+  template <std::derived_from<SpiMaster> S>
+  S& DefineSpiMaster(std::string_view name, hstd::Frequency auto f_clk) {
+    return static_cast<S&>(*spi_masters.emplace_back(
+        std::make_unique<S>(sched, name, static_cast<unsigned>(f_clk.count))));
+  }
+
+  std::size_t GetSpiMasterCount() const noexcept { return spi_masters.size(); }
+
+  SpiMaster* GetSpiMaster(std::size_t index) {
+    if (index >= spi_masters.size()) {
+      return nullptr;
+    }
+    return spi_masters[index].get();
+  }
+
   /**
    * Returns a reference to the scheduler
    * @return Reference to the scheduler
@@ -104,47 +120,22 @@ export class System {
 
   Scheduler sched{};
 
-  std::vector<std::unique_ptr<Gpio>> gpios{};
-  std::vector<std::unique_ptr<Uart>> uarts{};
+  std::vector<std::unique_ptr<Gpio>>      gpios{};
+  std::vector<std::unique_ptr<Uart>>      uarts{};
+  std::vector<std::unique_ptr<SpiMaster>> spi_masters{};
 
   std::optional<std::function<void(const char*)>> error_callback{};
 };
 
 }   // namespace sil
 
-using ErrorCallback        = void (*)(const char*);
-using GpioEdgeCallback     = void (*)(int);
-using UartTransmitCallback = void (*)(const uint8_t*, std::size_t);
+using ErrorCallback           = void (*)(const char*);
+using GpioEdgeCallback        = void (*)(int);
+using UartTransmitCallback    = void (*)(const uint8_t*, std::size_t);
+using SpiMisoSizeHintCallback = void (*)(std::size_t);
+using SpiMosiCallback         = void (*)(const uint8_t*, std::size_t);
 
 namespace {
-/**
- * Helper function for performing an action with a UART given its index
- * @tparam T Return type
- * @param index UART index
- * @param err_value Value to return in case the UART could not be found, or an
- * error occurs
- * @param inner Inner function
- * @return Result of inner function, or error value in case of a failure
- */
-template <typename T>
-T WithUart(std::size_t index, T err_value,
-           std::invocable<sil::Uart&> auto inner) {
-  auto& sys = sil::System::instance();
-
-  try {
-    auto* uart = sys.GetUart(index);
-
-    if (!uart) {
-      sys.HandleError(std::format("{} is not a valid UART index", index));
-      return err_value;
-    }
-
-    return inner(*uart);
-  } catch (std::exception& e) {
-    sys.HandleException(e);
-    return err_value;
-  }
-}
 
 /**
  * Helper function for performing an action with a GPIO given its index
@@ -201,6 +192,64 @@ void WithGpio(std::size_t index, F inner)
     inner(*gpio);
   } catch (std::exception& e) {
     sys.HandleException(e);
+  }
+}
+
+/**
+ * Helper function for performing an action with a UART given its index
+ * @tparam T Return type
+ * @param index UART index
+ * @param err_value Value to return in case the UART could not be found, or an
+ * error occurs
+ * @param inner Inner function
+ * @return Result of inner function, or error value in case of a failure
+ */
+template <typename T>
+T WithUart(std::size_t index, T err_value,
+           std::invocable<sil::Uart&> auto inner) {
+  auto& sys = sil::System::instance();
+
+  try {
+    auto* uart = sys.GetUart(index);
+
+    if (!uart) {
+      sys.HandleError(std::format("{} is not a valid UART index", index));
+      return err_value;
+    }
+
+    return inner(*uart);
+  } catch (std::exception& e) {
+    sys.HandleException(e);
+    return err_value;
+  }
+}
+
+/**
+ * Helper function for performing an action with a SPI master given its index
+ * @tparam T Return type
+ * @param index SPI master index
+ * @param err_value Value to return in case the UART could not be found, or an
+ * error occurs
+ * @param inner Inner function
+ * @return Result of inner function, or error value in case of a failure
+ */
+template <typename T>
+T WithSpiMaster(std::size_t index, T err_value,
+                std::invocable<sil::SpiMaster&> auto inner) {
+  auto& sys = sil::System::instance();
+
+  try {
+    auto* spi_master = sys.GetSpiMaster(index);
+
+    if (!spi_master) {
+      sys.HandleError(std::format("{} is not a valid SPI master index", index));
+      return err_value;
+    }
+
+    return inner(*spi_master);
+  } catch (std::exception& e) {
+    sys.HandleException(e);
+    return err_value;
   }
 }
 
@@ -374,6 +423,71 @@ extern "C" {
       const auto data_u8 = hstd::ReinterpretSpan<uint8_t>(data);
       (*cb)(data_u8.data(), data_u8.size());
     });
+    return true;
+  });
+}
+
+[[maybe_unused]] std::size_t Spi_GetSpiMasterCount() {
+  auto& sys = sil::System::instance();
+
+  try {
+    return sys.GetSpiMasterCount();
+  } catch (std::exception& e) {
+    sys.HandleException(e);
+    return 0;
+  }
+}
+
+[[maybe_unused]] const char* Spi_GetSpiMasterName(std::size_t index) {
+  return WithSpiMaster<const char*>(index, nullptr, [](auto& spi_master) {
+    return spi_master.GetName().c_str();
+  });
+}
+
+[[maybe_unused]] bool Spi_SimulateSpiMasterMiso(std::size_t    index,
+                                                uint64_t       timestamp_us,
+                                                const uint8_t* data,
+                                                std::size_t    data_len) {
+  return WithSpiMaster(
+      index, false, [timestamp_us, data, data_len](auto& spi_master) {
+        spi_master.SimulateMisoData(
+            sil::TimePointUs{timestamp_us},
+            hstd::ReinterpretSpan<std::byte>(std::span{data, data_len}));
+        return true;
+      });
+}
+
+[[maybe_unused]] bool
+Spi_SetSpiMasterMisoSizeHintCallback(std::size_t             index,
+                                     SpiMisoSizeHintCallback callback) {
+  return WithSpiMaster(index, false, [callback](auto& spi_master) {
+    spi_master.SetMisoSizeHintCallback(callback);
+    return true;
+  });
+}
+
+[[maybe_unused]] bool
+Spi_ClearSpiMasterMisoSizeHintCallback(std::size_t index) {
+  return WithSpiMaster(index, false, [](auto& spi_master) {
+    spi_master.ClearMisoSizeHintCallback();
+    return true;
+  });
+}
+
+[[maybe_unused]] bool Spi_SetSpiMasterMosiCallback(std::size_t     index,
+                                                   SpiMosiCallback cb) {
+  return WithSpiMaster(index, false, [cb](auto& spi_master) {
+    spi_master.SetMosiCallback([cb](std::span<const std::byte> data) {
+      const auto data_u8 = hstd::ReinterpretSpan<uint8_t>(data);
+      (*cb)(data_u8.data(), data_u8.size());
+    });
+    return true;
+  });
+}
+
+[[maybe_unused]] bool Spi_ClearSpiMasterMosiCallback(std::size_t index) {
+  return WithSpiMaster(index, false, [](auto& spi_master) {
+    spi_master.ClearMosiCallback();
     return true;
   });
 }

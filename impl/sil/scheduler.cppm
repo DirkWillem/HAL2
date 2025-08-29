@@ -5,6 +5,7 @@ module;
 #include <chrono>
 #include <deque>
 #include <functional>
+#include <iostream>
 #include <latch>
 #include <map>
 #include <mutex>
@@ -34,12 +35,17 @@ enum class RunType {
   Asynchronous,
 };
 
-inline constexpr unsigned ExternalEventPriorityLevel = 0;
-inline constexpr unsigned ThreadPriorityLevel        = 1;
+inline constexpr unsigned HighestPriorityLevel       = 0;
+inline constexpr unsigned ExternalEventPriorityLevel = 1;
+inline constexpr unsigned ThreadPriorityLevel        = 10;
+inline constexpr unsigned LowestPriorityLevel        = 10'000;
 
 export class Scheduler;
 
 using ItemPrio = std::tuple<unsigned, unsigned>;
+
+inline constexpr ItemPrio HighestPrio = {HighestPriorityLevel, 0};
+inline constexpr ItemPrio LowestPrio  = {LowestPriorityLevel, 0};
 
 class SchedulerItem {
  public:
@@ -208,6 +214,17 @@ class ExternalEventItem final : public SchedulerItem {
 };
 
 /**
+ * Options for finding the next block timeout
+ */
+export struct GetBlockTimeoutOpts {
+  bool exclude_now = false;   //!< Whether to exclude now
+  bool higher_than_current_prio =
+      false;   //!< Whether to only include items that have higher priority
+  //!< than the current thread
+  ItemPrio min_prio = LowestPrio;
+};
+
+/**
  * Discrete event scheduler. Can simulate at microsecond granularity. Only one
  * task is allowed to run at a time
  */
@@ -220,8 +237,9 @@ export class Scheduler {
   /**
    * Simulates up to the given time point
    * @param time Time until which to simulate
+   * @param inclusive Whether to also simulate all events at the time limit
    */
-  void RunUntil(TimePointUs time);
+  void RunUntil(TimePointUs time, bool inclusive = false);
 
   /**
    * Simulates up until the next time point. Behavior is dependent on whether
@@ -243,6 +261,35 @@ export class Scheduler {
    * threads are shut down
    */
   void Shutdown(std::size_t max_wakeups = 100);
+
+  /**
+   * Blocks the current thread for the given amount of time
+   * @param time Time to block the current thread for
+   */
+  void BlockCurrentThreadFor(hstd::Duration auto time) {
+    GetCurrentThread().BlockUntil(now.load() + time, *this);
+  }
+
+  bool BlockCurrentThreadUntilNextTimepoint(hstd::Duration auto upper_bound) {
+    const auto next_timeout_at_opt = GetNextBlockTimeout({
+        .higher_than_current_prio = true,
+    });
+
+    if (next_timeout_at_opt.has_value()) {
+      auto next_timeout_at = *next_timeout_at_opt;
+
+      if (next_timeout_at > upper_bound) {
+        BlockCurrentThreadUntil(upper_bound);
+        return false;
+      } else {
+        BlockCurrentThreadUntil(next_timeout_at);
+        return true;
+      }
+    } else {
+      BlockCurrentThreadUntil(upper_bound);
+      return false;
+    }
+  }
 
   /**
    * Blocks the current thread until the simulated point in time
@@ -318,6 +365,13 @@ export class Scheduler {
   ThreadItem& GetCurrentThread() &;
 
   /**
+   * Returns the ThreadState associated with the thread in which the function
+   * is called
+   * @return Current thread state
+   */
+  const ThreadItem& GetCurrentThread() const&;
+
+  /**
    * Yields the current thread, allowing higher-priority threads to run
    */
   void YieldCurrentThread();
@@ -332,9 +386,12 @@ export class Scheduler {
    * Returns the earliest time point at which any thread will unblock due to
    * its block timeout expiring, or std::nullopt if no thread is currently
    * waiting on a timeout
+   * @param opts Options to use when searching
    * @return Earliest time point at which any thread will unblock due to timeout
    */
-  std::optional<TimePointUs> GetNextBlockTimeout() const;
+  std::optional<TimePointUs>
+  GetNextBlockTimeout(GetBlockTimeoutOpts opts = {}) const;
+
   /**
    * Returns whether all threads have stopped
    * @return Whether all threads have stopped

@@ -35,9 +35,11 @@ class SilProxy:
         self._exception = None
         self._parent = parent
 
+        # General functions
         self._app_init = _func_ptr(self._c.App_Init, [], None)
         self._app_deinit = _func_ptr(self._c.App_DeInit, [], None)
 
+        # Scheduler-related functions
         self._sched_start = _func_ptr(self._c.Sched_Start, [], None)
         self._sched_shutdown = _func_ptr(self._c.Sched_Shutdown, [ctypes.c_size_t], None)
 
@@ -47,6 +49,14 @@ class SilProxy:
         )
         self._sched_now = _func_ptr(self._c.Sched_Now, [], ctypes.c_uint64)
 
+        # Error handling-related functions
+        self._set_err_callback = _func_ptr(self._c.SetErrorCallback, [ctypes.c_void_p], None)
+        self._clear_err_callback = _func_ptr(self._c.ClearErrorCallback, [], None)
+
+        callback_t = ctypes.CFUNCTYPE(None, ctypes.c_char_p, use_errno=False, use_last_error=False)
+        self._err_callback = callback_t(self._err_callback)
+
+        # GPIO-related functions
         self._gpio_get_count = _func_ptr(self._c.Gpio_GetGpioCount, [], ctypes.c_size_t)
         self._gpio_get_name = _func_ptr(self._c.Gpio_GetGpioName, [ctypes.c_size_t], ctypes.c_char_p)
         self._gpio_set_input_pin_state = _func_ptr(
@@ -60,6 +70,7 @@ class SilProxy:
             self._c.Gpio_ClearOutputPinEdgeCallback, [ctypes.c_size_t], None
         )
 
+        # UART-related functions
         self._uart_get_count = _func_ptr(self._c.Uart_GetUartCount, [], ctypes.c_size_t)
         self._uart_get_name = _func_ptr(self._c.Uart_GetUartName, [ctypes.c_size_t], ctypes.c_char_p)
         self._uart_simulate_receive = _func_ptr(
@@ -71,11 +82,26 @@ class SilProxy:
             self._c.Uart_SetTransmitCallback, [ctypes.c_size_t, ctypes.c_void_p], ctypes.c_bool
         )
 
-        self._set_err_callback = _func_ptr(self._c.SetErrorCallback, [ctypes.c_void_p], None)
-        self._clear_err_callback = _func_ptr(self._c.ClearErrorCallback, [], None)
-
-        callback_t = ctypes.CFUNCTYPE(None, ctypes.c_char_p, use_errno=False, use_last_error=False)
-        self._err_callback = callback_t(self._err_callback)
+        # SPI-related functions
+        self._spi_get_master_count = _func_ptr(self._c.Spi_GetSpiMasterCount, [], ctypes.c_size_t)
+        self._spi_get_master_name = _func_ptr(self._c.Spi_GetSpiMasterName, [ctypes.c_size_t], ctypes.c_char_p)
+        self._spi_simulate_master_miso = _func_ptr(
+            self._c.Spi_SimulateSpiMasterMiso,
+            [ctypes.c_size_t, ctypes.c_uint64, ctypes.POINTER(ctypes.c_uint8), ctypes.c_size_t],
+            ctypes.c_bool,
+        )
+        self._spi_set_master_miso_size_hint_callback = _func_ptr(
+            self._c.Spi_SetSpiMasterMisoSizeHintCallback, [ctypes.c_size_t, ctypes.c_void_p], ctypes.c_bool
+        )
+        self._spi_clear_master_miso_size_hint_callback = _func_ptr(
+            self._c.Spi_ClearSpiMasterMisoSizeHintCallback, [ctypes.c_size_t], ctypes.c_bool
+        )
+        self._spi_set_master_mosi_callback = _func_ptr(
+            self._c.Spi_SetSpiMasterMosiCallback, [ctypes.c_size_t, ctypes.c_void_p], ctypes.c_bool
+        )
+        self._spi_clear_master_mosi_callback = _func_ptr(
+            self._c.Spi_ClearSpiMasterMosiCallback, [ctypes.c_size_t], ctypes.c_bool
+        )
 
     def _activate(self):
         self._set_err_callback(self._err_callback)
@@ -258,6 +284,98 @@ class SilProxy:
         """
 
         self._uart_set_tx_callback(index, callback)
+
+    @property
+    def spi_master_count(self) -> int:
+        """Number of SPI masters in the simulated system."""
+
+        return self._spi_get_master_count()
+
+    def get_spi_master_name(self, index: int) -> str:
+        """
+        Returns the name of the SPI master at the specified index.
+
+        Args:
+            index: SPI master index.
+
+        Returns:
+            SPI master name.
+        """
+
+        return self._spi_get_master_name(index).decode("utf-8")
+
+    def simulate_spi_master_miso(self, index: int, timestamp_us: int, data: bytes) -> bool:
+        """
+        Simulates MISO data for a simulated SPI master.
+
+        Args:
+            index: SPI master index to simulate MISO for.
+            timestamp_us: Timestamp at which to simulate the MISO data.
+            data: MISO data to simulate.
+
+        Returns:
+            Whether the simulation was successful.
+        """
+
+        buf = ctypes.create_string_buffer(data)
+        buf_u8 = ctypes.cast(buf, ctypes.POINTER(ctypes.c_uint8))
+
+        return self._spi_simulate_master_miso(index, timestamp_us, buf_u8, len(data))
+    
+    def set_spi_master_miso_size_hint_callback(self, index: int, callback) -> bool:
+        """
+        Sets the callback for providing MISO size hints for a simulated SPI master.
+
+        Args:
+            index: SPI master index for which to register the callback.
+            callback: Callback to set.
+
+        Returns:
+            Whether setting the callback was successful.
+        """
+
+        return self._spi_set_master_miso_size_hint_callback(index, callback)
+
+
+    def clear_spi_master_miso_size_hint_callback(self, index: int) -> bool:
+        """
+        Clears the MISO size hint callback for a simulated SPI master.
+
+        Args:
+            index: SPI master index for which to clear the callback.
+
+        Returns:
+            Whether clearing the callback was successful.
+        """
+
+        return self._spi_clear_master_miso_size_hint_callback(index)
+
+    def set_spi_master_mosi_callback(self, index: int, callback) -> bool:
+        """
+        Sets the callback for when a simulated SPI master transmits MOSI data.
+
+        Args:
+            index: SPI master index for which to register the callback.
+            callback: Callback to set.
+
+        Returns:
+            Whether setting the callback was successful.
+        """
+
+        return self._spi_set_master_mosi_callback(index, callback)
+
+    def clear_spi_master_mosi_callback(self, index: int) -> bool:
+        """
+        Clears the MOSI callback for a simulated SPI master.
+
+        Args:
+            index: SPI master index for which to clear the callback.
+
+        Returns:
+            Whether clearing the callback was successful.
+        """
+
+        return self._spi_clear_master_mosi_callback(index)
 
     def _err_callback(self, data):
         err_msg = ctypes.string_at(data).decode("utf-8")

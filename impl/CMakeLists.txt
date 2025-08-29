@@ -384,6 +384,7 @@ if (NOT CMAKE_CROSSCOMPILING)
 
             sil/gpio.cppm
             sil/scheduler.cppm
+            sil/spi.cppm
             sil/system.cppm
             sil/uart.cppm
 

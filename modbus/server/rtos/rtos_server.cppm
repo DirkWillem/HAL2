@@ -45,7 +45,7 @@ class UartServer
 
         if (decode_result.has_value()) {
           const auto request_frame = *decode_result;
-          const auto addr          = E::GetAddress(request_frame);
+          [[maybe_unused]] const auto addr          = E::GetAddress(request_frame);
 
           if (E::GetAddress(request_frame) != address) {
             continue;

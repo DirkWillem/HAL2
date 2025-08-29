@@ -1,7 +1,12 @@
+from typing import Callable
+
 import hal2.sil._lib as sil_lib
+
+import hal2.sil.scheduler as sched
 
 import hal2.sil.peripherals.uart as uart
 import hal2.sil.peripherals.gpio as gpio
+import hal2.sil.peripherals.spi as spi
 
 
 class PeripheralNotFoundError(Exception):
@@ -44,6 +49,12 @@ class SilApp:
     def __exit__(self, exc_type, exc_val, exc_tb):
         return self._sil_lib.__exit__(exc_type, exc_val, exc_tb)
 
+    @property
+    def scheduler(self) -> sched.Scheduler:
+        """Simulated application scheduler."""
+
+        return sched.Scheduler(self._sil_lib)
+
     def get_gpo(self, index_or_name: int | str) -> gpio.Gpo:
         """
         Obtains a GPO by its index or name
@@ -79,20 +90,31 @@ class SilApp:
             PeripheralNotFoundError: Peripheral could not be found
         """
 
-        if isinstance(index_or_name, int):
-            index = index_or_name
-        else:
-            index = None
-            with self._sil_lib.proxy() as proxy:
-                for i in range(proxy.uart_count):
-                    if proxy.get_uart_name(i) == index_or_name:
-                        index = i
-                        break
-
-            if index is None:
-                raise PeripheralNotFoundError("UART", index_or_name)
+        with self._sil_lib.proxy() as proxy:
+            index = self._find_peripheral_index(index_or_name, "UART", proxy.uart_count, proxy.get_uart_name)
 
         return uart.Uart(self._sil_lib, index)
+
+    def get_spi_master(self, index_or_name: int | str) -> spi.SpiMaster:
+        """
+        Obtains a SPI master by its index or name
+
+        Args:
+            index_or_name: SPI master index or name
+
+        Returns:
+            Requested SPI master
+
+        Raises:
+            PeripheralNotFoundError: Peripheral could not be found
+        """
+
+        with self._sil_lib.proxy() as proxy:
+            index = self._find_peripheral_index(
+                index_or_name, "SPI Master", proxy.spi_master_count, proxy.get_spi_master_name
+            )
+
+        return spi.SpiMaster(self._sil_lib, index)
 
     @property
     def now(self) -> int:
@@ -112,3 +134,16 @@ class SilApp:
                     return i
 
         raise PeripheralNotFoundError("GPIO", name)
+
+    def _find_peripheral_index(
+        self, index_or_name: int | str, peripheral_type: str, count: int, get_name: Callable[[int], str]
+    ) -> int:
+        if isinstance(index_or_name, int):
+            return index_or_name
+        else:
+            with self._sil_lib.proxy():
+                for i in range(count):
+                    if get_name(i) == index_or_name:
+                        return i
+
+            raise PeripheralNotFoundError(peripheral_type, index_or_name)

@@ -2,6 +2,7 @@ module;
 
 #include <algorithm>
 #include <format>
+#include <iostream>
 #include <latch>
 #include <mutex>
 #include <ranges>
@@ -47,9 +48,12 @@ void Scheduler::Start() {
 
   // Unlock the system lock
   sys_lk.unlock();
+
+  // Simulate all events at the epoch
+  RunUntil(Epoch, true);
 }
 
-void Scheduler::RunUntil(TimePointUs time) {
+void Scheduler::RunUntil(TimePointUs time, bool inclusive) {
   // Ensure RunUntil is not called from one of the simulated task threads
   if (threads.contains(std::this_thread::get_id())) {
     throw std::runtime_error{
@@ -58,13 +62,21 @@ void Scheduler::RunUntil(TimePointUs time) {
   }
 
   // Keep on handling threads until the target time is reached
-  while (now.load() < time) {
+  while ((!inclusive && now.load() < time)
+         || (inclusive && now.load() <= time)) {
     const auto thread_ran = HandleNextItem();
 
     if (!thread_ran) {
-      const auto next_block_timeout = GetNextBlockTimeout();
-      if (next_block_timeout.has_value()) {
-        now.store(std::min(time, *next_block_timeout));
+      const auto next_block_timeout_opt = GetNextBlockTimeout();
+      if (next_block_timeout_opt.has_value()) {
+        const auto next_block_timeout = *next_block_timeout_opt;
+
+        if (next_block_timeout > time) {
+          now.store(time);
+          return;
+        } else {
+          now.store(next_block_timeout);
+        }
       } else {
         now.store(time);
         return;
@@ -246,8 +258,18 @@ void Scheduler::InitializePriorityBrackets() {
 
   std::ranges::sort(priority_brackets,
                     [](const PriorityBracket& a, const PriorityBracket& b) {
-                      return a.prio > b.prio;
+                      return a.prio < b.prio;
                     });
+}
+
+const ThreadItem& Scheduler::GetCurrentThread() const& {
+  const auto tid = std::this_thread::get_id();
+  if (!threads.contains(tid)) {
+    throw std::runtime_error{std::format(
+        "No ThreadState was constructed for this thread (id {}).", tid)};
+  }
+
+  return threads.at(tid);
 }
 
 ThreadItem& Scheduler::GetCurrentThread() & {
@@ -305,13 +327,33 @@ bool Scheduler::HandleNextItem() {
   return thread_ran;
 }
 
-std::optional<TimePointUs> Scheduler::GetNextBlockTimeout() const {
+std::optional<TimePointUs>
+Scheduler::GetNextBlockTimeout(GetBlockTimeoutOpts opts) const {
   std::optional<TimePointUs> next_timeout{std::nullopt};
+
+  ItemPrio min_prio = opts.min_prio;
+
+  if (opts.higher_than_current_prio) {
+    const auto current_thread_prio = GetCurrentThread().GetPriority();
+    if (current_thread_prio < opts.min_prio) {
+      min_prio = current_thread_prio;
+    }
+  }
 
   for (const auto& bracket : priority_brackets) {
     for (const auto& item : bracket.items) {
-      const auto to = item->GetTimeout();
-      if (to && (next_timeout == std::nullopt || to < next_timeout)) {
+      if (const auto to = item->GetTimeout();
+          to && (next_timeout == std::nullopt || to < next_timeout)) {
+        // Handle "exclude_now"
+        if (opts.exclude_now && *to > now.load()) {
+          continue;
+        }
+
+        // Handle minimum priority
+        if (*to == now.load() && item->GetPriority() > min_prio) {
+          continue;
+        }
+
         next_timeout = to;
       }
     }
