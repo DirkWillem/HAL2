@@ -9,6 +9,8 @@ module;
 #include <thread>
 #include <variant>
 
+#include <pthread.h>
+
 export module rtos.sil;
 
 import hstd;
@@ -97,6 +99,8 @@ class Task {
   explicit Task(std::string_view name, unsigned priority = 0)
       : name{name}
       , thread{[this, priority]() {
+        pthread_setname_np(this->name.c_str());
+
         auto& sched = ::sil::System::instance().GetScheduler();
         sched.InitializeThread(priority);
         static_cast<Impl*>(this)->operator()();

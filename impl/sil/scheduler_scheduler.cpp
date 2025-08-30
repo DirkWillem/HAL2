@@ -217,12 +217,12 @@ void Scheduler::DeInitializeThread() {
   // Indicate current thread is "blocked", so that the scheduler thread
   // can continue
   running_thread_is_blocked.store(true);
-  running_thread_is_blocked.notify_one();
+  running_thread_is_blocked.notify_all();
 }
 
 void Scheduler::MarkCurrentItemBlocked() {
   running_thread_is_blocked.store(true);
-  running_thread_is_blocked.notify_one();
+  running_thread_is_blocked.notify_all();
 }
 
 void Scheduler::InitializePriorityBrackets() {

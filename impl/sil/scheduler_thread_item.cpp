@@ -57,7 +57,7 @@ std::optional<TimePointUs> ThreadItem::GetTimeout() const {
 
 RunType ThreadItem::Run() {
   wakeup_requested.store(true);
-  cv.notify_one();
+  cv.notify_all();
   return RunType::Asynchronous;
 }
 
@@ -74,7 +74,10 @@ void ThreadItem::Yield(Scheduler& sched) {
 ThreadItem::UnblockReason ThreadItem::BlockUntilWoken(Scheduler& sched) {
   sched.MarkCurrentItemBlocked();
 
-  cv.wait(lk, [this] { return wakeup_requested.exchange(false); });
+  using namespace std::chrono_literals;
+
+  while (!cv.wait_for(lk, 10ms,
+                      [this] { return wakeup_requested.exchange(false); })) {}
 
   // Determine unblock reason
   auto reason = UnblockReason::Timeout;
