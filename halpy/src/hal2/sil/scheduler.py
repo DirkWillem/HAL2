@@ -22,3 +22,14 @@ class Scheduler:
 
         with self._lib.proxy() as proxy:
             return proxy.now
+
+    def simulate_for(self, us: int):
+        """
+        Simulates the system for a given amount of microseconds
+
+        Args:
+            us: Amount of microseconds to simulate for
+        """
+
+        with self._lib.proxy() as proxy:
+            proxy.simulate_until(proxy.now + us)

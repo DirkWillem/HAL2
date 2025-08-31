@@ -42,7 +42,7 @@ def _get_modbus_client(context) -> modbus_client.Client:
     if not hasattr(context, "modbus_client"):
         raise RuntimeError("No MODBUS client was initialized")
 
-    return context.mostcal.modbus_client
+    return context.modbus_client
 
 
 def _upper_camel_case_to_upper_snake_case(name: str) -> str:
