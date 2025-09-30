@@ -6,3 +6,7 @@ cmake-build-*
 **/generated/
 
 dist/
+
+.DS_Store
+
+__pycache__/

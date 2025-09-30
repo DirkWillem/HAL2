@@ -14,6 +14,19 @@ IsPowerOf2(std::unsigned_integral auto v) noexcept {
   return v && ((v & (v - 1)) == 0);
 }
 
+/**
+ * Performs a division and returns the rounded up result as an integer
+ * @tparam T Integral type
+ * @param lhs Left-hand side
+ * @param rhs Right-hand side
+ * @return Quotient of lhs and rhs, rounded up
+ */
+export template <std::integral T>
+constexpr T DivCeil(T lhs, T rhs) noexcept {
+  constexpr auto One = static_cast<T>(1);
+  return One + (lhs - One) / rhs;
+}
+
 export template <bool Signed, unsigned Bits>
 struct IntN;
 
@@ -103,8 +116,6 @@ export constexpr uint32_t operator""_u32(unsigned long long int x) noexcept {
   return static_cast<uint32_t>(x);
 }
 
-
-
-}
+}   // namespace literals
 
 }   // namespace hstd
