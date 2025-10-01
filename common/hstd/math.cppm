@@ -27,6 +27,21 @@ constexpr T DivCeil(T lhs, T rhs) noexcept {
   return One + (lhs - One) / rhs;
 }
 
+/**
+ * Sign function
+ * @tparam T Integral type
+ * @param x Value to return the sign of
+ * @return +1 if x is positive, -1 if it is negative
+ */
+export template <std::signed_integral T>
+constexpr T Sign(T x) {
+  constexpr auto Zero     = static_cast<T>(0);
+  constexpr auto PlusOne  = static_cast<T>(1);
+  constexpr auto MinusOne = static_cast<T>(-1);
+
+  return x >= Zero ? PlusOne : MinusOne;
+}
+
 export template <bool Signed, unsigned Bits>
 struct IntN;
 
