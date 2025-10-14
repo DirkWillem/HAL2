@@ -4,8 +4,8 @@ module;
 #include <chrono>
 #include <cstdint>
 #include <format>
-#include <iostream>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <print>
 #include <ranges>
@@ -130,8 +130,6 @@ class BlockingSpiMaster final : public SpiMaster {
 
     // Keep on handling events until we either hit the timeout or we have enough
     // data
-    const auto t0 = sched.Now();
-
     while (sched.BlockCurrentThreadUntilNextTimepoint(timeout_at)) {
       if (miso_buf.size() >= into.size()) {
         std::ranges::copy(miso_buf | std::views::take(into.size()),

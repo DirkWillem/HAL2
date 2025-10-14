@@ -354,8 +354,8 @@ endfunction()
 
 
 if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
-    add_stm32g0_hal(stm32g030 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G030K(6-8)Tx.xml")
-#    add_stm32g0_hal(stm32g0b1 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G0B1R(B-C-E)Tx.xml")
+#    add_stm32g0_hal(stm32g030 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G030K(6-8)Tx.xml")
+    add_stm32g0_hal(stm32g0b1 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G0B1R(B-C-E)Tx.xml")
 endif ()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m4")

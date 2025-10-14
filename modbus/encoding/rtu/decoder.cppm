@@ -18,6 +18,7 @@ import :frames;
 namespace modbus::encoding::rtu {
 
 export enum class DecodeError {
+  FrameForOtherDevice,
   InvalidFunctionCode,
   IncompleteCommand,
   InvalidCrc,
@@ -38,13 +39,21 @@ export class Decoder {
   using ResFrame = ResponseFrame;
   using Error    = DecodeError;
 
-  constexpr explicit Decoder(std::span<const std::byte> buffer)
-      : buffer{buffer} {}
+  constexpr explicit Decoder(uint8_t address, std::span<const std::byte> buffer)
+      : address{address}
+      , buffer{buffer} {}
 
   constexpr std::expected<RequestFrame, DecodeError> DecodeRequest() noexcept {
     // Minimal frame length is 4 bytes (address, function code, 2 CRC bytes)
     if (buffer.size() < 4) {
       return std::unexpected(DecodeError::IncompleteCommand);
+    }
+
+    // If the frame is not for this device, don't attempt to decode the request
+    // as we don't know whether it is a request or a response
+    const auto frame_addr = static_cast<uint8_t>(buffer[0]);
+    if (frame_addr != address) {
+      return std::unexpected(DecodeError::FrameForOtherDevice);
     }
 
     // Decode depending on function code
@@ -295,6 +304,7 @@ export class Decoder {
     return buffer.subspan(2, buffer.size() - 4);
   }
 
+  uint8_t                    address;
   std::span<const std::byte> buffer;
 };
 

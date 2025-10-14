@@ -41,11 +41,11 @@ class UartServer
     while (!OS::template Task<UartServer<OS, Srv, Uart>,
                               OS::MediumStackSize>::StopRequested()) {
       if (const auto recv = uart.Receive(buffer, 1000ms); recv.has_value()) {
-        const auto decode_result = Decoder{*recv}.DecodeRequest();
+        const auto decode_result = Decoder{address, *recv}.DecodeRequest();
 
         if (decode_result.has_value()) {
-          const auto request_frame = *decode_result;
-          [[maybe_unused]] const auto addr          = E::GetAddress(request_frame);
+          const auto                  request_frame = *decode_result;
+          [[maybe_unused]] const auto addr = E::GetAddress(request_frame);
 
           if (E::GetAddress(request_frame) != address) {
             continue;

@@ -37,11 +37,11 @@ export class Gpio {
    * @param direction Direction of the GPIO
    * @param initial_state Initial state of the GPIO
    */
-  Gpio(std::string name, GpioDirection direction,
-       bool initial_state = false) noexcept
-      : name{name}
-      , dir{direction}
-      , state{initial_state} {}
+  Gpio(std::string name, const GpioDirection direction,
+       const bool initial_state = false) noexcept
+      : dir{direction}
+      , state{initial_state}
+      , name{std::move(name)} {}
 
   /**
    * Reads the pin logic level
