@@ -7,7 +7,7 @@
 
 #include <stm32h5xx_hal.h>
 
-#include <stm32h5/peripheral_ids.h>
+#include <stm32h5_old/peripheral_ids.h>
 
 namespace stm32h5 {
 

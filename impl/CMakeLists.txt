@@ -260,42 +260,75 @@ function(add_stm32h5_hal VARIANT XMLFILE)
             "${VARIANT}"
             "uart-pin-mapping"
             "${XMLFILE}"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/uart_pin_mapping.h")
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5_old/generated/${VARIANT}/stm32h5/mappings/uart_pin_mapping.h")
     add_generated_file(
             stm32h5
             "${VARIANT}"
             "spi-i2s-pin-mapping"
             "${XMLFILE}"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/spi_i2s_pin_mapping.h")
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5_old/generated/${VARIANT}/stm32h5/mappings/spi_i2s_pin_mapping.h")
     add_generated_file(
             stm32h5
             "${VARIANT}"
             "usb-pin-mapping"
             "${XMLFILE}"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/usb_pin_mapping.h")
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5_old/generated/${VARIANT}/stm32h5/mappings/usb_pin_mapping.h")
 
 
     # Add library
-    add_library("${VARIANT}_hal"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/uart_pin_mapping.h"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/spi_i2s_pin_mapping.h"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/usb_pin_mapping.h"
+    add_library("${VARIANT}_hal_old"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5_old/generated/${VARIANT}/stm32h5/mappings/uart_pin_mapping.h"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5_old/generated/${VARIANT}/stm32h5/mappings/spi_i2s_pin_mapping.h"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5_old/generated/${VARIANT}/stm32h5/mappings/usb_pin_mapping.h"
 
-            stm32h5/clocks.h
-            stm32h5/dma.cpp
-            stm32h5/dma.h
-            stm32h5/interrupts.h
-            stm32h5/peripheral_ids.h
-            stm32h5/pin.cpp
-            stm32h5/pin.h
-            stm32h5/uart.cpp
-            stm32h5/uart.h
+            stm32h5_old/clocks.h
+            stm32h5_old/dma.cpp
+            stm32h5_old/dma.h
+            stm32h5_old/interrupts.h
+            stm32h5_old/peripheral_ids.h
+            stm32h5_old/pin.cpp
+            stm32h5_old/pin.h
+            stm32h5_old/uart.cpp
+            stm32h5_old/uart.h
     )
 
-    target_link_libraries("${VARIANT}_hal" PUBLIC abstract_hal "${VARIANT}_vendor" project_settings)
-    target_include_directories("${VARIANT}_hal" PUBLIC
+    target_link_libraries("${VARIANT}_hal_old" PUBLIC abstract_hal "${VARIANT}_vendor" project_settings)
+    target_include_directories("${VARIANT}_hal_old" PUBLIC
             "${CMAKE_CURRENT_LIST_DIR}"
-            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}")
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5_old/generated/${VARIANT}")
+
+    add_library("${VARIANT}_hal")
+    target_sources("${VARIANT}_hal"
+            PUBLIC
+            FILE_SET CXX_MODULES
+            FILES
+            stm32h5/clocks.cppm
+            stm32h5/nvic.cppm
+            stm32h5/peripherals.cppm
+            stm32h5/pin.cppm
+            stm32h5/system.cppm
+
+            stm32h5/stm32h5.cppm
+
+#            PUBLIC
+#            FILE_SET pub_headers TYPE HEADERS
+#            BASE_DIRS "${CMAKE_CURRENT_LIST_DIR}/stm32g0"
+#            FILES
+#            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/pin_macros.h"
+#            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/interrupts.h"
+#            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/internal/peripheral_availability.h"
+    )
+
+    target_link_libraries("${VARIANT}_hal"
+            PUBLIC
+            "${VARIANT}_vendor"
+            rtos_check
+            rtos_concepts
+
+            PRIVATE
+            hstd
+            hal_abstract
+            project_settings)
 endfunction()
 
 function(add_stm32h7_hal VARIANT XMLFILE)

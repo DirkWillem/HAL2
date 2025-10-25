@@ -8,8 +8,8 @@
 #include <hal/peripheral.h>
 #include <hal/uart.h>
 
-#include <stm32h5/dma.h>
-#include <stm32h5/pin.h>
+#include <stm32h5_old/dma.h>
+#include <stm32h5_old/pin.h>
 
 #include <stm32h5/mappings/uart_pin_mapping.h>
 

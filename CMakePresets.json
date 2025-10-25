@@ -160,7 +160,7 @@
     },
 
     {
-      "name": "cortex-m33f-base",
+      "name": "cortex-m33f-gcc-base",
       "hidden": true,
       "generator": "Ninja",
       "cacheVariables": {
@@ -168,22 +168,49 @@
       }
     },
     {
-      "name": "cortex-m33f-debug",
-      "inherits": "cortex-m33f-base",
-      "displayName": "Cortex-M33F (Debug)",
+      "name": "cortex-m33f-gcc-debug",
+      "inherits": "cortex-m33f-gcc-base",
+      "displayName": "Cortex-M33F (GCC, Debug)",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       },
-      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m33f-debug"
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m33f-gcc-debug"
     },
     {
-      "name": "cortex-m33f-release",
-      "inherits": "cortex-m33f-base",
-      "displayName": "Cortex-M33F (Release)",
+      "name": "cortex-m33f-gcc-release",
+      "inherits": "cortex-m33f-gcc-base",
+      "displayName": "Cortex-M33F (GCC, Release)",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
       },
-      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m33f-release"
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m33f-gcc-release"
+    },
+
+    {
+      "name": "cortex-m33f-clang-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "${fileDir}/cmake/toolchains/arm-cortex-m33f-clang.cmake"
+      }
+    },
+    {
+      "name": "cortex-m33f-clang-debug",
+      "inherits": "cortex-m33f-clang-base",
+      "displayName": "Cortex-M33F (Clang, Debug)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      },
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m33f-clang-debug"
+    },
+    {
+      "name": "cortex-m33f-clang-release",
+      "inherits": "cortex-m33f-clang-base",
+      "displayName": "Cortex-M33F (Clang, Release)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      },
+      "binaryDir": "${sourceDir}/build/cmake-build-cortex-m33f-clang-release"
     }
   ],
   "buildPresets": [
