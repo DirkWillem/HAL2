@@ -1,4 +1,4 @@
-include(cmake/setup_python.cmake)
+#include(cmake/setup_python.cmake)
 include(cmake/utilities.cmake)
 
 if (NOT CMAKE_CROSSCOMPILING)

@@ -1,5 +1,6 @@
 module;
 
+#include <string_view>
 #include <utility>
 
 #include <stm32h5xx_hal.h>
@@ -28,7 +29,10 @@ export enum class Port : uint8_t {
 #endif
   E,
 #ifdef GPIOF
-  F
+  F,
+#endif
+#ifdef GPIOG
+  G
 #endif
 };
 
@@ -148,6 +152,45 @@ export struct PinId {
 
   [[nodiscard]] constexpr auto hal_pin() const noexcept {
     return GetHalPin(num);
+  }
+
+  static consteval PinId Make(std::string_view port, PinNum num) {
+#ifdef GPIOA
+    if (port == "A") {
+      return {.port = Port::A, .num = num};
+    }
+#endif
+#ifdef GPIOB
+    if (port == "B") {
+      return {.port = Port::B, .num = num};
+    }
+#endif
+#ifdef GPIOC
+    if (port == "C") {
+      return {.port = Port::C, .num = num};
+    }
+#endif
+#ifdef GPIOD
+    if (port == "D") {
+      return {.port = Port::D, .num = num};
+    }
+#endif
+#ifdef GPIOE
+    if (port == "E") {
+      return {.port = Port::E, .num = num};
+    }
+#endif
+#ifdef GPIOF
+    if (port == "F") {
+      return {.port = Port::F, .num = num};
+    }
+#endif
+#ifdef GPIOG
+    if (port == "G") {
+      return {.port = Port::G, .num = num};
+    }
+#endif
+    std::unreachable();
   }
 };
 

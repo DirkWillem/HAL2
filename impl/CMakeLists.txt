@@ -8,6 +8,20 @@ function(add_generated_file FAMILY VARIANT GEN_TYPE XML_PATH OUT_PATH)
     )
 endfunction()
 
+function(generate_pin_mapping FAMILY VARIANT GEN_TYPE XML_PATH OUT_PATH)
+    if (NOT VENV_DIR)
+        message(FATAL_ERROR "VENV_DIR is not set, cannot generate pin mappings")
+    endif ()
+
+    set(GEN_PIN_MAPPING "${VENV_DIR}/bin/hal2.generate_stm32_pin_mapping")
+
+    add_custom_command(
+            OUTPUT "${OUT_PATH}"
+            DEPENDS "${XML_PATH}"
+            COMMAND "${GEN_PIN_MAPPING}" --gen "${GEN_TYPE}" --mcu-family "${FAMILY}" --mcu "${VARIANT}" --xml-file "'${XML_PATH}'" --dst-file "${OUT_PATH}"
+    )
+endfunction()
+
 function(add_stm32g0_hal VARIANT XMLFILE)
     # Add generated code
     add_generated_file(
@@ -72,7 +86,7 @@ function(add_stm32g0_hal VARIANT XMLFILE)
                 "uart-pin-mapping-module"
                 "${XMLFILE}"
                 "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/uart_pin_mapping.cppm")
-    endif()
+    endif ()
 
     if (NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/spi_i2s_pin_mapping.cppm")
         add_generated_file(
@@ -81,7 +95,7 @@ function(add_stm32g0_hal VARIANT XMLFILE)
                 "spi-i2s-pin-mapping-module"
                 "${XMLFILE}"
                 "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/spi_i2s_pin_mapping.cppm")
-    endif()
+    endif ()
 
     if (NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.cppm")
         add_generated_file(
@@ -90,7 +104,7 @@ function(add_stm32g0_hal VARIANT XMLFILE)
                 "tim-pin-mapping-module"
                 "${XMLFILE}"
                 "${CMAKE_CURRENT_LIST_DIR}/stm32g0/generated/${VARIANT}/stm32g0/mappings/tim_pin_mapping.cppm")
-    endif()
+    endif ()
 
     add_library("${VARIANT}_hal")
     target_sources("${VARIANT}_hal"
@@ -198,7 +212,7 @@ function(add_stm32g4_hal VARIANT XMLFILE)
                 "uart-pin-mapping-module"
                 "${XMLFILE}"
                 "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/uart_pin_mapping.cppm")
-    endif()
+    endif ()
 
     if (NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/tim_pin_mapping.cppm")
         add_generated_file(
@@ -207,7 +221,7 @@ function(add_stm32g4_hal VARIANT XMLFILE)
                 "tim-pin-mapping-module"
                 "${XMLFILE}"
                 "${CMAKE_CURRENT_LIST_DIR}/stm32g4/generated/${VARIANT}/stm32g4/mappings/tim_pin_mapping.cppm")
-    endif()
+    endif ()
 
     add_library("${VARIANT}_hal")
     target_sources("${VARIANT}_hal"
@@ -292,6 +306,14 @@ function(add_stm32h5_hal VARIANT XMLFILE)
             stm32h5_old/uart.h
     )
 
+    generate_pin_mapping(
+            stm32h5
+            ${VARIANT}
+            "uart"
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/uart_pin_mapping.cppm"
+    )
+
     target_link_libraries("${VARIANT}_hal_old" PUBLIC abstract_hal "${VARIANT}_vendor" project_settings)
     target_include_directories("${VARIANT}_hal_old" PUBLIC
             "${CMAKE_CURRENT_LIST_DIR}"
@@ -308,15 +330,17 @@ function(add_stm32h5_hal VARIANT XMLFILE)
             stm32h5/pin.cppm
             stm32h5/system.cppm
 
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/uart_pin_mapping.cppm"
+
             stm32h5/stm32h5.cppm
 
-#            PUBLIC
-#            FILE_SET pub_headers TYPE HEADERS
-#            BASE_DIRS "${CMAKE_CURRENT_LIST_DIR}/stm32g0"
-#            FILES
-#            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/pin_macros.h"
-#            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/interrupts.h"
-#            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/internal/peripheral_availability.h"
+            #            PUBLIC
+            #            FILE_SET pub_headers TYPE HEADERS
+            #            BASE_DIRS "${CMAKE_CURRENT_LIST_DIR}/stm32g0"
+            #            FILES
+            #            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/pin_macros.h"
+            #            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/interrupts.h"
+            #            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/internal/peripheral_availability.h"
     )
 
     target_link_libraries("${VARIANT}_hal"
@@ -387,7 +411,7 @@ endfunction()
 
 
 if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
-#    add_stm32g0_hal(stm32g030 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G030K(6-8)Tx.xml")
+    #    add_stm32g0_hal(stm32g030 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G030K(6-8)Tx.xml")
     add_stm32g0_hal(stm32g0b1 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G0B1R(B-C-E)Tx.xml")
 endif ()
 
@@ -426,4 +450,4 @@ if (NOT CMAKE_CROSSCOMPILING)
             sil/scheduler_scheduler.cpp
             sil/scheduler_thread_item.cpp)
     target_link_libraries(hal_sil PUBLIC hal_abstract hstd rtos_concepts)
-endif()
+endif ()
