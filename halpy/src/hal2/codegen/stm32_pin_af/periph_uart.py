@@ -4,15 +4,19 @@ import re
 import hal2.codegen.stm32_pin_af.pin as pin
 
 
-@dataclasses.dataclass
-class _UartPinMappings:
-    tx: list[pin.PinAf]
-    rx: list[pin.PinAf]
-    rts: list[pin.PinAf]
-    cts: list[pin.PinAf]
-
-
 def gen_uart_mapping(pins: list[pin.Pin], mcu_family: str, mcu: str) -> str:
+    """
+    Generates the pin mapping C++ file for the UART peripheral of a STM32 MCU as used by HAL2.
+
+    Args:
+        pins: Parsed pin data.
+        mcu_family: MCU family name (e.g. ``stm32g0``, ``stm32h5``)
+        mcu: MCU name (e.g. ``stm32g4ret6``)
+
+    Returns:
+        Contents of the C++ module containing the pin mapping.
+    """
+
     # Get the UART pin mappings
     mappings = _get_uart_pin_mappings(pins)
 
@@ -46,6 +50,14 @@ export {_uart_pin_mappings_tmpl("UartCtsPinMappings", mappings.cts)}
 
 }}
 """
+
+
+@dataclasses.dataclass
+class _UartPinMappings:
+    tx: list[pin.PinAf]
+    rx: list[pin.PinAf]
+    rts: list[pin.PinAf]
+    cts: list[pin.PinAf]
 
 
 def _get_uart_pin_mappings(pins: list[pin.Pin]) -> _UartPinMappings:

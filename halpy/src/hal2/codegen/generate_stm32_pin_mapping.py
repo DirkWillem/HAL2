@@ -2,7 +2,6 @@ import argparse
 import pathlib
 import sys
 
-
 from hal2.codegen.stm32_pin_af.stm32_xml_parser import parse_pin_xml_file
 from hal2.codegen.stm32_pin_af.periph_uart import gen_uart_mapping
 from hal2.codegen.clang.clang_format import format_file
