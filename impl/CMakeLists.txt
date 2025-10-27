@@ -334,13 +334,11 @@ function(add_stm32h5_hal VARIANT XMLFILE)
 
             stm32h5/stm32h5.cppm
 
-            #            PUBLIC
-            #            FILE_SET pub_headers TYPE HEADERS
-            #            BASE_DIRS "${CMAKE_CURRENT_LIST_DIR}/stm32g0"
-            #            FILES
-            #            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/pin_macros.h"
-            #            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/interrupts.h"
-            #            "${CMAKE_CURRENT_LIST_DIR}/stm32g0/internal/peripheral_availability.h"
+            PUBLIC
+            FILE_SET pub_headers TYPE HEADERS
+            BASE_DIRS "${CMAKE_CURRENT_LIST_DIR}/stm32h5"
+            FILES
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/interrupts.h"
     )
 
     target_link_libraries("${VARIANT}_hal"
