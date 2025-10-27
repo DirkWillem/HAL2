@@ -352,7 +352,8 @@ GetShiftedPllVcoRange(Pll pll, PllVcoRange range) noexcept {
 }
 
 [[nodiscard]] consteval uint32_t
-GetVosRange(hstd::Frequency auto f_hclk) noexcept {
+GetVosRange([[maybe_unused]] hstd::Frequency auto f_hclk) noexcept {
+  // TODO: Properly handle this?
   return PWR_REGULATOR_VOLTAGE_SCALE0;
 }
 
@@ -398,9 +399,16 @@ bool ConfigurePowerAndClocks() noexcept {
 
   RCC_OscInitTypeDef osc_init{
       .OscillatorType      = RCC_OSCILLATORTYPE_HSI,
+      .HSEState            = RCC_HSE_OFF,
+      .LSEState            = RCC_LSE_OFF,
       .HSIState            = RCC_HSI_ON,
       .HSIDiv              = RCC_HSI_DIV2,
       .HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT,
+      .LSIState            = RCC_LSI_OFF,
+      .CSIState            = RCC_CSI_OFF,
+      .CSICalibrationValue = RCC_CSICALIBRATION_DEFAULT,
+      .HSI48State          = RCC_HSI48_OFF,
+      .PLL                 = {},
   };
 
   // Configure PLL1

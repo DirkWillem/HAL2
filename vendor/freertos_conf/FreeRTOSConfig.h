@@ -139,7 +139,7 @@
  *
  * Defining configTICK_TYPE_WIDTH_IN_BITS as TICK_TYPE_WIDTH_64_BITS causes
  * TickType_t to be defined (typedef'ed) as an unsigned 64-bit type. */
-#if defined(CORE_CM0)
+#if defined(CORE_CM0) || defined(CORE_CM33)
 #define configTICK_TYPE_WIDTH_IN_BITS TICK_TYPE_WIDTH_32_BITS
 #elif defined(CORE_CM4)
 #define configTICK_TYPE_WIDTH_IN_BITS TICK_TYPE_WIDTH_64_BITS
@@ -328,7 +328,7 @@
 #if defined(CORE_CM0)
 #define configPRIO_BITS                              (2)
 #define configMAX_SYSCALL_INTERRUPT_LOGICAL_PRIORITY 1
-#elif defined(CORE_CM4)
+#elif defined(CORE_CM4) || defined(CORE_CM33)
 #define configPRIO_BITS                              (4)
 #define configMAX_SYSCALL_INTERRUPT_LOGICAL_PRIORITY 5
 #else
@@ -604,7 +604,7 @@
  * to enable the TrustZone support in FreeRTOS ARMv8-M ports which allows the
  * non-secure FreeRTOS tasks to call the (non-secure callable) functions
  * exported from secure side. */
-#define configENABLE_TRUSTZONE 1
+#define configENABLE_TRUSTZONE 0
 
 /* If the application writer does not want to use TrustZone, but the hardware
  * does not support disabling TrustZone then the entire application (including
@@ -615,7 +615,7 @@
 
 /* Set configENABLE_MPU to 1 to enable the Memory Protection Unit (MPU), or 0
  * to leave the Memory Protection Unit disabled. */
-#if defined(CORE_CM0)
+#if defined(CORE_CM0) || defined(CORE_CM33)
 #define configENABLE_MPU 0
 #else
 #define configENABLE_MPU 1
@@ -631,7 +631,11 @@
  * (MVE) is available only on these architectures. configENABLE_MVE must be left
  * undefined, or defined to 0 for the Cortex-M23,Cortex-M33 and Cortex-M35P
  * ports. */
+#if defined(CORE_CM33)
+#define configENABLE_MVE 0
+#else
 #define configENABLE_MVE 1
+#endif
 
 /******************************************************************************/
 /* ARMv7-M and ARMv8-M port Specific Configuration definitions. ***************/
@@ -690,7 +694,7 @@
 #define INCLUDE_xTaskGetHandle              0
 #define INCLUDE_xTaskResumeFromISR          1
 
-#ifdef CORE_CM0
+#if defined(CORE_CM0) || defined(CORE_CM33)
 // Fixup interrupt names
 #define SysTick_Handler xPortSysTickHandler
 #endif

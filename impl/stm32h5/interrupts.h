@@ -23,17 +23,17 @@ void HAL_IncTick();
 }
 
 // RTOS-Related interrupts
-void PendSV_Handler() {
-  if constexpr (rtos::IsRtosUsed<rtos::FreeRtosMarker>()) {
-    extern void xPortPendSVHandler(void);
-    xPortPendSVHandler();
-  }
-}
-
-void SVC_Handler() {
-  if constexpr (rtos::IsRtosUsed<rtos::FreeRtosMarker>()) {
-    extern void vPortSVCHandler(void);
-    vPortSVCHandler();
-  }
-}
+// void PendSV_Handler() {
+//   if constexpr (rtos::IsRtosUsed<rtos::FreeRtosMarker>()) {
+//     extern void xPortPendSVHandler(void);
+//     xPortPendSVHandler();
+//   }
+// }
+//
+// void SVC_Handler() {
+//   if constexpr (rtos::IsRtosUsed<rtos::FreeRtosMarker>()) {
+//     extern void vPortSVCHandler(void);
+//     vPortSVCHandler();
+//   }
+// }
 }
