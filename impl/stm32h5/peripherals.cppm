@@ -21,7 +21,8 @@ export enum class UartId {
   LpUart1,
 };
 
-export [[nodiscard]] constexpr USART_TypeDef* GetUartPointer(UartId uart) noexcept {
+export [[nodiscard]] constexpr USART_TypeDef*
+GetUartPointer(UartId uart) noexcept {
   switch (uart) {
   case UartId::Usart1: return USART1;
   case UartId::Usart2: return USART2;
@@ -35,7 +36,8 @@ export [[nodiscard]] constexpr USART_TypeDef* GetUartPointer(UartId uart) noexce
   std::unreachable();
 }
 
-export [[nodiscard]] consteval UartId UartIdFromName(std::string_view name) noexcept {
+export [[nodiscard]] consteval UartId
+UartIdFromName(std::string_view name) noexcept {
   return hstd::StaticMap<std::string_view, UartId, 7>(
       name, {{
                 {"USART1", UartId::Usart1},
@@ -48,4 +50,22 @@ export [[nodiscard]] consteval UartId UartIdFromName(std::string_view name) noex
             }});
 }
 
+export enum SpiId {
+  Spi1,
+  Spi2,
+  Spi3,
+  Spi4,
+};
+
+export [[nodiscard]] constexpr SPI_TypeDef* GetSpiPointer(SpiId id) noexcept {
+  switch (id) {
+  case SpiId::Spi1: return SPI1;
+  case SpiId::Spi2: return SPI2;
+  case SpiId::Spi3: return SPI3;
+  case SpiId::Spi4: return SPI4;
+  }
+
+  std::unreachable();
 }
+
+}   // namespace stm32h5

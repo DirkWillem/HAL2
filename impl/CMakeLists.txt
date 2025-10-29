@@ -325,6 +325,7 @@ function(add_stm32h5_hal VARIANT XMLFILE)
             FILE_SET CXX_MODULES
             FILES
             stm32h5/clocks.cppm
+            stm32h5/dma.cppm
             stm32h5/nvic.cppm
             stm32h5/peripherals.cppm
             stm32h5/pin.cppm

@@ -5,6 +5,7 @@ module;
 export module hal.stm32h5;
 
 export import :clocks;
+export import :dma;
 export import :pin;
 export import :system;
 
