@@ -330,6 +330,7 @@ function(add_stm32h5_hal VARIANT XMLFILE)
             stm32h5/peripherals.cppm
             stm32h5/pin.cppm
             stm32h5/system.cppm
+            stm32h5/uart.cppm
 
             "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/uart_pin_mapping.cppm"
 

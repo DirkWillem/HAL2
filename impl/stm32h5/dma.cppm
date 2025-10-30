@@ -160,7 +160,7 @@ void SetupDma(std::size_t n_used_channels) noexcept {
     __HAL_RCC_GPDMA2_CLK_ENABLE();
   }
 
-  // Enable IRQ
+  // Enable interrupts for all enabled channels
   constexpr std::array<IRQn_Type, 16> ChannelIrqns{
       GPDMA1_Channel0_IRQn, GPDMA1_Channel1_IRQn, GPDMA1_Channel2_IRQn,
       GPDMA1_Channel3_IRQn, GPDMA1_Channel4_IRQn, GPDMA1_Channel5_IRQn,
@@ -170,9 +170,9 @@ void SetupDma(std::size_t n_used_channels) noexcept {
       GPDMA2_Channel7_IRQn,
   };
 
-  ([ChannelIrqns]<std::size_t... Idxs>(std::index_sequence<Idxs...>) {
+  [ChannelIrqns]<std::size_t... Idxs>(std::index_sequence<Idxs...>) {
     (..., EnableInterrupt<ChannelIrqns[Idxs], Impl>());
-  });
+  }(std::make_index_sequence<ChannelIrqns.size()>());
 #else
 #error "Cannot determine DMA interrupts for this STM32H5 variant"
 #endif
@@ -297,6 +297,7 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
 
     hdma.Init = {
         .Request       = GetDmaRequestId(Chan::Peripheral, Chan::Request),
+        .BlkHWRequest  = DMA_BREQ_SINGLE_BURST,
         .Direction     = ToHalDmaDirection(dir),
         .SrcInc        = src_inc ? DMA_SINC_INCREMENTED : DMA_SINC_FIXED,
         .DestInc       = dst_inc ? DMA_DINC_INCREMENTED : DMA_DINC_FIXED,
@@ -304,9 +305,11 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
         .DestDataWidth = ToHalDstDataWidth(dst_width),
         .Priority =
             ToHalDmaPriority(ChanList::template DmaChannelPriority<Chan>()),
-        .SrcBurstLength  = 1,
-        .DestBurstLength = 1,
-        .Mode            = ToHalDmaMode(mode),
+        .SrcBurstLength        = 1,
+        .DestBurstLength       = 1,
+        .TransferAllocatedPort = 0,
+        .TransferEventMode     = 0,
+        .Mode                  = ToHalDmaMode(mode),
     };
     HAL_DMA_Init(&hdma);
 
