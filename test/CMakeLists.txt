@@ -29,26 +29,26 @@ target_link_libraries(test_helpers PUBLIC
         GTest::gmock)
 
 # hstd tests
-add_executable(test_hstd
+add_executable(hal2_test_hstd
         hstd/test_crc.cpp
         hstd/test_logic.cpp
         hstd/test_memory.cpp)
-target_link_libraries(test_hstd
+target_link_libraries(hal2_test_hstd
         PRIVATE
         hstd
         GTest::gtest GTest::gmock GTest::gtest_main)
-add_test(test_hstd test_hstd)
+add_test(hal2_test_hstd hal2_test_hstd)
 
 # MODBUS tests
-add_executable(test_modbus
+add_executable(hal2_test_modbus
         modbus/test_bit_storage.cpp
         modbus/test_encoding_rtu_decoder.cpp
         modbus/test_encoding_rtu_encoder.cpp
         modbus/test_server.cpp
         modbus/test_server_frames.cpp)
-target_link_libraries(test_modbus
+target_link_libraries(hal2_test_modbus
         PRIVATE
         modbus_encoding_rtu modbus_server
         test_helpers
         GTest::gtest GTest::gmock GTest::gtest_main)
-add_test(test_modbus test_modbus)
+add_test(hal2_test_modbus hal2_test_modbus)

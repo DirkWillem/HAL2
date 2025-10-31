@@ -40,4 +40,26 @@ constexpr auto ToByteArray(const std::array<T, N>& data) noexcept {
   return std::bit_cast<std::array<std::byte, sizeof(T) * N>>(data);
 }
 
+export template <std::endian E = std::endian::native, typename T>
+  requires(E == std::endian::native)
+void IntoByteArray(std::span<std::byte> into, T value) noexcept {
+  if (E != std::endian::native) {
+    value = SwapEndianness(value);
+  }
+
+  std::memcpy(into.data(), &value, sizeof(T));
+}
+
+export template <std::integral T, std::endian E = std::endian::native>
+constexpr auto BytesToInt(std::span<const std::byte> bytes) {
+  T result;
+  std::memcpy(&result, bytes.data(), sizeof(T));
+
+  if (E != std::endian::native) {
+    return SwapEndianness(result);
+  } else {
+    return result;
+  }
+}
+
 }   // namespace hstd
