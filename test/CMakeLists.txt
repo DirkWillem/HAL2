@@ -1,4 +1,4 @@
-
+# Ensure Google Test is downloaded
 if (NOT TARGET GTest::gtest)
     include(FetchContent)
     FetchContent_Declare(
@@ -10,6 +10,7 @@ if (NOT TARGET GTest::gtest)
     FetchContent_MakeAvailable(googletest)
 endif ()
 
+# Test helpers
 add_library(test_helpers)
 target_sources(test_helpers
         PUBLIC
@@ -27,43 +28,27 @@ target_link_libraries(test_helpers PUBLIC
         GTest::gtest
         GTest::gmock)
 
-
-# Test source files
-set(HAL2_TEST_SRCS
+# hstd tests
+add_executable(test_hstd
         hstd/test_crc.cpp
         hstd/test_logic.cpp
-        hstd/test_memory.cpp
+        hstd/test_memory.cpp)
+target_link_libraries(test_hstd
+        PRIVATE
+        hstd
+        GTest::gtest GTest::gmock GTest::gtest_main)
+add_test(test_hstd test_hstd)
 
+# MODBUS tests
+add_executable(test_modbus
+        modbus/test_bit_storage.cpp
         modbus/test_encoding_rtu_decoder.cpp
         modbus/test_encoding_rtu_encoder.cpp
-        modbus/test_modbus_server.cpp
-        modbus/test_modbus_server_frames.cpp
-        modbus/test_storage_coil_discrete_input.cpp)
-
-
-add_library(hal2_tests_lib STATIC ${HAL2_TEST_SRCS})
-link_library_hdronly(hal2_tests_lib PUBLIC GTest::gtest)
-link_library_hdronly(hal2_tests_lib PUBLIC GTest::gmock)
-target_link_libraries(hal2_tests_lib PUBLIC abstract_hal fp test_protos hal_test_helpers test_helpers)
-target_include_directories(hal2_tests_lib PUBLIC "${CMAKE_CURRENT_LIST_DIR}")
-
-add_executable(hal2_tests ${HAL2_TEST_SRCS})
-target_link_libraries(hal2_tests PUBLIC
-        modbus_encoding_rtu
-        modbus_core
-        modbus_server
-
-        hstd
-
-        GTest::gmock
-        GTest::gtest_main
-
-        test_helpers)
-target_include_directories(hal2_tests PUBLIC "${CMAKE_CURRENT_LIST_DIR}")
-target_compile_options(hal2_tests PUBLIC -g3)
-
-if(APPLE)
-    target_link_options(hal2_tests PRIVATE
-            -L/opt/homebrew/opt/llvm/lib/c++ # TODO: non-hardcoded path
-    )
-endif()
+        modbus/test_server.cpp
+        modbus/test_server_frames.cpp)
+target_link_libraries(test_modbus
+        PRIVATE
+        modbus_encoding_rtu modbus_server
+        test_helpers
+        GTest::gtest GTest::gmock GTest::gtest_main)
+add_test(test_modbus test_modbus)

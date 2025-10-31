@@ -17,7 +17,7 @@ using namespace modbus::encoding::rtu;
 
 using namespace hstd::literals;
 
-class ModbusRtuEncoder : public Test {
+class RtuEncoder : public Test {
  public:
   void SetUp() override {
     std::fill(buffer.begin(), buffer.end(), std::byte{0});
@@ -58,7 +58,7 @@ class ModbusRtuEncoder : public Test {
       check_buffer_builder{nullptr};
 };
 
-TEST_F(ModbusRtuEncoder, ErrorResponse) {
+TEST_F(RtuEncoder, ErrorResponse) {
   const auto encoded_frame = EncodeResponse({
       .pdu     = MakeErrorResponse(FunctionCode::ReadCoils,
                                    ExceptionCode::IllegalDataValue),
@@ -75,7 +75,7 @@ TEST_F(ModbusRtuEncoder, ErrorResponse) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, ReadCoilsRequest) {
+TEST_F(RtuEncoder, ReadCoilsRequest) {
   const auto encoded_frame = EncodeRequest({
       .pdu =
           ReadCoilsRequest{
@@ -96,7 +96,7 @@ TEST_F(ModbusRtuEncoder, ReadCoilsRequest) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, ReadCoilsResponseSingleCoil) {
+TEST_F(RtuEncoder, ReadCoilsResponseSingleCoil) {
   std::array<std::byte, 1> coils{std::byte{0b0000'0001}};
 
   const auto encoded_frame = EncodeResponse({
@@ -115,7 +115,7 @@ TEST_F(ModbusRtuEncoder, ReadCoilsResponseSingleCoil) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, ReadCoilsResponseMultipleCoils) {
+TEST_F(RtuEncoder, ReadCoilsResponseMultipleCoils) {
   std::array<std::byte, 2> coils{std::byte{0b1111'0000},
                                  std::byte{0b1010'0101}};
 
@@ -136,7 +136,7 @@ TEST_F(ModbusRtuEncoder, ReadCoilsResponseMultipleCoils) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, ReadDiscreteInputsRequest) {
+TEST_F(RtuEncoder, ReadDiscreteInputsRequest) {
   const auto encoded_frame = EncodeRequest({
       .pdu =
           ReadDiscreteInputsRequest{
@@ -157,7 +157,7 @@ TEST_F(ModbusRtuEncoder, ReadDiscreteInputsRequest) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, ReadDiscreteInputsResponse) {
+TEST_F(RtuEncoder, ReadDiscreteInputsResponse) {
   std::array inputs{std::byte{0b1111'0000}, std::byte{0b1010'0101}};
 
   const auto encoded_frame = EncodeResponse({
@@ -177,7 +177,7 @@ TEST_F(ModbusRtuEncoder, ReadDiscreteInputsResponse) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, ReadHoldingRegistersRequest) {
+TEST_F(RtuEncoder, ReadHoldingRegistersRequest) {
   const auto encoded_frame = EncodeRequest({
       .pdu =
           ReadHoldingRegistersRequest{
@@ -198,7 +198,7 @@ TEST_F(ModbusRtuEncoder, ReadHoldingRegistersRequest) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, ReadHoldingRegistersResponse) {
+TEST_F(RtuEncoder, ReadHoldingRegistersResponse) {
   std::array registers{0x12_b, 0x34_b, 0xAA_b, 0xBB_b, 0xBE_b, 0xEF_b};
 
   const auto encoded_frame = EncodeResponse({
@@ -219,7 +219,7 @@ TEST_F(ModbusRtuEncoder, ReadHoldingRegistersResponse) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, ReadInputRegistersRequest) {
+TEST_F(RtuEncoder, ReadInputRegistersRequest) {
   const auto encoded_frame = EncodeRequest({
       .pdu =
           ReadInputRegistersRequest{
@@ -240,7 +240,7 @@ TEST_F(ModbusRtuEncoder, ReadInputRegistersRequest) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, ReadInputRegistersResponse) {
+TEST_F(RtuEncoder, ReadInputRegistersResponse) {
   std::array<std::byte, 6> registers{0x12_b, 0x34_b, 0xAA_b,
                                      0xBB_b, 0xBE_b, 0xEF_b};
 
@@ -265,7 +265,7 @@ TEST_F(ModbusRtuEncoder, ReadInputRegistersResponse) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, WriteSingleRegisterRequest) {
+TEST_F(RtuEncoder, WriteSingleRegisterRequest) {
   const auto encoded_frame = EncodeRequest({
       .pdu     = WriteSingleRegisterRequest{.register_addr = 0x0010,
                                             .new_value     = 0x1234},
@@ -283,7 +283,7 @@ TEST_F(ModbusRtuEncoder, WriteSingleRegisterRequest) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, WriteSingleRegisterResponse) {
+TEST_F(RtuEncoder, WriteSingleRegisterResponse) {
   const auto encoded_frame = EncodeResponse({
       .pdu     = WriteSingleRegisterResponse{.register_addr = 0x0010,
                                              .new_value     = 0x1234},
@@ -301,7 +301,7 @@ TEST_F(ModbusRtuEncoder, WriteSingleRegisterResponse) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, WriteSingleCoilRequest) {
+TEST_F(RtuEncoder, WriteSingleCoilRequest) {
   const auto encoded_frame = EncodeRequest({
       .pdu     = WriteSingleCoilRequest{.coil_addr = 0x0020,
                                         .new_state = CoilState::Enabled},
@@ -319,7 +319,7 @@ TEST_F(ModbusRtuEncoder, WriteSingleCoilRequest) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, WriteSingleCoilResponse) {
+TEST_F(RtuEncoder, WriteSingleCoilResponse) {
   const auto encoded_frame = EncodeResponse({
       .pdu     = WriteSingleCoilResponse{.coil_addr = 0x0030,
                                          .new_state = CoilState::Enabled},
@@ -337,7 +337,7 @@ TEST_F(ModbusRtuEncoder, WriteSingleCoilResponse) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, WriteMultipleCoilsRequest) {
+TEST_F(RtuEncoder, WriteMultipleCoilsRequest) {
   std::array<std::byte, 2> coils{std::byte{0b1111'0000},
                                  std::byte{0b1010'0101}};
 
@@ -362,7 +362,7 @@ TEST_F(ModbusRtuEncoder, WriteMultipleCoilsRequest) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, WriteMultipleCoilsResponse) {
+TEST_F(RtuEncoder, WriteMultipleCoilsResponse) {
   const auto encoded_frame = EncodeResponse(
       {.pdu = WriteMultipleCoilsResponse{.start_addr = 0x0020, .num_coils = 13},
        .address = 0x65});
@@ -378,7 +378,7 @@ TEST_F(ModbusRtuEncoder, WriteMultipleCoilsResponse) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, WriteMultipleRegistersRequest) {
+TEST_F(RtuEncoder, WriteMultipleRegistersRequest) {
   std::array<std::byte, 4> values{0x12_b, 0x34_b, 0x56_b, 0x78_b};
 
   const auto encoded_frame = EncodeRequest({
@@ -405,7 +405,7 @@ TEST_F(ModbusRtuEncoder, WriteMultipleRegistersRequest) {
   ASSERT_THAT(encoded_frame, ElementsAreArray(encoded_frame_check));
 }
 
-TEST_F(ModbusRtuEncoder, WriteMultipleRegistersResponse) {
+TEST_F(RtuEncoder, WriteMultipleRegistersResponse) {
   const auto encoded_frame = EncodeResponse({
       .pdu =
           WriteMultipleRegistersResponse{

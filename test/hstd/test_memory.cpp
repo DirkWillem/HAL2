@@ -9,7 +9,7 @@ import hstd;
 using namespace testing;
 using namespace hstd::literals;
 
-TEST(HstdMemory, ToByteArrayScalar) {
+TEST(Memory, ToByteArrayScalar) {
   EXPECT_THAT(hstd::ToByteArray<std::endian::little>(0x12_u8),
               ElementsAre(0x12_b));
   EXPECT_THAT(hstd::ToByteArray<std::endian::little>(0x12345678_u32),
@@ -21,7 +21,7 @@ TEST(HstdMemory, ToByteArrayScalar) {
               ElementsAre(0x12_b, 0x34_b, 0x56_b, 0x78_b));
 }
 
-TEST(HstdMemory, ToByteArrayArray) {
+TEST(Memory, ToByteArrayArray) {
   EXPECT_THAT(hstd::ToByteArray<std::endian::little>(
                   std::array<uint16_t, 2>{0x1234, 0x5678}),
               ElementsAre(0x34_b, 0x12_b, 0x78_b, 0x56_b));

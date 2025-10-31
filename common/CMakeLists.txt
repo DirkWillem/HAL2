@@ -84,5 +84,5 @@ target_compile_definitions(math INTERFACE HAL2_CMSIS_DSP_ENABLED)
 target_include_directories(math INTERFACE
         ${CMAKE_CURRENT_LIST_DIR})
 
-add_subdirectory(sbs)
-add_subdirectory(vrpc)
+#add_subdirectory(sbs)
+#add_subdirectory(vrpc)

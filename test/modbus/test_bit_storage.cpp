@@ -4,7 +4,7 @@ import modbus.server;
 
 using namespace modbus::server;
 
-TEST(ModbusStorageCoilDiscreteInput, ReadWriteInMemCoil) {
+TEST(BitStorage, ReadWriteInMemCoil) {
   uint8_t coil{};
 
   EXPECT_TRUE(WriteBit(coil, true).has_value());

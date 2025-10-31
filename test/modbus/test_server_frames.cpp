@@ -76,7 +76,7 @@ using Srv =
 
 using namespace hstd::literals;
 
-class ModbusServerFrames : public Test {
+class ServerFrames : public Test {
  public:
   void SetUp() override { srv = std::make_unique<Srv>(); }
 
@@ -92,7 +92,7 @@ class ModbusServerFrames : public Test {
   std::unique_ptr<Srv> srv{nullptr};
 };
 
-TEST_F(ModbusServerFrames, ReadDiscreteInputsSingleByte) {
+TEST_F(ServerFrames, ReadDiscreteInputsSingleByte) {
   server().GetStorage<DiscreteInput1>() = 1;
   server().GetStorage<DiscreteInput4>() = 1;
   server().GetStorage<DiscreteInput7>() = 1;
@@ -108,7 +108,7 @@ TEST_F(ModbusServerFrames, ReadDiscreteInputsSingleByte) {
                   Field(&Pdu::inputs, ElementsAre(std::byte{0b1001'0010}))));
 }
 
-TEST_F(ModbusServerFrames, ReadDiscreteInputsMultipleBytes) {
+TEST_F(ServerFrames, ReadDiscreteInputsMultipleBytes) {
   server().GetStorage<DiscreteInput1>()  = 1;
   server().GetStorage<DiscreteInput4>()  = 1;
   server().GetStorage<DiscreteInput7>()  = 1;
@@ -125,7 +125,7 @@ TEST_F(ModbusServerFrames, ReadDiscreteInputsMultipleBytes) {
                   &Pdu::inputs, ElementsAre(0b1001'0010_b, 0b0000'1001_b))));
 }
 
-TEST_F(ModbusServerFrames, ReadDiscreteInputsInvalidAddress) {
+TEST_F(ServerFrames, ReadDiscreteInputsInvalidAddress) {
   const auto response = HandleFrame(ReadDiscreteInputsRequest{
       .starting_addr = 0xEEEE,
       .num_inputs    = 8,
@@ -139,7 +139,7 @@ TEST_F(ModbusServerFrames, ReadDiscreteInputsInvalidAddress) {
                                         ExceptionCode::IllegalDataAddress))));
 }
 
-TEST_F(ModbusServerFrames, ReadCoilsFrameSingleByte) {
+TEST_F(ServerFrames, ReadCoilsFrameSingleByte) {
   server().WriteCoil(0, true);
   server().WriteCoil(4, true);
   server().WriteCoil(7, true);
@@ -154,7 +154,7 @@ TEST_F(ModbusServerFrames, ReadCoilsFrameSingleByte) {
                                   ElementsAre(std::byte{0b1001'0001}))));
 }
 
-TEST_F(ModbusServerFrames, ReadCoilsMultipleBytes) {
+TEST_F(ServerFrames, ReadCoilsMultipleBytes) {
   server().WriteCoil(0, true);
   server().WriteCoil(4, true);
   server().WriteCoil(7, true);
@@ -171,7 +171,7 @@ TEST_F(ModbusServerFrames, ReadCoilsMultipleBytes) {
                                   ElementsAre(0b1001'0001_b, 0b0000'1001_b))));
 }
 
-TEST_F(ModbusServerFrames, ReadCoilsInvalidAddress) {
+TEST_F(ServerFrames, ReadCoilsInvalidAddress) {
   const auto response = HandleFrame(ReadCoilsRequest{
       .starting_addr = 0xEEEE,
       .num_coils     = 8,
@@ -185,7 +185,7 @@ TEST_F(ModbusServerFrames, ReadCoilsInvalidAddress) {
                                         ExceptionCode::IllegalDataAddress))));
 }
 
-TEST_F(ModbusServerFrames, WriteSingleCoilToOn) {
+TEST_F(ServerFrames, WriteSingleCoilToOn) {
   // Handle frame
   const auto response = HandleFrame(WriteSingleCoilRequest{
       .coil_addr = 1,
@@ -203,7 +203,7 @@ TEST_F(ModbusServerFrames, WriteSingleCoilToOn) {
   ASSERT_THAT(coil_value, Optional(true));
 }
 
-TEST_F(ModbusServerFrames, WriteSingleCoilToOff) {
+TEST_F(ServerFrames, WriteSingleCoilToOff) {
   // Set coil to ON
   server().WriteCoil(4, true);
 
@@ -224,7 +224,7 @@ TEST_F(ModbusServerFrames, WriteSingleCoilToOff) {
   ASSERT_THAT(coil_value, Optional(false));
 }
 
-TEST_F(ModbusServerFrames, WriteSingleCoilInvalidState) {
+TEST_F(ServerFrames, WriteSingleCoilInvalidState) {
   // Handle frame
   const auto response = HandleFrame(WriteSingleCoilRequest{
       .coil_addr = 4,
@@ -239,7 +239,7 @@ TEST_F(ModbusServerFrames, WriteSingleCoilInvalidState) {
                                            ExceptionCode::IllegalDataValue))));
 }
 
-TEST_F(ModbusServerFrames, WriteSingleCoilInvalidAddress) {
+TEST_F(ServerFrames, WriteSingleCoilInvalidAddress) {
   // Handle frame
   const auto response = HandleFrame(WriteSingleCoilRequest{
       .coil_addr = 0xAAAA,
@@ -254,7 +254,7 @@ TEST_F(ModbusServerFrames, WriteSingleCoilInvalidAddress) {
                                         ExceptionCode::IllegalDataAddress))));
 }
 
-TEST_F(ModbusServerFrames, WriteMultipleCoils) {
+TEST_F(ServerFrames, WriteMultipleCoils) {
   std::array<std::byte, 2> coils{std::byte{0b11110000}, std::byte{0b10100101}};
 
   // Handle frame
@@ -275,7 +275,7 @@ TEST_F(ModbusServerFrames, WriteMultipleCoils) {
               Optional(ElementsAreArray(coils)));
 }
 
-TEST_F(ModbusServerFrames, WriteMultipleCoilsToInvalidAddress) {
+TEST_F(ServerFrames, WriteMultipleCoilsToInvalidAddress) {
   std::array<std::byte, 2> coils{std::byte{0b11110000}, std::byte{0b10100101}};
 
   // Handle frame
@@ -293,7 +293,7 @@ TEST_F(ModbusServerFrames, WriteMultipleCoilsToInvalidAddress) {
                                         ExceptionCode::IllegalDataAddress))));
 }
 
-TEST_F(ModbusServerFrames,
+TEST_F(ServerFrames,
        WriteMultipleCoilsMismatchBetweenValuesAndCoilCount) {
   std::array<std::byte, 2> coils{};
 
@@ -312,7 +312,7 @@ TEST_F(ModbusServerFrames,
                                            ExceptionCode::IllegalDataValue))));
 }
 
-TEST_F(ModbusServerFrames, ReadHoldingRegistersSingleRegister) {
+TEST_F(ServerFrames, ReadHoldingRegistersSingleRegister) {
   // Write sample value
   server().WriteHoldingRegister(0x0001, 0x1234_u16);
 
@@ -328,7 +328,7 @@ TEST_F(ModbusServerFrames, ReadHoldingRegistersSingleRegister) {
                                                ElementsAre(0x12_b, 0x34_b))));
 }
 
-TEST_F(ModbusServerFrames, ReadHoldingRegisterMultipleRegisters) {
+TEST_F(ServerFrames, ReadHoldingRegisterMultipleRegisters) {
   server().WriteHoldingRegister(0x0004, 0x1234_u16);
   server().WriteHoldingRegister(0x0005, 0x5678_u16);
 
@@ -345,7 +345,7 @@ TEST_F(ModbusServerFrames, ReadHoldingRegisterMultipleRegisters) {
                             ElementsAre(0x12_b, 0x34_b, 0x56_b, 0x78_b))));
 }
 
-TEST_F(ModbusServerFrames, ReadHoldingRegisterReadFloat) {
+TEST_F(ServerFrames, ReadHoldingRegisterReadFloat) {
   // Write sample value
   const auto v = 123.456F;
   server().WriteHoldingRegister(0x0010, v);
@@ -365,7 +365,7 @@ TEST_F(ModbusServerFrames, ReadHoldingRegisterReadFloat) {
                             Field(&Pdu::registers, ElementsAreArray(v_check))));
 }
 
-TEST_F(ModbusServerFrames, ReadHoldingRegisterReadFloats) {
+TEST_F(ServerFrames, ReadHoldingRegisterReadFloats) {
   // Write sample value
   std::array<float, 4> arr{1.2F, 3.4F, 5.6F, 7.8F};
   for (std::size_t i = 0; i < arr.size(); ++i) {
@@ -390,7 +390,7 @@ TEST_F(ModbusServerFrames, ReadHoldingRegisterReadFloats) {
                             Field(&Pdu::registers, ElementsAreArray(v_check))));
 }
 
-TEST_F(ModbusServerFrames, ReadHoldingRegisterUnalignedRead) {
+TEST_F(ServerFrames, ReadHoldingRegisterUnalignedRead) {
   // Handle frame
   const auto response = HandleFrame(ReadHoldingRegistersRequest{
       .starting_addr         = 0x0010,
@@ -405,7 +405,7 @@ TEST_F(ModbusServerFrames, ReadHoldingRegisterUnalignedRead) {
                                         ExceptionCode::ServerDeviceFailure))));
 }
 
-TEST_F(ModbusServerFrames, ReadInputRegistersSingleRegister) {
+TEST_F(ServerFrames, ReadInputRegistersSingleRegister) {
   // Write sample value
   server().GetStorage<U16IR1>() = 0x1234;
 
@@ -421,7 +421,7 @@ TEST_F(ModbusServerFrames, ReadInputRegistersSingleRegister) {
                                                ElementsAre(0x12_b, 0x34_b))));
 }
 
-TEST_F(ModbusServerFrames, ReadInputRegisterMultipleRegisters) {
+TEST_F(ServerFrames, ReadInputRegisterMultipleRegisters) {
   auto& arr = server().GetStorage<U16ArrayIR>();
   arr[0]    = 0x1234;
   arr[1]    = 0x5678;
@@ -439,7 +439,7 @@ TEST_F(ModbusServerFrames, ReadInputRegisterMultipleRegisters) {
                             ElementsAre(0x12_b, 0x34_b, 0x56_b, 0x78_b))));
 }
 
-TEST_F(ModbusServerFrames, ReadInputRegisterReadFloat) {
+TEST_F(ServerFrames, ReadInputRegisterReadFloat) {
   // Write sample value
   const auto v                  = 123.456F;
   server().GetStorage<F32IR0>() = v;
@@ -458,7 +458,7 @@ TEST_F(ModbusServerFrames, ReadInputRegisterReadFloat) {
                             Field(&Pdu::registers, ElementsAreArray(v_check))));
 }
 
-TEST_F(ModbusServerFrames, ReadInputRegisterReadFloats) {
+TEST_F(ServerFrames, ReadInputRegisterReadFloats) {
   // Write sample value
   std::array<float, 4> arr{1.2F, 3.4F, 5.6F, 7.8F};
   auto&                storage_arr = server().GetStorage<F32ArrayIR>();
@@ -480,7 +480,7 @@ TEST_F(ModbusServerFrames, ReadInputRegisterReadFloats) {
                             Field(&Pdu::registers, ElementsAreArray(v_check))));
 }
 
-TEST_F(ModbusServerFrames, ReadInputRegisterUnalignedRead) {
+TEST_F(ServerFrames, ReadInputRegisterUnalignedRead) {
   // Handle frame
   const auto response = HandleFrame(ReadInputRegistersRequest{
       .starting_addr       = 0x0010,
@@ -495,7 +495,7 @@ TEST_F(ModbusServerFrames, ReadInputRegisterUnalignedRead) {
                                         ExceptionCode::ServerDeviceFailure))));
 }
 
-TEST_F(ModbusServerFrames, WriteSingleRegisterOk) {
+TEST_F(ServerFrames, WriteSingleRegisterOk) {
   const auto response = HandleFrame(
       WriteSingleRegisterRequest{.register_addr = 0x0001, .new_value = 0x1234});
 
@@ -510,7 +510,7 @@ TEST_F(ModbusServerFrames, WriteSingleRegisterOk) {
   ASSERT_THAT(value, Optional(0x1234_u16));
 }
 
-TEST_F(ModbusServerFrames, WriteSingleRegisterInvalidAddress) {
+TEST_F(ServerFrames, WriteSingleRegisterInvalidAddress) {
   const auto response = HandleFrame(
       WriteSingleRegisterRequest{.register_addr = 0xEEEE, .new_value = 0x1234});
 
@@ -522,7 +522,7 @@ TEST_F(ModbusServerFrames, WriteSingleRegisterInvalidAddress) {
                                         ExceptionCode::IllegalDataAddress))));
 }
 
-TEST_F(ModbusServerFrames, WriteMultipleRegistersSingleRegister) {
+TEST_F(ServerFrames, WriteMultipleRegistersSingleRegister) {
   std::array<std::byte, 2> data{0xAB_b, 0xCD_b};
   const auto               response = HandleFrame(WriteMultipleRegistersRequest{
                     .start_addr = 0x0001, .num_registers = 1, .values = data});
@@ -536,7 +536,7 @@ TEST_F(ModbusServerFrames, WriteMultipleRegistersSingleRegister) {
   ASSERT_THAT(server().ReadHoldingRegister<uint16_t>(0x0001), Optional(0xABCD));
 }
 
-TEST_F(ModbusServerFrames, WriteMultipleRegistersFloatRegister) {
+TEST_F(ServerFrames, WriteMultipleRegistersFloatRegister) {
   constexpr float Val  = 12.34F;
   constexpr auto  Data = hstd::ToByteArray<std::endian::big>(Val);
 
@@ -555,7 +555,7 @@ TEST_F(ModbusServerFrames, WriteMultipleRegistersFloatRegister) {
   ASSERT_THAT(server().ReadHoldingRegister<float>(0x0010), Optional(Val));
 }
 
-TEST_F(ModbusServerFrames, WriteMultipleRegistersFloatArray) {
+TEST_F(ServerFrames, WriteMultipleRegistersFloatArray) {
   constexpr std::array<float, 4> Vals{1.2F, 3.4F, 5.6F, 7.8F};
   constexpr auto Data = hstd::ToByteArray<std::endian::big>(Vals);
 
@@ -575,7 +575,7 @@ TEST_F(ModbusServerFrames, WriteMultipleRegistersFloatArray) {
               Optional(ElementsAreArray(Vals)));
 }
 
-TEST_F(ModbusServerFrames, WriteMultipleRegistersDataSizeDoesntMatchRegCount) {
+TEST_F(ServerFrames, WriteMultipleRegistersDataSizeDoesntMatchRegCount) {
   constexpr float Val  = 12.34F;
   constexpr auto  Data = hstd::ToByteArray<std::endian::big>(Val);
 
@@ -593,7 +593,7 @@ TEST_F(ModbusServerFrames, WriteMultipleRegistersDataSizeDoesntMatchRegCount) {
                                            ExceptionCode::IllegalDataValue))));
 }
 
-TEST_F(ModbusServerFrames, WriteMultipleRegistersUnalignedWrite) {
+TEST_F(ServerFrames, WriteMultipleRegistersUnalignedWrite) {
   constexpr float Val  = 12.34F;
   constexpr auto  Data = hstd::ToByteArray<std::endian::big>(Val);
 
@@ -611,7 +611,7 @@ TEST_F(ModbusServerFrames, WriteMultipleRegistersUnalignedWrite) {
                                         ExceptionCode::ServerDeviceFailure))));
 }
 
-TEST_F(ModbusServerFrames, WriteMultipleRegistersInvalidAddress) {
+TEST_F(ServerFrames, WriteMultipleRegistersInvalidAddress) {
   constexpr float Val  = 12.34F;
   constexpr auto  Data = hstd::ToByteArray<std::endian::big>(Val);
 

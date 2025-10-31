@@ -15,9 +15,10 @@ if (NOT CMAKE_CROSSCOMPILING)
             GIT_REPOSITORY https://github.com/p-ranav/argparse.git
     )
     FetchContent_MakeAvailable(argparse)
-endif()
+endif ()
 
 add_subdirectory(common)
+
 add_subdirectory(vendor)
 add_subdirectory(rtos)
 add_subdirectory(abstract)
@@ -26,10 +27,10 @@ add_subdirectory(impl)
 
 if ("${TARGET}" STREQUAL "")
     set(TARGET "desktop")
-endif()
+endif ()
 
 if (${TARGET} STREQUAL "desktop")
     add_subdirectory(test)
-endif()
+endif ()
 
 include(cmake/add_application.cmake)
