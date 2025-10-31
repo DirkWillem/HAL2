@@ -23,6 +23,16 @@
       },
       "binaryDir": "${sourceDir}/build/cmake-build-debug"
     },
+    {
+      "name": "desktop-debug-coverage",
+      "inherits": "desktop-debug",
+      "displayName": "Desktop (Debug+Coverage)",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "ENABLE_COVERAGE": "ON"
+      },
+      "binaryDir": "${sourceDir}/build/cmake-build-debug-coverage"
+    },
 
     {
       "name": "cortex-m0plus-gcc-base",

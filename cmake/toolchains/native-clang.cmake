@@ -45,6 +45,11 @@ set(CMAKE_CXX_FLAGS "-std=c++23 -stdlib=libc++ -fexperimental-library")
 set(CMAKE_EXE_LINKER_FLAGS "-std=c++23 -stdlib=libc++ -fexperimental-library -L${LLVM_PREFIX}/lib/c++")
 set(CMAKE_SHARED_LINKER_FLAGS "-std=c++23 -stdlib=libc++ -fexperimental-library -L${LLVM_PREFIX}/lib/c++")
 
+if (ENABLE_COVERAGE)
+    message("Enabling coverage")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
+endif()
 
 set(CMAKE_AR ${TOOLCHAIN_PREFIX}llvm-ar${CLANG_VERSION_SUFFIX}${TOOLCHAIN_SUFFIX})
 set(CMAKE_ASM_COMPILER ${TOOLCHAIN_PREFIX}clang${CLANG_VERSION_SUFFIX}${TOOLCHAIN_SUFFIX})
