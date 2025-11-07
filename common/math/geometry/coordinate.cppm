@@ -11,11 +11,11 @@ namespace math {
 export template <unsigned N = 2, concepts::Number R = float>
 class CartesianCoordinate : public Vec<N, R> {
  public:
-  CartesianCoordinate(R x, R y) noexcept
+  constexpr CartesianCoordinate(R x, R y) noexcept
     requires(N == 2)
       : Vec<N, R>{x, y} {}
 
-  CartesianCoordinate(R x, R y, R z) noexcept
+  constexpr CartesianCoordinate(R x, R y, R z) noexcept
     requires(N == 3)
       : Vec<N, R>{x, y, z} {}
 
