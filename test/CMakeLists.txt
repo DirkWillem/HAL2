@@ -39,6 +39,15 @@ target_link_libraries(hal2_test_hstd
         GTest::gtest GTest::gmock GTest::gtest_main)
 add_test(hal2_test_hstd hal2_test_hstd)
 
+# Math tests
+add_executable(hal2_test_math
+        math/test_coordinate.cpp)
+target_link_libraries(hal2_test_math
+        PRIVATE
+        math
+        GTest::gtest GTest::gmock GTest::gtest_main)
+add_test(hal2_test_math hal2_test_math)
+
 # MODBUS tests
 add_executable(hal2_test_modbus
         modbus/test_bit_storage.cpp
