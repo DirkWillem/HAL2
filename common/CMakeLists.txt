@@ -27,6 +27,7 @@ target_sources(hstd
         hstd/crc.cppm
         hstd/endian.cppm
         hstd/chrono.cppm
+        hstd/constants.cppm
         hstd/logic.cppm
         hstd/math.cppm
         hstd/memory.cppm
@@ -50,6 +51,7 @@ target_sources(math
         FILES
         math/math.cppm
 
+        math/functions/interpolation.cppm
         math/functions/power.cppm
         math/functions/trigonometric.cppm
         math/geometry/coordinate.cppm

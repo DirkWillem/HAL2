@@ -237,4 +237,16 @@ struct ConcatTypesHelper<> {
 export template <typename... Ts>
 using ConcatTypes = typename ConcatTypesHelper<Ts...>::Result;
 
+template <auto V>
+struct FieldPointerHelper;
+
+template <typename T, typename S, T S::* Ptr>
+struct FieldPointerHelper<Ptr> {
+  using FieldType  = T;
+  using StructType = S;
+};
+
+export template <auto Fp>
+using FieldPointerFieldType = typename FieldPointerHelper<Fp>::FieldType;
+
 }   // namespace hstd

@@ -317,6 +317,16 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
   }
 
   /**
+   * @brief Disables the half transmit complete interrupt for the given channel
+   * @tparam Chan Channel to disable the half transmit complete interrupt for
+   */
+  template <hal::DmaChannelId Chan>
+  void DisableHalfTransmitCompleteInterrupt() {
+    auto& hdma = DmaChannel<Chan>();
+    __HAL_DMA_DISABLE_IT(hdma, DMA_IT_HT);
+  }
+
+  /**
    * @brief DMA interrupt handler.
    *
    * @tparam DmaInst DMA instance number.

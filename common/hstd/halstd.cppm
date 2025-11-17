@@ -8,6 +8,7 @@ export import :mp.values;
 export import :array;
 export import :atomic;
 export import :callback;
+export import :constants;
 export import :crc;
 export import :endian;
 export import :chrono;

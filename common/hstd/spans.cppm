@@ -85,8 +85,8 @@ export template <ByteLike TOut, typename TIn, std::size_t E>
  * @param in Input span
  * @return Byte view over the passed span
  */
-std::span<const TOut> ReinterpretSpan(std::span<TIn, E> in) noexcept {
-  return std::span{
+std::span<const TOut, E> ReinterpretSpan(std::span<TIn, E> in) noexcept {
+  return std::span<const TOut, E>{
       reinterpret_cast<const TOut*>(in.data()),
       in.size() * (sizeof(TIn) / sizeof(TOut)),
   };

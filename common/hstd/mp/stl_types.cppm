@@ -2,6 +2,7 @@ module;
 
 #include <array>
 #include <optional>
+#include <span>
 
 export module hstd:mp.stl_types;
 
@@ -21,6 +22,12 @@ inline constexpr auto IsOptional = false;
 export template <typename T>
 inline constexpr auto IsOptional<std::optional<T>> = true;
 
+export template <typename T>
+inline constexpr auto IsSpan = false;
+
+export template <typename T, std::size_t E>
+inline constexpr auto IsSpan<std::span<T, E>> = true;
+
 namespace concepts {
 
 export template <typename T>
@@ -28,6 +35,9 @@ concept Array = IsArray<T>;
 
 export template <typename T>
 concept Optional = IsOptional<T>;
+
+export template <typename T>
+concept Span = IsSpan<T>;
 
 }   // namespace concepts
 

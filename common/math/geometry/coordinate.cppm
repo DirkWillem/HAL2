@@ -32,6 +32,28 @@ class CartesianCoordinate : public Vec<N, R> {
 export template <concepts::Number R = float>
 class PolarCoordinate : public Vec<2, R> {
  public:
+  /** @brief Default constructor. */
+  constexpr PolarCoordinate() noexcept = default;
+  /** @brief Copy constructor. */
+  constexpr PolarCoordinate(const PolarCoordinate&) noexcept = default;
+  /** @brief Move constructor. */
+  constexpr PolarCoordinate(PolarCoordinate&&) noexcept = default;
+  /** @brief Copy assignment operator. */
+  constexpr PolarCoordinate&
+  operator=(const PolarCoordinate&) noexcept = default;
+  /** @brief Move assignment operator. */
+  constexpr PolarCoordinate& operator=(PolarCoordinate&&) noexcept = default;
+  /** @brief Destructor. */
+  constexpr ~PolarCoordinate() noexcept = default;
+
+  /**
+   * @brief Constructor.
+   * @param r Radial component.
+   * @param theta Angular component.
+   */
+  constexpr PolarCoordinate(R r, R theta)
+      : Vec<2, R>{r, theta} {}
+
   /**
    * @brief Returns the radial (\c r) component of the vector.
    *

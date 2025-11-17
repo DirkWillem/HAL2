@@ -547,6 +547,7 @@ class UartImpl
     HAL_UARTEx_ReceiveToIdle_DMA(
         &huart, hstd::ReinterpretSpanMut<uint8_t>(rx_buf).data(),
         rx_buf.size());
+    __HAL_DMA_DISABLE_IT(huart.hdmarx, DMA_IT_HT);
   }
 
   /**

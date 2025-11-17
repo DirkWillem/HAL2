@@ -63,4 +63,16 @@ constexpr auto BytesToInt(std::span<const std::byte> bytes) {
   }
 }
 
+export template <std::floating_point T, std::endian E = std::endian::native>
+constexpr auto BytesToFloat(std::span<const std::byte> bytes) {
+  T result;
+  std::memcpy(&result, bytes.data(), sizeof(T));
+
+  if (E != std::endian::native) {
+    return SwapEndianness(result);
+  } else {
+    return result;
+  }
+}
+
 }   // namespace hstd
