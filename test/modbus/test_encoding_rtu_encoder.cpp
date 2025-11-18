@@ -9,11 +9,13 @@ import hstd;
 import modbus.core;
 import modbus.encoding.rtu;
 
-import testing.helpers;
+import hal2.testing.helpers;
 
 using namespace testing;
 using namespace modbus;
 using namespace modbus::encoding::rtu;
+
+using namespace hal2::testing::helpers;
 
 using namespace hstd::literals;
 
@@ -42,11 +44,10 @@ class RtuEncoder : public Test {
           "Can only create one check buffer per test case"};
     }
 
-    check_buffer_builder = std::make_unique<
-        helpers::BufferBuilder<std::endian::big, std::endian::little>>(
-        check_buffer,
-        helpers::BufferBuilderSettings{.default_crc16_poly = 0xA001,
-                                       .default_crc16_init = 0xFFFF});
+    check_buffer_builder =
+        std::make_unique<BufferBuilder<std::endian::big, std::endian::little>>(
+            check_buffer, BufferBuilderSettings{.default_crc16_poly = 0xA001,
+                                                .default_crc16_init = 0xFFFF});
     return *check_buffer_builder;
   }
 
@@ -54,7 +55,7 @@ class RtuEncoder : public Test {
   std::array<std::byte, 256> buffer{};
 
   std::array<std::byte, 256> check_buffer{};
-  std::unique_ptr<helpers::BufferBuilder<std::endian::big, std::endian::little>>
+  std::unique_ptr<BufferBuilder<std::endian::big, std::endian::little>>
       check_buffer_builder{nullptr};
 };
 

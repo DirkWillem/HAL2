@@ -7,11 +7,11 @@ module;
 #include <optional>
 #include <span>
 
-export module testing.helpers:buffers;
+export module hal2.testing.helpers:buffers;
 
 import hstd;
 
-namespace helpers {
+namespace hal2::testing::helpers {
 
 /** Buffer builder settings */
 export struct BufferBuilderSettings {
@@ -186,4 +186,4 @@ class BufferBuilder {
   BufferBuilderSettings settings;   //!< Buffer builder settings
 };
 
-}   // namespace helpers
+}   // namespace hal2::helpers

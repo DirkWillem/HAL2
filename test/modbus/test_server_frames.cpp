@@ -10,12 +10,14 @@ import modbus.core;
 import modbus.server;
 import modbus.server.spec;
 
-import testing.helpers;
+import hal2.testing.helpers;
 
 using namespace testing;
 
 using namespace modbus;
 using namespace modbus::server;
+
+using namespace hal2::testing::helpers;
 
 using DiscreteInput0 =
     InMemDiscreteInput<spec::DiscreteInput<0x0000, "DiscreteInput1">>;
@@ -293,8 +295,7 @@ TEST_F(ServerFrames, WriteMultipleCoilsToInvalidAddress) {
                                         ExceptionCode::IllegalDataAddress))));
 }
 
-TEST_F(ServerFrames,
-       WriteMultipleCoilsMismatchBetweenValuesAndCoilCount) {
+TEST_F(ServerFrames, WriteMultipleCoilsMismatchBetweenValuesAndCoilCount) {
   std::array<std::byte, 2> coils{};
 
   // Handle frame
@@ -358,7 +359,7 @@ TEST_F(ServerFrames, ReadHoldingRegisterReadFloat) {
 
   // Validate response
   std::array<std::byte, 4> v_check;
-  helpers::BufferBuilder<std::endian::big>{v_check}.Write(v);
+  BufferBuilder<std::endian::big>{v_check}.Write(v);
 
   using Pdu = ReadHoldingRegistersResponse;
   ASSERT_THAT(response, VariantWith<Pdu>(
@@ -380,7 +381,7 @@ TEST_F(ServerFrames, ReadHoldingRegisterReadFloats) {
 
   // Validate response
   std::array<std::byte, arr.size() * sizeof(float)> v_check;
-  helpers::BufferBuilder<std::endian::big>          bb{v_check};
+  BufferBuilder<std::endian::big>                   bb{v_check};
   for (const auto v : arr) {
     bb.Write(v);
   }

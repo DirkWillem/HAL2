@@ -11,19 +11,22 @@ if (NOT TARGET GTest::gtest)
 endif ()
 
 # Test helpers
-add_library(test_helpers)
-target_sources(test_helpers
+add_library(hal2_test_helpers)
+target_sources(hal2_test_helpers
         PUBLIC
         FILE_SET CXX_MODULES
         FILES
         helpers/helpers.cppm
         helpers/matchers.cppm
 
+        helpers/mocks/mock_performance_timer.cppm
+
         helpers/buffer.cppm)
 
-target_link_libraries(test_helpers PUBLIC
+target_link_libraries(hal2_test_helpers PUBLIC
         hstd
         project_settings
+        hal_abstract
 
         GTest::gtest
         GTest::gmock)
@@ -58,6 +61,6 @@ add_executable(hal2_test_modbus
 target_link_libraries(hal2_test_modbus
         PRIVATE
         modbus_encoding_rtu modbus_server
-        test_helpers
+        hal2_test_helpers
         GTest::gtest GTest::gmock GTest::gtest_main)
 add_test(hal2_test_modbus hal2_test_modbus)
