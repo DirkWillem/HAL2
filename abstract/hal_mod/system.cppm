@@ -1,3 +1,8 @@
+module;
+
+#include <concepts>
+#include <cstdint>
+
 export module hal.abstract:system;
 
 import hstd;
@@ -32,6 +37,12 @@ class CriticalSection {
   CriticalSection(CriticalSection&&)                 = delete;
   CriticalSection& operator=(const CriticalSection&) = delete;
   CriticalSection& operator=(CriticalSection&&)      = delete;
+};
+
+export template <typename PT>
+concept PerformanceTimer = requires {
+  PT::Enable();
+  { PT::Get() } -> std::convertible_to<uint32_t>;
 };
 
 }   // namespace hal

@@ -14,7 +14,7 @@ import :clocks;
 namespace stm32h5 {
 
 export class DisableInterruptsCriticalSectionInterface {
-public:
+ public:
   static void Enter() noexcept { __disable_irq(); }
   static void Exit() noexcept { __enable_irq(); }
 };
@@ -29,4 +29,26 @@ export struct BareMetalSystem {
   using AtomicFlag = std::atomic_flag;
 };
 
-}   // namespace stm32g4
+/**
+ * @brief Helper struct for the performance timer.
+ */
+export struct PerformanceTimer {
+  /**
+   * @brief Enables the performance timer.
+   */
+  static void Enable() noexcept {
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CYCCNT = 0;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+  }
+
+  /**
+   * @brief Returns the current amount of cycles, usable for determining
+   * performance.
+   *
+   * @return Current cycle count.
+   */
+  static uint32_t Get() noexcept { return DWT->CYCCNT; }
+};
+
+}   // namespace stm32h5
