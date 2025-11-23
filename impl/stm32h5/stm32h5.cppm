@@ -8,6 +8,7 @@ export import :clocks;
 export import :dma;
 export import :peripherals;
 export import :pin;
+export import :spi;
 export import :system;
 export import :uart;
 

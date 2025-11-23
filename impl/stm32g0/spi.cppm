@@ -307,6 +307,8 @@ using SpiTxDma = DmaChannel<Id, SpiDmaRequest::Tx, Prio>;
 export template <SpiId Id, hal::DmaPriority Prio = hal::DmaPriority::Low>
 using SpiRxDma = DmaChannel<Id, SpiDmaRequest::Rx, Prio>;
 
+
+
 export template <typename Impl, SpiId Id, ClockSettings CS, SpiSettings SS>
   requires(SS.data_size == 8 || SS.data_size == 16)
 class SpiImpl : public hal::UsedPeripheral {

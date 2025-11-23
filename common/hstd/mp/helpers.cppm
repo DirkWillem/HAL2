@@ -119,6 +119,27 @@ Assert(bool check, [[maybe_unused]] std::string_view message) noexcept {
   }
 }
 
+/**
+ * @brief Invokes undefined behavior, because of unimplemented functionality.
+ * @param message Diagnostic message.
+ */
+export consteval void
+Unimplemented([[maybe_unused]] std::string_view message) noexcept {
+  std::unreachable();
+}
+
+/**
+ * @brief Invokes undefined behavior, because of unimplemented functionality.
+ * @param message Diagnostic message.
+ */
+export consteval void
+Unimplemented(bool                              condition,
+              [[maybe_unused]] std::string_view message) noexcept {
+  if (condition) {
+    std::unreachable();
+  }
+}
+
 export template <typename TIn, typename TOut, std::size_t N>
 [[nodiscard]] consteval TOut
 StaticMap(std::equality_comparable_with<TIn> auto value,

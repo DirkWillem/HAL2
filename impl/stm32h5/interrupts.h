@@ -117,4 +117,49 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
   HANDLE_UART_TX_CALLBACK(Uart5)
   HANDLE_UART_TX_CALLBACK(LpUart1)
 }
+
+/**
+ * SPI Interrupts
+ */
+
+#define SPI_IRQ_HANDLER(Name)                                     \
+  void Name##_IRQHandler() {                                      \
+    constexpr auto Inst = stm32h5::SpiIdFromName(#Name);          \
+    if constexpr (hal::IsPeripheralInUse<stm32h5::Spi<Inst>>()) { \
+      stm32h5::Spi<Inst>::instance().HandleInterrupt();           \
+    }                                                             \
+  }
+
+SPI_IRQ_HANDLER(SPI1)
+SPI_IRQ_HANDLER(SPI2)
+SPI_IRQ_HANDLER(SPI3)
+SPI_IRQ_HANDLER(SPI4)
+
+#define HANDLE_SPI_RX_CALLBACK(Inst)                       \
+  if constexpr (hal::IsPeripheralInUse<stm32h5::Inst>()) { \
+    if (hspi == &stm32h5::Inst::instance().hspi) {         \
+      stm32h5::Inst::instance().ReceiveComplete();         \
+    }                                                      \
+  }
+
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef* hspi) {
+  HANDLE_SPI_RX_CALLBACK(Spi1)
+  HANDLE_SPI_RX_CALLBACK(Spi2)
+  HANDLE_SPI_RX_CALLBACK(Spi3)
+  HANDLE_SPI_RX_CALLBACK(Spi4)
+}
+
+#define HANDLE_SPI_TX_CALLBACK(Inst)                       \
+  if constexpr (hal::IsPeripheralInUse<stm32h5::Inst>()) { \
+    if (hspi == &stm32h5::Inst::instance().hspi) {         \
+      stm32h5::Inst::instance().TransmitComplete();        \
+    }                                                      \
+  }
+
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef* hspi) {
+  HANDLE_SPI_TX_CALLBACK(Spi1)
+  HANDLE_SPI_TX_CALLBACK(Spi2)
+  HANDLE_SPI_TX_CALLBACK(Spi3)
+  HANDLE_SPI_TX_CALLBACK(Spi4)
+}
 }

@@ -50,19 +50,60 @@ UartIdFromName(std::string_view name) noexcept {
             }});
 }
 
-export enum SpiId {
-  Spi1,
-  Spi2,
-  Spi3,
-  Spi4,
-};
+export enum class SpiId { Spi1, Spi2, Spi3, Spi4 };
 
 export [[nodiscard]] constexpr SPI_TypeDef* GetSpiPointer(SpiId id) noexcept {
+  using enum SpiId;
+
   switch (id) {
-  case SpiId::Spi1: return SPI1;
-  case SpiId::Spi2: return SPI2;
-  case SpiId::Spi3: return SPI3;
-  case SpiId::Spi4: return SPI4;
+  case Spi1: return SPI1;
+  case Spi2: return SPI2;
+  case Spi3: return SPI3;
+  case Spi4: return SPI4;
+  }
+
+  std::unreachable();
+}
+
+export [[nodiscard]] consteval SpiId
+SpiIdFromName(std::string_view name) noexcept {
+  using enum SpiId;
+
+  if (name == "SPI1") {
+    return Spi1;
+  }
+
+  if (name == "SPI2") {
+    return Spi2;
+  }
+
+  if (name == "SPI3") {
+    return Spi3;
+  }
+
+  if (name == "SPI4") {
+    return Spi4;
+  }
+
+  std::unreachable();
+}
+
+export enum class I2sId { I2s1, I2s2, I2s3 };
+
+export [[nodiscard]] consteval I2sId
+I2sIdFromName(std::string_view name) noexcept {
+  using enum I2sId;
+
+  if (name == "I2S1") {
+    return I2s1;
+  }
+
+  if (name == "I2S2") {
+    return I2s2;
+  }
+
+  if (name == "I2S3") {
+    return I2s3;
   }
 
   std::unreachable();

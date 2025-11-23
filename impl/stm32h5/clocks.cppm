@@ -197,16 +197,51 @@ export inline constexpr SystemClockSettings DefaultSystemClockSettings = {
 
 export struct ClockSettings {
   hstd::hertz         f_hse;
-  PllSource           pll_source = DefaultPllSource;
-  PllsSettings        pll;
-  SysClkSource        sysclk_source = DefaultSysClkSource;
-  SystemClockSettings system_clock_settings;
+  PllSource           pll1_source           = DefaultPllSource;
+  PllSource           pll2_source           = DefaultPllSource;
+  PllSource           pll3_source           = DefaultPllSource;
+  PllsSettings        pll                   = DefaultPllSettings;
+  SysClkSource        sysclk_source         = DefaultSysClkSource;
+  SystemClockSettings system_clock_settings = DefaultSystemClockSettings;
+
+  /**
+   * @brief Returns the HSI (High Speed Internal) clock frequency.
+   * @return HSI Frequency.
+   */
+  [[nodiscard]] consteval hstd::Frequency auto HsiFrequency() const noexcept {
+    return stm32h5::HsiFrequency.As<hstd::Hz>();
+  }
+
+  /**
+   * @brief Returns the HSI48 (High Speed Internal 48 MHz / USB) clock
+   * frequency.
+   * @return HSI Frequency.
+   */
+  [[nodiscard]] consteval hstd::Frequency auto Hsi48Frequency() const noexcept {
+    return stm32h5::Hsi48Frequency.As<hstd::Hz>();
+  }
+
+  /**
+   * @brief Returns the CSI clock frequency.
+   * @return CSI Frequency.
+   */
+  [[nodiscard]] consteval hstd::Frequency auto CsiFrequency() const noexcept {
+    return stm32h5::CsiFrequency.As<hstd::Hz>();
+  }
+
+  /**
+   * @brief Returns the HSE (High Speed External) clock frequency.
+   * @return HSE Frequency.
+   */
+  [[nodiscard]] consteval hstd::Frequency auto HseFrequency() const noexcept {
+    return f_hse.As<hstd::Hz>();
+  }
 
   [[nodiscard]] consteval hstd::Frequency auto
   PllSourceClockFrequency() const noexcept {
-    switch (pll_source) {
-    case PllSource::Hsi: return HsiFrequency.As<hstd::Hz>();
-    case PllSource::Csi: return CsiFrequency.As<hstd::Hz>();
+    switch (pll1_source) {
+    case PllSource::Hsi: return HsiFrequency().As<hstd::Hz>();
+    case PllSource::Csi: return CsiFrequency().As<hstd::Hz>();
     case PllSource::Hse: return f_hse.As<hstd::Hz>();
     }
 
@@ -216,14 +251,68 @@ export struct ClockSettings {
   [[nodiscard]] consteval hstd::Frequency auto
   SysClkSourceClockFrequency() const noexcept {
     switch (sysclk_source) {
-    case SysClkSource::Hsi: return HsiFrequency.As<hstd::Hz>();
-    case SysClkSource::Csi: return CsiFrequency.As<hstd::Hz>();
+    case SysClkSource::Hsi: return HsiFrequency().As<hstd::Hz>();
+    case SysClkSource::Csi: return CsiFrequency().As<hstd::Hz>();
     case SysClkSource::Hse: return f_hse.As<hstd::Hz>();
     case SysClkSource::Pll:
       return pll.pll1.OutputP(PllSourceClockFrequency()).As<hstd::Hz>();
     }
 
     std::unreachable();
+  }
+
+  /**
+   * @brief Returns the frequency of the clock feeding PLL1.
+   *
+   * @return Source clock frequency of PLL1.
+   */
+  [[nodiscard]] consteval hstd::Frequency auto
+  Pll1SourceClockFrequency() const noexcept {
+    switch (pll1_source) {
+    case PllSource::Hsi: return HsiFrequency().As<hstd::Hz>();
+    case PllSource::Csi: return CsiFrequency().As<hstd::Hz>();
+    case PllSource::Hse: return f_hse.As<hstd::Hz>();
+    default: std::unreachable();
+    }
+  }
+
+  /**
+   * @brief Returns the frequency of the clock feeding PLL2.
+   *
+   * @return Source clock frequency of PLL2.
+   */
+  [[nodiscard]] consteval hstd::Frequency auto
+  Pll2SourceClockFrequency() const noexcept {
+    switch (pll2_source) {
+    case PllSource::Hsi: return HsiFrequency().As<hstd::Hz>();
+    case PllSource::Csi: return CsiFrequency().As<hstd::Hz>();
+    case PllSource::Hse: return f_hse.As<hstd::Hz>();
+    default: std::unreachable();
+    }
+  }
+
+  /**
+   * @brief Returns the frequency of the clock feeding PLL3.
+   *
+   * @return Source clock frequency of PLL3.
+   */
+  [[nodiscard]] consteval hstd::Frequency auto
+  Pll3SourceClockFrequency() const noexcept {
+    switch (pll3_source) {
+    case PllSource::Hsi: return HsiFrequency().As<hstd::Hz>();
+    case PllSource::Csi: return CsiFrequency().As<hstd::Hz>();
+    case PllSource::Hse: return f_hse.As<hstd::Hz>();
+    default: std::unreachable();
+    }
+  }
+
+  /**
+   * @brief Returns the HCLK (AHB) frequency.
+   * @return HCLK frequency.
+   */
+  [[nodiscard]] consteval hstd::Frequency auto HclkFrequency() const noexcept {
+    return (SysClkSourceClockFrequency() / system_clock_settings.ahb_prescaler)
+        .As<hstd::Hz>();
   }
 
   [[nodiscard]] consteval bool Validate() const noexcept {
@@ -238,7 +327,7 @@ export struct ClockSettings {
 
 export inline constexpr ClockSettings DefaultClockSettings{
     .f_hse                 = (25_MHz).As<hstd::Hz>(),
-    .pll_source            = PllSource::Hsi,
+    .pll1_source           = PllSource::Hsi,
     .pll                   = DefaultPllSettings,
     .sysclk_source         = SysClkSource::Pll,
     .system_clock_settings = DefaultSystemClockSettings,
@@ -415,7 +504,7 @@ bool ConfigurePowerAndClocks() noexcept {
   if constexpr (CS.pll.pll1.enable) {
     osc_init.PLL = {
         .PLLState  = RCC_PLL_ON,
-        .PLLSource = static_cast<uint32_t>(CS.pll_source),
+        .PLLSource = static_cast<uint32_t>(CS.pll1_source),
         .PLLM      = CS.pll.pll1.m,
         .PLLN      = CS.pll.pll1.n,
         .PLLP      = CS.pll.pll1.p,

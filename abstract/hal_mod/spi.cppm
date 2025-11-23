@@ -110,6 +110,16 @@ concept AsyncTxSpiMaster = SpiMaster<Impl> && requires(Impl& impl) {
 };
 
 export template <typename Impl>
+concept RtosTxSpiMaster = SpiMaster<Impl> && requires(Impl& impl) {
+  requires SpiTransmitEnabled(Impl::TransmissionType);
+
+  {
+    impl.Transmit(std::declval<std::span<const typename Impl::Data>>(),
+                  std::declval<std::chrono::milliseconds>())
+  } -> std::convertible_to<bool>;
+};
+
+export template <typename Impl>
 concept BlockingTxSpiMaster = SpiMaster<Impl> && requires(Impl& impl) {
   requires Impl::TransmissionType != SpiTransmissionType::TxOnly;
 
