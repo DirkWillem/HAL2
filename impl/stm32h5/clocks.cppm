@@ -491,7 +491,7 @@ bool ConfigurePowerAndClocks() noexcept {
       .HSEState            = RCC_HSE_OFF,
       .LSEState            = RCC_LSE_OFF,
       .HSIState            = RCC_HSI_ON,
-      .HSIDiv              = RCC_HSI_DIV2,
+      .HSIDiv              = RCC_HSI_DIV1,
       .HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT,
       .LSIState            = RCC_LSI_OFF,
       .CSIState            = RCC_CSI_OFF,

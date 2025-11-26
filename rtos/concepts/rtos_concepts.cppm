@@ -19,6 +19,9 @@ concept EventGroup = requires(EG& eg) {
   eg.SetBits(std::declval<uint32_t>());
   eg.SetBitsFromInterrupt(std::declval<uint32_t>());
 
+  { eg.ClearBits(std::declval<uint32_t>()) } -> std::convertible_to<uint32_t>;
+  { eg.ReadBits() } -> std::convertible_to<uint32_t>;
+
   eg.Wait(std::declval<uint32_t>(), std::declval<std::chrono::milliseconds>(),
           std::declval<bool>(), std::declval<bool>());
 };

@@ -68,7 +68,7 @@ ToHalMasterDirection(const hal::SpiTransmissionType tt) noexcept {
 
 [[nodiscard]] constexpr uint32_t ToHalDataSize(unsigned size) noexcept {
   // ReSharper disable once CppRedundantParentheses
-  return (size - 1) << 8U;
+  return (size - 1);
 }
 
 /**
@@ -121,8 +121,9 @@ class SpiImplBase<SpiOperatingMode::DmaRtos, OS> {
 
 template <typename T, SpiSettings SS>
 concept SpiData =
-    std::is_same_v<T, std::conditional_t<(SS.data_size > 8), uint16_t, uint8_t>>
-    || (SS.data_size == 8 && std::is_same_v<T, std::byte>);
+    std::is_same_v<std::remove_cvref_t<T>,
+                   std::conditional_t<(SS.data_size > 8), uint16_t, uint8_t>>
+    || (SS.data_size == 8 && std::is_same_v<std::remove_cvref_t<T>, std::byte>);
 
 /**
  * @brief SPI peripheral implementation.
@@ -140,6 +141,9 @@ class SpiImpl
     : public hal::UsedPeripheral
     , SpiImplBase<SS.operating_mode, Rest...> {
   using PinoutHelper = SpiPinoutHelper<Id, SS>;
+
+  friend void ::HAL_SPI_RxCpltCallback(SPI_HandleTypeDef*);
+  friend void ::HAL_SPI_TxCpltCallback(SPI_HandleTypeDef*);
 
  public:
   static constexpr auto Mode = SS.mode;   //!< SPI mode.
@@ -230,8 +234,8 @@ class SpiImpl
    * transmitted.
    */
   template <SpiData<SS> D>
-  void
-  Transmit(std::span<const Data>                                 buffer,
+  bool
+  Transmit(std::span<D>                                          buffer,
            typename SpiImplBase<SS.operating_mode, Rest...>::EG& event_group,
            uint32_t                                              bitmask)
     requires(SS.operating_mode == SpiOperatingMode::DmaRtos)
@@ -239,9 +243,10 @@ class SpiImpl
     SpiImplBase<SS.operating_mode, Rest...>::tx_event_group =
         std::make_pair(&event_group, bitmask);
 
-    HAL_SPI_Transmit_DMA(&hspi,
-                         hstd::ReinterpretSpan<const uint8_t>(buffer).data(),
-                         buffer.size_bytes());
+    return HAL_SPI_Transmit_DMA(
+               &hspi, hstd::ReinterpretSpan<const uint8_t>(buffer).data(),
+               buffer.size_bytes())
+           == HAL_OK;
   }
 
  protected:
@@ -254,6 +259,7 @@ class SpiImpl
     requires(SS.operating_mode == SpiOperatingMode::Poll)
   {
     PinoutHelper::SetupPins(pinout);
+    EnablePeripheralClock();
     SetupSpiMaster();
   }
 
@@ -274,7 +280,13 @@ class SpiImpl
 
     // Set up pins and SPI master
     PinoutHelper::SetupPins(pinout);
-    SetupSpiMaster();
+    if (!SetupSourceClock()) {
+      while (true) {}
+    }
+    EnablePeripheralClock();
+    if (!SetupSpiMaster()) {
+      while (true) {}
+    }
 
     // Setup Tx and Rx DMA channels
     if constexpr (hal::SpiTransmitEnabled(SS.transmission_type)) {
@@ -295,6 +307,46 @@ class SpiImpl
     // Enable SPI interrupts.
     EnableSpiInterrupt();
   }
+
+  /**
+   * @brief Receive complete callback.
+   */
+  void ReceiveComplete() noexcept {
+    // Handle DMA+RTOS callback through event group.
+    if constexpr (SS.operating_mode == SpiOperatingMode::DmaRtos) {
+      auto& [eg, bitmask] =
+          SpiImplBase<SS.operating_mode, Rest...>::rx_event_group;
+      eg->SetBitsFromInterrupt(bitmask);
+    }
+
+    // Handle DMA callback through SpiReceiveCallback.
+    if constexpr (SS.operating_mode == SpiOperatingMode::Dma) {
+      if constexpr (hal::AsyncRxSpiMaster<Impl>) {
+        static_cast<SpiImpl*>(this)->SpiReceiveCallback();
+      }
+    }
+  }
+
+  /**
+   * @brief Transmit complete calback.
+   */
+  void TransmitComplete() noexcept {
+    // Handle DMA+RTOS callback through event group.
+    if constexpr (SS.operating_mode == SpiOperatingMode::DmaRtos) {
+      auto& [eg, bitmask] =
+          SpiImplBase<SS.operating_mode, Rest...>::tx_event_group;
+      eg->SetBitsFromInterrupt(bitmask);
+    }
+
+    // Handle DMA callback through SpiReceiveCallback.
+    if constexpr (SS.operating_mode == SpiOperatingMode::Dma) {
+      if constexpr (hal::AsyncTxSpiMaster<Impl>) {
+        static_cast<SpiImpl*>(this)->SpiTransmitCallback();
+      }
+    }
+  }
+
+  SPI_HandleTypeDef hspi{};
 
  private:
   /**
@@ -390,7 +442,7 @@ class SpiImpl
   /**
    * @brief Enables the clock to the SPI peripheral.
    */
-  static void EnablePerihperalClock() noexcept {
+  static void EnablePeripheralClock() noexcept {
     using enum SpiId;
 
     if constexpr (Id == Spi1) {
@@ -413,6 +465,66 @@ class SpiImpl
 #endif
   }
 
+  bool SetupSourceClock() {
+    using enum SpiSourceClock;
+
+    if constexpr (Id == SpiId::Spi1) {
+      RCC_PeriphCLKInitTypeDef init = {
+          .PeriphClockSelection = RCC_PERIPHCLK_SPI1,
+      };
+
+      hstd::Unimplemented(SS.source_clock == AudioClk || SS.source_clock == Per,
+                          "AUDIOCLK en PER source clocks");
+
+      switch (SS.source_clock) {
+      case Pll1Q: init.Spi1ClockSelection = RCC_SPI1CLKSOURCE_PLL1Q; break;
+      case Pll2P: init.Spi1ClockSelection = RCC_SPI1CLKSOURCE_PLL2P; break;
+      case Pll3P: init.Spi1ClockSelection = RCC_SPI1CLKSOURCE_PLL3P; break;
+      default: break;
+      }
+
+      return HAL_RCCEx_PeriphCLKConfig(&init) == HAL_OK;
+    }
+
+    if constexpr (Id == SpiId::Spi2) {
+      RCC_PeriphCLKInitTypeDef init = {
+        .PeriphClockSelection = RCC_PERIPHCLK_SPI2,
+    };
+
+      hstd::Unimplemented(SS.source_clock == AudioClk || SS.source_clock == Per,
+                          "AUDIOCLK en PER source clocks");
+
+      switch (SS.source_clock) {
+      case Pll1Q: init.Spi2ClockSelection = RCC_SPI2CLKSOURCE_PLL1Q; break;
+      case Pll2P: init.Spi2ClockSelection = RCC_SPI2CLKSOURCE_PLL2P; break;
+      case Pll3P: init.Spi2ClockSelection = RCC_SPI2CLKSOURCE_PLL3P; break;
+      default: break;
+      }
+
+      return HAL_RCCEx_PeriphCLKConfig(&init) == HAL_OK;
+    }
+
+    if constexpr (Id == SpiId::Spi3) {
+      RCC_PeriphCLKInitTypeDef init = {
+        .PeriphClockSelection = RCC_PERIPHCLK_SPI3,
+    };
+
+      hstd::Unimplemented(SS.source_clock == AudioClk || SS.source_clock == Per,
+                          "AUDIOCLK en PER source clocks");
+
+      switch (SS.source_clock) {
+      case Pll1Q: init.Spi3ClockSelection = RCC_SPI3CLKSOURCE_PLL1Q; break;
+      case Pll2P: init.Spi3ClockSelection = RCC_SPI3CLKSOURCE_PLL2P; break;
+      case Pll3P: init.Spi3ClockSelection = RCC_SPI3CLKSOURCE_PLL3P; break;
+      default: break;
+      }
+
+      return HAL_RCCEx_PeriphCLKConfig(&init) == HAL_OK;
+    }
+
+    std::unreachable();
+  }
+
   bool SetupSpiMaster() noexcept {
     constexpr auto Presc = FindPrescalerValue();
 
@@ -432,47 +544,10 @@ class SpiImpl
             .CRCLength         = SPI_CRC_LENGTH_DATASIZE,
             .NSSPMode          = SPI_NSS_PULSE_DISABLE,
             .NSSPolarity       = SPI_NSS_POLARITY_LOW,
+            .FifoThreshold     = SPI_FIFO_THRESHOLD_01DATA,
     };
 
     return HAL_SPI_Init(&hspi) == HAL_OK;
-  }
-
-  /**
-   * @brief Receive complete callback.
-   */
-  void ReceiveComplete() noexcept {
-    // Handle DMA+RTOS callback through event group.
-    if constexpr (SS.operating_mode == SpiOperatingMode::DmaRtos) {
-      auto& [eg, bitmask] =
-          SpiImplBase<SS.operating_mode, Rest...>::rx_event_group;
-      eg->SetBitsFromInterrupt(bitmask);
-    }
-
-    // Handle DMA callback through SpiReceiveCallback.
-    if constexpr (SS.operating_mode == SpiOperatingMode::Dma) {
-      if constexpr (hal::AsyncRxSpiMaster<Impl>) {
-        static_cast<SpiImpl*>(this)->SpiReceiveCallback();
-      }
-    }
-  }
-
-  /**
-   * @brief Transmit complete calback.
-   */
-  void TransmitComplete() noexcept {
-    // Handle DMA+RTOS callback through event group.
-    if constexpr (SS.operating_mode == SpiOperatingMode::DmaRtos) {
-      auto& [eg, bitmask] =
-          SpiImplBase<SS.operating_mode, Rest...>::tx_event_group;
-      eg->SetBitsFromInterrupt(bitmask);
-    }
-
-    // Handle DMA callback through SpiReceiveCallback.
-    if constexpr (SS.operating_mode == SpiOperatingMode::Dma) {
-      if constexpr (hal::AsyncTxSpiMaster<Impl>) {
-        static_cast<SpiImpl*>(this)->SpiTransmitCallback();
-      }
-    }
   }
 
   /**
@@ -481,8 +556,6 @@ class SpiImpl
   static void EnableSpiInterrupt() noexcept {
     EnableInterrupt<GetIrqn(Id), Impl>();
   }
-
-  SPI_HandleTypeDef hspi{};
 };
 
 export template <SpiId Id>
