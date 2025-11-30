@@ -119,6 +119,101 @@ class SpiImplBase<SpiOperatingMode::DmaRtos, OS> {
   DMA_HandleTypeDef* hdma_rx{};
 };
 
+export template <SpiId Id>
+void EnableSpiClock() noexcept {
+  using enum SpiId;
+
+  if constexpr (Id == Spi1) {
+    __HAL_RCC_SPI1_CLK_ENABLE();
+    return;
+  }
+  if constexpr (Id == Spi2) {
+    __HAL_RCC_SPI2_CLK_ENABLE();
+    return;
+  }
+  if constexpr (Id == Spi3) {
+    __HAL_RCC_SPI3_CLK_ENABLE();
+    return;
+  }
+#ifdef SPI4
+  if constexpr (Id == Spi4) {
+    __HAL_RCC_SPI4_CLK_ENABLE();
+    return;
+  }
+#endif
+}
+
+export template <SpiId Id, SpiSourceClock SC>
+bool SetupSourceClock() {
+  using enum SpiSourceClock;
+
+  if constexpr (Id == SpiId::Spi1) {
+    RCC_PeriphCLKInitTypeDef init = {
+        .PeriphClockSelection = RCC_PERIPHCLK_SPI1,
+    };
+
+    hstd::Unimplemented(SC == AudioClk || SC == Per,
+                        "AUDIOCLK en PER source clocks");
+
+    switch (SC) {
+    case Pll1Q: init.Spi1ClockSelection = RCC_SPI1CLKSOURCE_PLL1Q; break;
+    case Pll2P: init.Spi1ClockSelection = RCC_SPI1CLKSOURCE_PLL2P; break;
+    case Pll3P: init.Spi1ClockSelection = RCC_SPI1CLKSOURCE_PLL3P; break;
+    default: break;
+    }
+
+    return HAL_RCCEx_PeriphCLKConfig(&init) == HAL_OK;
+  }
+
+  if constexpr (Id == SpiId::Spi2) {
+    RCC_PeriphCLKInitTypeDef init = {
+        .PeriphClockSelection = RCC_PERIPHCLK_SPI2,
+    };
+
+    hstd::Unimplemented(SC == AudioClk || SC == Per,
+                        "AUDIOCLK en PER source clocks");
+
+    switch (SC) {
+    case Pll1Q: init.Spi2ClockSelection = RCC_SPI2CLKSOURCE_PLL1Q; break;
+    case Pll2P: init.Spi2ClockSelection = RCC_SPI2CLKSOURCE_PLL2P; break;
+    case Pll3P: init.Spi2ClockSelection = RCC_SPI2CLKSOURCE_PLL3P; break;
+    default: break;
+    }
+
+    return HAL_RCCEx_PeriphCLKConfig(&init) == HAL_OK;
+  }
+
+  if constexpr (Id == SpiId::Spi3) {
+    RCC_PeriphCLKInitTypeDef init = {
+        .PeriphClockSelection = RCC_PERIPHCLK_SPI3,
+    };
+
+    hstd::Unimplemented(SC == AudioClk || SC == Per,
+                        "AUDIOCLK en PER source clocks");
+
+    switch (SC) {
+    case Pll1Q: init.Spi3ClockSelection = RCC_SPI3CLKSOURCE_PLL1Q; break;
+    case Pll2P: init.Spi3ClockSelection = RCC_SPI3CLKSOURCE_PLL2P; break;
+    case Pll3P: init.Spi3ClockSelection = RCC_SPI3CLKSOURCE_PLL3P; break;
+    default: break;
+    }
+
+    return HAL_RCCEx_PeriphCLKConfig(&init) == HAL_OK;
+  }
+
+  std::unreachable();
+}
+
+/**
+ * @brief Enables the SPI interrupt.
+ * @tparam Id ID of the SPI to enable the interrupt of.
+ * @tparam Impl Peripheral implementation type.
+ */
+export template <SpiId Id, typename Impl>
+void EnableSpiInterrupt() noexcept {
+  EnableInterrupt<GetIrqn(Id), Impl>();
+}
+
 template <typename T, SpiSettings SS>
 concept SpiData =
     std::is_same_v<std::remove_cvref_t<T>,
@@ -259,7 +354,7 @@ class SpiImpl
     requires(SS.operating_mode == SpiOperatingMode::Poll)
   {
     PinoutHelper::SetupPins(pinout);
-    EnablePeripheralClock();
+    EnableSpiClock<Id>();
     SetupSpiMaster();
   }
 
@@ -280,10 +375,10 @@ class SpiImpl
 
     // Set up pins and SPI master
     PinoutHelper::SetupPins(pinout);
-    if (!SetupSourceClock()) {
+    if (!SetupSourceClock<Id, SS.source_clock>()) {
       while (true) {}
     }
-    EnablePeripheralClock();
+    EnableSpiClock<Id>();
     if (!SetupSpiMaster()) {
       while (true) {}
     }
@@ -305,7 +400,7 @@ class SpiImpl
     }
 
     // Enable SPI interrupts.
-    EnableSpiInterrupt();
+    EnableSpiInterrupt<Id, Impl>();
   }
 
   /**
@@ -439,92 +534,6 @@ class SpiImpl
     return best_prescale;
   }
 
-  /**
-   * @brief Enables the clock to the SPI peripheral.
-   */
-  static void EnablePeripheralClock() noexcept {
-    using enum SpiId;
-
-    if constexpr (Id == Spi1) {
-      __HAL_RCC_SPI1_CLK_ENABLE();
-      return;
-    }
-    if constexpr (Id == Spi2) {
-      __HAL_RCC_SPI2_CLK_ENABLE();
-      return;
-    }
-    if constexpr (Id == Spi3) {
-      __HAL_RCC_SPI3_CLK_ENABLE();
-      return;
-    }
-#ifdef SPI4
-    if constexpr (Id == Spi4) {
-      __HAL_RCC_SPI4_CLK_ENABLE();
-      return;
-    }
-#endif
-  }
-
-  bool SetupSourceClock() {
-    using enum SpiSourceClock;
-
-    if constexpr (Id == SpiId::Spi1) {
-      RCC_PeriphCLKInitTypeDef init = {
-          .PeriphClockSelection = RCC_PERIPHCLK_SPI1,
-      };
-
-      hstd::Unimplemented(SS.source_clock == AudioClk || SS.source_clock == Per,
-                          "AUDIOCLK en PER source clocks");
-
-      switch (SS.source_clock) {
-      case Pll1Q: init.Spi1ClockSelection = RCC_SPI1CLKSOURCE_PLL1Q; break;
-      case Pll2P: init.Spi1ClockSelection = RCC_SPI1CLKSOURCE_PLL2P; break;
-      case Pll3P: init.Spi1ClockSelection = RCC_SPI1CLKSOURCE_PLL3P; break;
-      default: break;
-      }
-
-      return HAL_RCCEx_PeriphCLKConfig(&init) == HAL_OK;
-    }
-
-    if constexpr (Id == SpiId::Spi2) {
-      RCC_PeriphCLKInitTypeDef init = {
-        .PeriphClockSelection = RCC_PERIPHCLK_SPI2,
-    };
-
-      hstd::Unimplemented(SS.source_clock == AudioClk || SS.source_clock == Per,
-                          "AUDIOCLK en PER source clocks");
-
-      switch (SS.source_clock) {
-      case Pll1Q: init.Spi2ClockSelection = RCC_SPI2CLKSOURCE_PLL1Q; break;
-      case Pll2P: init.Spi2ClockSelection = RCC_SPI2CLKSOURCE_PLL2P; break;
-      case Pll3P: init.Spi2ClockSelection = RCC_SPI2CLKSOURCE_PLL3P; break;
-      default: break;
-      }
-
-      return HAL_RCCEx_PeriphCLKConfig(&init) == HAL_OK;
-    }
-
-    if constexpr (Id == SpiId::Spi3) {
-      RCC_PeriphCLKInitTypeDef init = {
-        .PeriphClockSelection = RCC_PERIPHCLK_SPI3,
-    };
-
-      hstd::Unimplemented(SS.source_clock == AudioClk || SS.source_clock == Per,
-                          "AUDIOCLK en PER source clocks");
-
-      switch (SS.source_clock) {
-      case Pll1Q: init.Spi3ClockSelection = RCC_SPI3CLKSOURCE_PLL1Q; break;
-      case Pll2P: init.Spi3ClockSelection = RCC_SPI3CLKSOURCE_PLL2P; break;
-      case Pll3P: init.Spi3ClockSelection = RCC_SPI3CLKSOURCE_PLL3P; break;
-      default: break;
-      }
-
-      return HAL_RCCEx_PeriphCLKConfig(&init) == HAL_OK;
-    }
-
-    std::unreachable();
-  }
-
   bool SetupSpiMaster() noexcept {
     constexpr auto Presc = FindPrescalerValue();
 
@@ -548,13 +557,6 @@ class SpiImpl
     };
 
     return HAL_SPI_Init(&hspi) == HAL_OK;
-  }
-
-  /**
-   * @brief Enables the SPI interrupt.
-   */
-  static void EnableSpiInterrupt() noexcept {
-    EnableInterrupt<GetIrqn(Id), Impl>();
   }
 };
 

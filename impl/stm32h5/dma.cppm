@@ -3,6 +3,8 @@ module;
 #include <utility>
 
 #include <stm32h5xx_hal.h>
+#include <stm32h5xx_hal_dma.h>
+#include <stm32h5xx_hal_dma_ex.h>
 
 export module hal.stm32h5:dma;
 
@@ -189,13 +191,20 @@ struct DmaChannelId {
   static constexpr auto Request    = Req;
 };
 
+export template <typename LL = int>
+struct LinkedListConfig {
+  bool enable_linked_list   = false;
+  bool enable_circular_mode = false;
+};
+
 /**
  * DMA channel definition.
  * @tparam Periph Channel peripheral.
  * @tparam Req Channel request type.
  * @tparam Prio Channel priority.
  */
-template <auto Periph, auto Req, hal::DmaPriority Prio = hal::DmaPriority::Low>
+template <auto Periph, auto Req, hal::DmaPriority Prio = hal::DmaPriority::Low,
+          LinkedListConfig LLC = {}>
 struct DmaChannel {
   static constexpr auto Peripheral = Periph;
   static constexpr auto Request    = Req;
@@ -208,6 +217,11 @@ class DmaImpl;
 export template <typename Impl, hal::DmaChannel... Channels>
 class DmaImpl<Impl, hal::DmaChannels<Channels...>>
     : public hal::UsedPeripheral {
+  struct LinkedList {
+    DMA_NodeTypeDef  node;
+    DMA_QListTypeDef list;
+  };
+
 #if defined(STM32H533xx)
   static constexpr auto NGpDma1Channels = 8u;
   static constexpr auto NGpDma2Channels = 8u;
@@ -280,6 +294,7 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
                hal::DmaDataWidth mem_data_width, bool mem_inc) noexcept {
     constexpr auto     Idx  = ChanList::template DmaChannelIndex<Chan>();
     DMA_HandleTypeDef& hdma = hdmas[Idx];
+    LinkedList&        ll   = linked_list_cfgs[Idx];
 
     hdma.Instance = DmaChannel<Chan>();
     const auto src_inc =
@@ -295,23 +310,83 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
                                ? periph_data_width
                                : mem_data_width;
 
-    hdma.Init = {
-        .Request       = GetDmaRequestId(Chan::Peripheral, Chan::Request),
-        .BlkHWRequest  = DMA_BREQ_SINGLE_BURST,
-        .Direction     = ToHalDmaDirection(dir),
-        .SrcInc        = src_inc ? DMA_SINC_INCREMENTED : DMA_SINC_FIXED,
-        .DestInc       = dst_inc ? DMA_DINC_INCREMENTED : DMA_DINC_FIXED,
-        .SrcDataWidth  = ToHalSrcDataWidth(src_width),
-        .DestDataWidth = ToHalDstDataWidth(dst_width),
-        .Priority =
-            ToHalDmaPriority(ChanList::template DmaChannelPriority<Chan>()),
-        .SrcBurstLength        = 1,
-        .DestBurstLength       = 1,
-        .TransferAllocatedPort = 0,
-        .TransferEventMode     = 0,
-        .Mode                  = ToHalDmaMode(mode),
-    };
-    HAL_DMA_Init(&hdma);
+    if (mode == hal::DmaMode::Normal) {
+      hdma.Init = {
+          .Request       = GetDmaRequestId(Chan::Peripheral, Chan::Request),
+          .BlkHWRequest  = DMA_BREQ_SINGLE_BURST,
+          .Direction     = ToHalDmaDirection(dir),
+          .SrcInc        = src_inc ? DMA_SINC_INCREMENTED : DMA_SINC_FIXED,
+          .DestInc       = dst_inc ? DMA_DINC_INCREMENTED : DMA_DINC_FIXED,
+          .SrcDataWidth  = ToHalSrcDataWidth(src_width),
+          .DestDataWidth = ToHalDstDataWidth(dst_width),
+          .Priority =
+              ToHalDmaPriority(ChanList::template DmaChannelPriority<Chan>()),
+          .SrcBurstLength        = 1,
+          .DestBurstLength       = 1,
+          .TransferAllocatedPort = 0,
+          .TransferEventMode     = 0,
+          .Mode                  = DMA_NORMAL,
+      };
+      HAL_DMA_Init(&hdma);
+    }
+    if (mode == hal::DmaMode::Circular) {
+      DMA_NodeConfTypeDef node_config = {
+          .NodeType = DMA_GPDMA_LINEAR_NODE,
+          .Init =
+              {
+                  .Request = GetDmaRequestId(Chan::Peripheral, Chan::Request),
+                  .BlkHWRequest = DMA_BREQ_SINGLE_BURST,
+                  .Direction    = ToHalDmaDirection(dir),
+                  .SrcInc  = src_inc ? DMA_SINC_INCREMENTED : DMA_SINC_FIXED,
+                  .DestInc = dst_inc ? DMA_DINC_INCREMENTED : DMA_DINC_FIXED,
+                  .SrcDataWidth  = ToHalSrcDataWidth(src_width),
+                  .DestDataWidth = ToHalDstDataWidth(dst_width),
+                  .SrcBurstLength        = 1,
+                  .DestBurstLength       = 1,
+                  .TransferAllocatedPort = 0,
+                  .TransferEventMode     = 0,
+                  .Mode                  = DMA_NORMAL,
+              },
+          .TriggerConfig =
+              {
+                  .TriggerPolarity = DMA_TRIG_POLARITY_MASKED,
+              },
+          .DataHandlingConfig =
+              {
+                  .DataExchange  = DMA_EXCHANGE_NONE,
+                  .DataAlignment = DMA_DATA_RIGHTALIGN_ZEROPADDED,
+              },
+      };
+
+      if (HAL_DMAEx_List_BuildNode(&node_config, &ll.node) != HAL_OK) {
+        while (true) {}
+      }
+      if (HAL_DMAEx_List_InsertNode(&ll.list, nullptr, &ll.node) != HAL_OK) {
+        while (true) {}
+      }
+      if (HAL_DMAEx_List_SetCircularMode(&ll.list) != HAL_OK) {
+        while (true);
+      }
+
+      hdma.InitLinkedList = {
+        .Priority      = ToHalDmaPriority(
+                      ChanList::template DmaChannelPriority<Chan>()),
+        .LinkStepMode = DMA_LSM_FULL_EXECUTION,
+        .LinkAllocatedPort = DMA_LINK_ALLOCATED_PORT0,
+        .TransferEventMode=DMA_TCEM_BLOCK_TRANSFER,
+        .LinkedListMode = DMA_LINKEDLIST_CIRCULAR
+      };
+
+      if (HAL_DMAEx_List_Init(&hdma) != HAL_OK) {
+        while (true) {}
+      }
+
+      if (HAL_DMAEx_List_LinkQ(&hdma, &ll.list) != HAL_OK) {
+        while (true) {}
+      }
+
+      // if (HAL_DMAEx_List_BuildNode());
+    }
 
     return hdma;
   }
@@ -361,6 +436,7 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
   }
 
   std::array<DMA_HandleTypeDef, sizeof...(Channels)> hdmas{};
+  std::array<LinkedList, sizeof...(Channels)>        linked_list_cfgs{};
 };
 
 export struct DmaImplMarker {};

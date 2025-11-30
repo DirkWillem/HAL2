@@ -332,11 +332,14 @@ function(add_stm32h5_hal VARIANT XMLFILE)
             PUBLIC
             FILE_SET CXX_MODULES
             FILES
+            stm32h5/internal/i2s_config.cppm
+            stm32h5/internal/i2s_pinout.cppm
             stm32h5/internal/spi_config.cppm
             stm32h5/internal/spi_pinout.cppm
 
             stm32h5/clocks.cppm
             stm32h5/dma.cppm
+            stm32h5/i2s.cppm
             stm32h5/nvic.cppm
             stm32h5/peripherals.cppm
             stm32h5/pin.cppm

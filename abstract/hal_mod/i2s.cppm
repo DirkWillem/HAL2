@@ -1,3 +1,8 @@
+module;
+
+#include <cstdint>
+#include <span>
+
 export module hal.abstract:i2s;
 
 namespace hal {
@@ -32,5 +37,19 @@ export enum class I2sOperatingMode { Poll, Dma, DmaCircular };
  * I2S clock polarity
  */
 export enum class I2sClockPolarity { Low, High };
+
+/**
+ * @brief Concept describing a I2S receiving master running in an RTOS app.
+ *
+ * @tparam Impl Implementing type
+ */
+export template <typename Impl, typename Rtos>
+concept RtosRxI2sMaster = requires(Impl& impl) {
+  {
+    impl.Receive(std::declval<std::span<uint16_t>>(),
+                 std::declval<typename Rtos::EventGroup&>(),
+                 std::declval<uint32_t>(), std::declval<uint32_t>())
+  };
+};
 
 }   // namespace hal

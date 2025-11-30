@@ -4,6 +4,7 @@ module;
 #include <utility>
 
 #include <stm32h5xx_hal.h>
+#include <stm32h5xx_hal_rcc_ex.h>
 #include <stm32h5xx_ll_rcc.h>
 
 export module hal.stm32h5:clocks;
@@ -238,8 +239,30 @@ export struct ClockSettings {
   }
 
   [[nodiscard]] consteval hstd::Frequency auto
-  PllSourceClockFrequency() const noexcept {
+  Pll1SourceClockFrequency() const noexcept {
     switch (pll1_source) {
+    case PllSource::Hsi: return HsiFrequency().As<hstd::Hz>();
+    case PllSource::Csi: return CsiFrequency().As<hstd::Hz>();
+    case PllSource::Hse: return f_hse.As<hstd::Hz>();
+    }
+
+    std::unreachable();
+  }
+
+  [[nodiscard]] consteval hstd::Frequency auto
+  Pll2SourceClockFrequency() const noexcept {
+    switch (pll2_source) {
+    case PllSource::Hsi: return HsiFrequency().As<hstd::Hz>();
+    case PllSource::Csi: return CsiFrequency().As<hstd::Hz>();
+    case PllSource::Hse: return f_hse.As<hstd::Hz>();
+    }
+
+    std::unreachable();
+  }
+
+  [[nodiscard]] consteval hstd::Frequency auto
+  Pll3SourceClockFrequency() const noexcept {
+    switch (pll3_source) {
     case PllSource::Hsi: return HsiFrequency().As<hstd::Hz>();
     case PllSource::Csi: return CsiFrequency().As<hstd::Hz>();
     case PllSource::Hse: return f_hse.As<hstd::Hz>();
@@ -255,55 +278,10 @@ export struct ClockSettings {
     case SysClkSource::Csi: return CsiFrequency().As<hstd::Hz>();
     case SysClkSource::Hse: return f_hse.As<hstd::Hz>();
     case SysClkSource::Pll:
-      return pll.pll1.OutputP(PllSourceClockFrequency()).As<hstd::Hz>();
+      return pll.pll1.OutputP(Pll1SourceClockFrequency()).As<hstd::Hz>();
     }
 
     std::unreachable();
-  }
-
-  /**
-   * @brief Returns the frequency of the clock feeding PLL1.
-   *
-   * @return Source clock frequency of PLL1.
-   */
-  [[nodiscard]] consteval hstd::Frequency auto
-  Pll1SourceClockFrequency() const noexcept {
-    switch (pll1_source) {
-    case PllSource::Hsi: return HsiFrequency().As<hstd::Hz>();
-    case PllSource::Csi: return CsiFrequency().As<hstd::Hz>();
-    case PllSource::Hse: return f_hse.As<hstd::Hz>();
-    default: std::unreachable();
-    }
-  }
-
-  /**
-   * @brief Returns the frequency of the clock feeding PLL2.
-   *
-   * @return Source clock frequency of PLL2.
-   */
-  [[nodiscard]] consteval hstd::Frequency auto
-  Pll2SourceClockFrequency() const noexcept {
-    switch (pll2_source) {
-    case PllSource::Hsi: return HsiFrequency().As<hstd::Hz>();
-    case PllSource::Csi: return CsiFrequency().As<hstd::Hz>();
-    case PllSource::Hse: return f_hse.As<hstd::Hz>();
-    default: std::unreachable();
-    }
-  }
-
-  /**
-   * @brief Returns the frequency of the clock feeding PLL3.
-   *
-   * @return Source clock frequency of PLL3.
-   */
-  [[nodiscard]] consteval hstd::Frequency auto
-  Pll3SourceClockFrequency() const noexcept {
-    switch (pll3_source) {
-    case PllSource::Hsi: return HsiFrequency().As<hstd::Hz>();
-    case PllSource::Csi: return CsiFrequency().As<hstd::Hz>();
-    case PllSource::Hse: return f_hse.As<hstd::Hz>();
-    default: std::unreachable();
-    }
   }
 
   /**
@@ -316,10 +294,6 @@ export struct ClockSettings {
   }
 
   [[nodiscard]] consteval bool Validate() const noexcept {
-    // Unimplemented features
-    hstd::Assert(!pll.pll2.enable && !pll.pll3.enable,
-                 "PLL2/3 configuration is not yet implemented");
-
     return system_clock_settings.Validate(
         SysClkSourceClockFrequency().As<hstd::Hz>());
   }
@@ -475,7 +449,7 @@ export template <ClockSettings CS>
 bool ConfigurePowerAndClocks() noexcept {
   static_assert(CS.Validate());
 
-  constexpr auto PllSrcClk  = CS.PllSourceClockFrequency();
+  constexpr auto PllSrcClk  = CS.Pll1SourceClockFrequency();
   constexpr auto SysClkFreq = CS.SysClkSourceClockFrequency();
   constexpr auto HclkFreq =
       CS.system_clock_settings.AhbClockFrequency(SysClkFreq);
@@ -512,10 +486,10 @@ bool ConfigurePowerAndClocks() noexcept {
         .PLLR      = CS.pll.pll1.r,
         .PLLRGE    = GetShiftedPllVciRange(
             Pll::Pll1, GetPllVciRange(CS.pll.pll1.PllInputFrequency(
-                           CS.PllSourceClockFrequency()))),
+                           CS.Pll1SourceClockFrequency()))),
         .PLLVCOSEL = GetShiftedPllVcoRange(
             Pll::Pll1, GetPllVcoRange(CS.pll.pll1.PllOutputFrequency(
-                           CS.PllSourceClockFrequency()))),
+                           CS.Pll1SourceClockFrequency()))),
         .PLLFRACN = 0,
     };
   } else {
@@ -528,17 +502,45 @@ bool ConfigurePowerAndClocks() noexcept {
 
   // Configure PLL2 if necessary
   if constexpr (CS.pll.pll2.enable) {
-    LL_RCC_PLL2_Disable();
-    LL_RCC_PLL2_SetFRACN(0);
-    LL_RCC_PLL2_SetM(CS.pll.pll2.m);
-    LL_RCC_PLL2_SetN(CS.pll.pll2.n);
-    LL_RCC_PLL2_SetP(CS.pll.pll2.p);
-    LL_RCC_PLL2_SetQ(CS.pll.pll2.q);
-    LL_RCC_PLL2_SetR(CS.pll.pll2.r);
-    LL_RCC_PLL2_Enable();
+    RCC_PLL2InitTypeDef pll2_init{
+        .PLL2Source = static_cast<uint32_t>(CS.pll2_source),
+        .PLL2M      = CS.pll.pll2.m,
+        .PLL2N      = CS.pll.pll2.n,
+        .PLL2P      = CS.pll.pll2.p,
+        .PLL2Q      = CS.pll.pll2.q,
+        .PLL2R      = CS.pll.pll2.r,
+        .PLL2RGE    = GetShiftedPllVciRange(
+            Pll::Pll2, GetPllVciRange(CS.pll.pll2.PllInputFrequency(
+                           CS.Pll2SourceClockFrequency()))),
+        .PLL2VCOSEL = GetShiftedPllVcoRange(
+            Pll::Pll2, GetPllVcoRange(CS.pll.pll2.PllInputFrequency(
+                           CS.Pll2SourceClockFrequency()))),
+        .PLL2FRACN = 0,
+    };
+    if (HAL_RCCEx_EnablePLL2(&pll2_init) != HAL_OK) {
+      return false;
+    }
+  }
 
-    while (!LL_RCC_PLL2_IsReady()) {
-      __asm("nop;");
+  // Configure PLL3 if necessary
+  if constexpr (CS.pll.pll3.enable) {
+    RCC_PLL3InitTypeDef pll3_init{
+        .PLL3Source = static_cast<uint32_t>(CS.pll2_source),
+        .PLL3M      = CS.pll.pll3.m,
+        .PLL3N      = CS.pll.pll3.n,
+        .PLL3P      = CS.pll.pll3.p,
+        .PLL3Q      = CS.pll.pll3.q,
+        .PLL3R      = CS.pll.pll3.r,
+        .PLL3RGE    = GetShiftedPllVciRange(
+            Pll::Pll3, GetPllVciRange(CS.pll.pll3.PllInputFrequency(
+                           CS.Pll3SourceClockFrequency()))),
+        .PLL3VCOSEL = GetShiftedPllVcoRange(
+            Pll::Pll3, GetPllVcoRange(CS.pll.pll3.PllInputFrequency(
+                           CS.Pll3SourceClockFrequency()))),
+        .PLL3FRACN = 0,
+    };
+    if (HAL_RCCEx_EnablePLL3(&pll3_init) != HAL_OK) {
+      return false;
     }
   }
 

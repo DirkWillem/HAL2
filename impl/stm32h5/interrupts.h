@@ -47,7 +47,14 @@ extern void HAL_IncTick();
     }                                                                         \
   }
 
-DMA_IRQ_HANDLER(1, 0)
+void GPDMA1_Channel0_IRQHandler() {
+  if constexpr (hal::IsPeripheralInUse<
+                    stm32h5::Dma<stm32h5::DmaImplMarker>>()) {
+    if (stm32h5::Dma<stm32h5::DmaImplMarker>::ChannelInUse<1, 0>()) {
+      stm32h5::Dma<stm32h5::DmaImplMarker>::instance().HandleInterrupt<1, 0>();
+    }
+  }
+}
 DMA_IRQ_HANDLER(1, 1)
 DMA_IRQ_HANDLER(1, 2)
 DMA_IRQ_HANDLER(1, 3)
@@ -130,9 +137,30 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
     }                                                             \
   }
 
-SPI_IRQ_HANDLER(SPI1)
-SPI_IRQ_HANDLER(SPI2)
-SPI_IRQ_HANDLER(SPI3)
+#define SPI_I2S_IRQ_HANDLER(SpiName, I2sName)                        \
+  void SpiName##_IRQHandler() {                                      \
+    constexpr auto SpiInst = stm32h5::SpiIdFromName(#SpiName);       \
+    if constexpr (hal::IsPeripheralInUse<stm32h5::Spi<SpiInst>>()) { \
+      stm32h5::Spi<SpiInst>::instance().HandleInterrupt();           \
+    }                                                                \
+    constexpr auto I2sInst = stm32h5::I2sIdFromName(#I2sName);       \
+    if constexpr (hal::IsPeripheralInUse<stm32h5::I2s<I2sInst>>()) { \
+      stm32h5::I2s<I2sInst>::instance().HandleInterrupt();           \
+    }                                                                \
+  }
+
+SPI_I2S_IRQ_HANDLER(SPI1, I2S1)
+SPI_I2S_IRQ_HANDLER(SPI2, I2S2)
+void SPI3_IRQHandler() {
+  constexpr auto SpiInst = stm32h5::SpiIdFromName("SPI3");
+  if constexpr (hal::IsPeripheralInUse<stm32h5::Spi<SpiInst>>()) {
+    stm32h5::Spi<SpiInst>::instance().HandleInterrupt();
+  }
+  constexpr auto I2sInst = stm32h5::I2sIdFromName("I2S3");
+  if constexpr (hal::IsPeripheralInUse<stm32h5::I2s<I2sInst>>()) {
+    stm32h5::I2s<I2sInst>::instance().HandleInterrupt();
+  }
+}
 SPI_IRQ_HANDLER(SPI4)
 
 #define HANDLE_SPI_RX_CALLBACK(Inst)                       \
@@ -161,5 +189,31 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef* hspi) {
   HANDLE_SPI_TX_CALLBACK(Spi2)
   HANDLE_SPI_TX_CALLBACK(Spi3)
   HANDLE_SPI_TX_CALLBACK(Spi4)
+}
+
+#define HANDLE_I2S_HALF_RECEIVE_CALLBACK(Inst)             \
+  if constexpr (hal::IsPeripheralInUse<stm32h5::Inst>()) { \
+    if (hspi == &stm32h5::Inst::instance().hi2s) {         \
+      stm32h5::Inst::instance().HalfReceiveComplete();     \
+    }                                                      \
+  }
+
+#define HANDLE_I2S_RECEIVE_CALLBACK(Inst)                  \
+  if constexpr (hal::IsPeripheralInUse<stm32h5::Inst>()) { \
+    if (hspi == &stm32h5::Inst::instance().hi2s) {         \
+      stm32h5::Inst::instance().ReceiveComplete();         \
+    }                                                      \
+  }
+
+void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef* hspi) {
+  HANDLE_I2S_HALF_RECEIVE_CALLBACK(I2s1)
+  HANDLE_I2S_HALF_RECEIVE_CALLBACK(I2s2)
+  HANDLE_I2S_HALF_RECEIVE_CALLBACK(I2s3)
+}
+
+void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef* hspi) {
+  HANDLE_I2S_RECEIVE_CALLBACK(I2s1)
+  HANDLE_I2S_RECEIVE_CALLBACK(I2s2)
+  HANDLE_I2S_RECEIVE_CALLBACK(I2s3)
 }
 }

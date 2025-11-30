@@ -109,4 +109,19 @@ I2sIdFromName(std::string_view name) noexcept {
   std::unreachable();
 }
 
+export [[nodiscard]] consteval SpiId GetSpiForI2s(I2sId id) {
+  using enum SpiId;
+  using enum I2sId;
+
+  if (id == I2s1) {
+    return Spi1;
+  }
+  if (id == I2s2) {
+    return Spi2;
+  }
+  if (id == I2s3) {
+    return Spi3;
+  }
+}
+
 }   // namespace stm32h5
