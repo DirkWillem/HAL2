@@ -5,6 +5,7 @@ add_library(stm32_system STATIC
         stm32_system/syscalls.c
         stm32_system/sysmem.c)
 
+target_link_libraries(CMSISDSP PRIVATE project_settings)
 
 function(add_stm32g0_vendor_hal SERIES VARIANT)
     string(TOUPPER "${VARIANT}" VARIANT_UPPER)
