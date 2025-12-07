@@ -14,6 +14,7 @@ if (CMAKE_CROSSCOMPILING)
             freertos/freertos.cppm
 
             freertos/event_group.cppm
+            freertos/mutex.cppm
             freertos/queue.cppm
             freertos/system.cppm
             freertos/task.cppm

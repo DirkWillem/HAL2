@@ -11,6 +11,7 @@ export module rtos.freertos;
 import rtos.concepts;
 
 export import :event_group;
+export import :mutex;
 export import :queue;
 export import :system;
 export import :task;
@@ -42,6 +43,7 @@ export [[noreturn]] inline void StartScheduler() noexcept {
 export struct FreeRtos {
   using TaskRef    = TaskRef;
   using EventGroup = EventGroup;
+  using Mutex      = Mutex;
   using System     = System;
 
   static constexpr auto MiniStackSize       = rtos::MiniStackSize;

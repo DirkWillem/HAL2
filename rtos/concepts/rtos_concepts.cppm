@@ -26,18 +26,17 @@ concept EventGroup = requires(EG& eg) {
           std::declval<bool>(), std::declval<bool>());
 };
 
-// struct Callable {
-//   void operator()() noexcept {}
-// };
-//
-// template <template <typename> typename Task>
-// class TaskImpl
-//     : Callable
-//     , Task<Callable> {
-//  public:
-//   TaskImpl(const char* name)
-//       : Task<Callable>{name} {}
-// };
+export template <typename Mtx>
+concept Mutex = requires(Mtx& mtx) {
+  {
+    mtx.Lock(std::declval<std::chrono::milliseconds>())
+  } -> std::convertible_to<bool>;
+  mtx.Unlock();
+
+  {
+    mtx.WithLocked(std::declval<std::chrono::milliseconds>(), [] {})
+  } -> std::convertible_to<bool>;
+};
 
 template <typename Bsp>
 class TaskImpl : public Bsp::template Task<TaskImpl<Bsp>> {
@@ -52,6 +51,7 @@ export template <typename T>
 concept Rtos = requires {
   // TaskRef<std::decay_t<typename T::TaskRef>>;
   EventGroup<std::decay_t<typename T::EventGroup>>;
+  Mutex<std::decay_t<typename T::Mutex>>;
 
   { T::MiniStackSize } -> std::convertible_to<std::size_t>;
   { T::SmallStackSize } -> std::convertible_to<std::size_t>;
