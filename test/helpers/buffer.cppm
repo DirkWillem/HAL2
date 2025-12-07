@@ -86,7 +86,7 @@ class BufferBuilder {
    * @return Reference to the buffer builder.
    */
   auto& FillBytes(std::byte value, std::size_t count) {
-    if (buffer.size() < sizeof(count)) {
+    if (buffer.size() < count) {
       throw std::runtime_error{"Value is too large to write to buffer"};
     }
 
@@ -94,6 +94,30 @@ class BufferBuilder {
       buffer[i] = value;
     }
     buffer = buffer.subspan(count);
+    return *this;
+  }
+
+  /**
+   * @brief Fills the buffer with a fixed number of values, all having the same
+   * value.
+   *
+   * @param value Value to fill with.
+   * @param count Number of values to fill.
+   * @return Reference to this.
+   */
+  template <typename T>
+    requires(std::is_trivially_copyable_v<T>)
+  auto& FillWith(T value, std::size_t count) {
+    if (buffer.size() < count * sizeof(T)) {
+      throw std::runtime_error{"Value is too large to write to buffer"};
+    }
+
+    for (std::size_t i = 0; i < count; ++i) {
+      std::memcpy(buffer.subspan(i * sizeof(T), sizeof(T)).data(), &value,
+                  sizeof(T));
+    }
+
+    buffer = buffer.subspan(count * sizeof(T));
     return *this;
   }
 
@@ -186,4 +210,4 @@ class BufferBuilder {
   BufferBuilderSettings settings;   //!< Buffer builder settings
 };
 
-}   // namespace hal2::helpers
+}   // namespace hal2::testing::helpers
