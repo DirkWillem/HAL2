@@ -7,3 +7,4 @@ export import :functions.interpolation;
 export import :functions.trigonometric;
 export import :functions.power;
 export import :geometry.coordinate;
+export import :lut;

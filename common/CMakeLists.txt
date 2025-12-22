@@ -57,6 +57,7 @@ target_sources(math
         math/geometry/coordinate.cppm
         math/linalg/vector.cppm
         math/concepts.cppm
+        math/lut.cppm
         math/settings.cppm)
 target_link_libraries(math PUBLIC hstd cmsis_dsp)
 
