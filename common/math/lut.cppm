@@ -47,6 +47,17 @@ class Lut {
         } {}
 
   /**
+   * @brief Updates the x bounds.
+   * @param new_x_min New x lower bound.
+   * @param new_x_max New x upper bound.
+   */
+  void UpdateXBounds(float new_x_min, float new_x_max) {
+    xr              = std::make_pair(new_x_min, new_x_max);
+    interp.x1       = new_x_min;
+    interp.xSpacing = (new_x_max - new_x_min) / static_cast<float>(N - 1);
+  }
+
+  /**
    * @brief Returns a view over the Y-axis data.
    * @return View over Y data.
    */
