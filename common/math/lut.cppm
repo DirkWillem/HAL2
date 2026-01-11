@@ -90,6 +90,12 @@ class Lut {
     return arm_linear_interp_f32(&interp, xq);
   }
 
+  /**
+   * @brief Returns the LUT size.
+   * @return LUT size.
+   */
+  [[nodiscard]] constexpr std::size_t size() const noexcept { return N; }
+
  private:
   std::array<R, N> d{};
   std::pair<R, R>  xr;
