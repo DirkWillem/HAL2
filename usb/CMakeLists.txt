@@ -8,7 +8,20 @@ function(add_hal_usb_lib VARIANT TINYUSB_TARGET)
             FILE_SET CXX_MODULES
             BASE_DIRS ${CMAKE_CURRENT_FUNCTION_LIST_DIR}
             FILES
-            ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/usb.cppm)
+            ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/usb.cppm
+
+            ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/concepts.cppm
+            ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/helpers.cppm
+            ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/functions/cdc.cppm)
+
+    target_sources(hal_usb_${VARIANT}
+            PUBLIC
+            FILE_SET callback_hdr
+            TYPE HEADERS
+            BASE_DIRS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/include"
+            FILES
+
+            "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/include/usb_callbacks.h")
     target_link_libraries(hal_usb_${VARIANT} PUBLIC
             hstd
             ${TINYUSB_TARGET}
