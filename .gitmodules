@@ -43,3 +43,6 @@
 [submodule "vendor/freertos"]
 	path = vendor/freertos
 	url = git@github.com:FreeRTOS/FreeRTOS-Kernel.git
+[submodule "vendor/tinyusb"]
+	path = vendor/tinyusb
+	url = git@github.com:hathach/tinyusb

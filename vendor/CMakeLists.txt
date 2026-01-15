@@ -333,3 +333,48 @@ if ("${TARGET}" STREQUAL "arm-cortex-m0plus"
         endif ()
     endfunction()
 endif ()
+
+# TinyUSB
+if (CMAKE_CROSSCOMPILING)
+    add_subdirectory(tinyusb/src)
+
+    function(add_tinyusb TARGET CONFIG_HEADER_INCLUDE_DIR)
+        add_library(${TARGET})
+        # Add TinyUSB sources
+        tinyusb_target_add(${TARGET})
+
+        # Add config headers
+        target_sources(
+                ${TARGET}
+                PUBLIC
+                FILE_SET config_hdr TYPE HEADERS
+                BASE_DIRS "${CONFIG_HEADER_INCLUDE_DIR}"
+                FILES
+                "${CONFIG_HEADER_INCLUDE_DIR}/tusb_config.h"
+        )
+
+        # Add fsdev driver
+        target_sources(
+                ${TARGET}
+                PUBLIC
+                FILE_SET fsdev_hdr TYPE HEADERS
+                BASE_DIRS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev"
+                FILES
+                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_at32.h"
+                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_ch32.h"
+                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_common.h"
+                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_stm32.h"
+        )
+
+        target_sources(
+                ${TARGET}
+                PRIVATE
+                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/dcd_stm32_fsdev.c"
+                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_common.c"
+                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/hcd_stm32_fsdev.c"
+        )
+
+        # Add STM32 fsdev driver
+        target_include_directories(${TARGET} PRIVATE ${CONFIG_HEADER_INCLUDE_DIR})
+    endfunction()
+endif ()

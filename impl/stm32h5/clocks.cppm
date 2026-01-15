@@ -461,7 +461,7 @@ bool ConfigurePowerAndClocks() noexcept {
   while (!__HAL_PWR_GET_FLAG(PWR_FLAG_VOSRDY)) {}
 
   RCC_OscInitTypeDef osc_init{
-      .OscillatorType      = RCC_OSCILLATORTYPE_HSI,
+      .OscillatorType      = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_HSI48,
       .HSEState            = RCC_HSE_OFF,
       .LSEState            = RCC_LSE_OFF,
       .HSIState            = RCC_HSI_ON,
@@ -470,7 +470,7 @@ bool ConfigurePowerAndClocks() noexcept {
       .LSIState            = RCC_LSI_OFF,
       .CSIState            = RCC_CSI_OFF,
       .CSICalibrationValue = RCC_CSICALIBRATION_DEFAULT,
-      .HSI48State          = RCC_HSI48_OFF,
+      .HSI48State          = RCC_HSI48_ON,
       .PLL                 = {},
   };
 

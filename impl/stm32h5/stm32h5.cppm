@@ -12,6 +12,8 @@ export import :pin;
 export import :spi;
 export import :system;
 export import :uart;
+export import :nvic;
+export import :usb;
 
 namespace stm32h5 {
 

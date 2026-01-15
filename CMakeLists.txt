@@ -23,6 +23,7 @@ add_subdirectory(vendor)
 add_subdirectory(rtos)
 add_subdirectory(abstract)
 add_subdirectory(modbus)
+add_subdirectory(usb)
 add_subdirectory(impl)
 
 if ("${TARGET}" STREQUAL "")
