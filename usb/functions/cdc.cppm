@@ -7,6 +7,7 @@ module;
 #include <utility>
 
 #include <tusb.h>
+#include <tusb_config.h>
 
 export module hal.usb:functions.cdc;
 
@@ -57,10 +58,40 @@ export struct CdcAcmFunction {
   }
 };
 
+export class CdcAcmInterface;
+
+export class CdcAcmCallbacks {
+  friend void ::tud_cdc_rx_cb(uint8_t itf);
+  friend class CdcAcmInterface;
+
+  static auto& instance() {
+    static CdcAcmCallbacks inst{};
+    return inst;
+  }
+
+ protected:
+  static void RegisterCallback(uint8_t itf, hstd::Callback<>& callback) {
+    auto& callbacks = instance().callbacks;
+    if (itf < callbacks.size()) {
+      callbacks[itf] = &callback;
+    }
+  }
+
+  static void InvokeCallback(uint8_t itf) {
+    auto& inst = instance();
+    if (itf < inst.callbacks.size() && inst.callbacks[itf] != nullptr) {
+      (*inst.callbacks[itf])();
+    }
+  }
+
+ private:
+  std::array<hstd::Callback<>*, CFG_TUD_CDC> callbacks{};
+};
+
 /**
  * @brief Single CDC-ACM function within the USB device.
  */
-export class CdcAcmInterface {
+class CdcAcmInterface {
   /**
    * @brief Finds the index of the given CDC-ACM function.
    *
@@ -116,6 +147,14 @@ export class CdcAcmInterface {
   }
 
   /**
+   * @brief Registers a callback to be invoked when data is available.
+   * @param callback Callback to register.
+   */
+  void RegisterReadCallback(hstd::Callback<>& callback) {
+    CdcAcmCallbacks::RegisterCallback(interface, callback);
+  }
+
+  /**
    * @brief Returns the number of bytes that are available to be read.
    *
    * @return Number of bytes available to read.
@@ -133,14 +172,19 @@ export class CdcAcmInterface {
    */
   std::optional<std::span<const std::byte>>
   Read(std::span<std::byte> buffer) noexcept {
-    const auto n =
-        tud_cdc_n_read(interface, buffer.data(), buffer.size_bytes());
+    std::size_t total = 0;
 
-    if (n == 0) {
+    while (tud_cdc_n_available(interface) > 0 && total < buffer.size_bytes()) {
+      auto n = tud_cdc_n_read(interface, buffer.data() + total,
+                              buffer.size_bytes() - total);
+      total += n;
+    }
+
+    if (total == 0) {
       return std::nullopt;
     }
 
-    return buffer.subspan(0, n);
+    return buffer.first(total);
   }
 
   /**
@@ -177,11 +221,17 @@ export class CdcAcmInterface {
    */
   void FlushWrite() noexcept { tud_cdc_n_write_flush(interface); }
 
+ protected:
+  uint8_t interface;   //!< Interface number.
+
  private:
   explicit CdcAcmInterface(uint8_t interface)
       : interface{interface} {}
-
-  uint8_t interface;   //!< Interface number.
 };
-
 }   // namespace hal::usb
+
+extern "C" {
+void tud_cdc_rx_cb(uint8_t itf) {
+  hal::usb::CdcAcmCallbacks::InvokeCallback(itf);
+}
+}

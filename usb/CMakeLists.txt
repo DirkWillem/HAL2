@@ -1,4 +1,10 @@
-
+add_library(hal_usb_abstract STATIC)
+target_sources(hal_usb_abstract
+        PUBLIC
+        FILE_SET CXX_MODULES
+        FILES
+        usb_abstract.cppm)
+target_link_libraries(hal_usb_abstract PUBLIC hstd)
 
 function(add_hal_usb_lib VARIANT TINYUSB_TARGET)
     add_library(hal_usb_${VARIANT} STATIC)

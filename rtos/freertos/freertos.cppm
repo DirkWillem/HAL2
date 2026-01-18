@@ -54,6 +54,8 @@ export struct FreeRtos {
 
   template <typename Impl, std::size_t StackSize = MediumStackSize>
   using Task = rtos::Task<Impl, StackSize>;
+
+  static void Yield() { taskYIELD(); }
 };
 
 static_assert(rtos::concepts::Rtos<FreeRtos>);

@@ -1,5 +1,6 @@
 module;
 
+#include <chrono>
 #include <cstring>
 #include <span>
 #include <string_view>
@@ -125,9 +126,10 @@ class UsbTask : public OS::template Task<UsbTask<OS>, OS::MediumStackSize> {
   template <typename... Args>
   explicit UsbTask(Args&&... base_args)
       : OS::template Task<UsbTask, OS::MediumStackSize>{
-            std::forward<Args>(base_args)...} {}
+            std::forward<Args>(base_args)..., configMAX_PRIORITIES - 2} {}
 
   [[noreturn]] void operator()() {
+    using namespace std::chrono_literals;
     while (true) {
       tud_task();
     }
