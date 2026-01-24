@@ -34,9 +34,18 @@ target_sources(hstd
         hstd/ratio.cppm
         hstd/spans.cppm
         hstd/static_string_builder.cppm
+        hstd/buffers.cppm
 
         hstd/halstd.cppm)
 target_link_libraries(hstd PUBLIC project_settings)
+
+add_library(hstd_dsp)
+target_sources(hstd_dsp
+        PUBLIC
+        FILE_SET CXX_MODULES FILES
+        hstd_dsp/hstd_dsp.cppm)
+target_link_libraries(hstd_dsp PUBLIC hstd)
+
 
 # Proxy library for CMSIS-DSP which allows disabling it under certain build conditions
 add_library(cmsis_dsp INTERFACE)

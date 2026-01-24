@@ -35,7 +35,8 @@ target_link_libraries(hal2_test_helpers PUBLIC
 add_executable(hal2_test_hstd
         hstd/test_crc.cpp
         hstd/test_logic.cpp
-        hstd/test_memory.cpp)
+        hstd/test_memory.cpp
+        hstd/test_buffer.cpp)
 target_link_libraries(hal2_test_hstd
         PRIVATE
         hstd

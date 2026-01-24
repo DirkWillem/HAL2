@@ -22,6 +22,7 @@ export inline constexpr auto SmallStackSize      = 128 * sizeof(StackType_t);
 export inline constexpr auto MediumStackSize     = 256 * sizeof(StackType_t);
 export inline constexpr auto LargeStackSize      = 512 * sizeof(StackType_t);
 export inline constexpr auto ExtraLargeStackSize = 1024 * sizeof(StackType_t);
+export inline constexpr auto HugeStackSize       = 2048 * sizeof(StackType_t);
 
 export template <std::size_t SS>
 struct StackSizeMarker {};

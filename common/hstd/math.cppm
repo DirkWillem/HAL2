@@ -27,6 +27,8 @@ constexpr T DivCeil(T lhs, T rhs) noexcept {
   return One + (lhs - One) / rhs;
 }
 
+
+
 /**
  * Sign function
  * @tparam T Integral type

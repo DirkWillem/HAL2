@@ -51,6 +51,7 @@ export struct FreeRtos {
   static constexpr auto MediumStackSize     = rtos::MediumStackSize;
   static constexpr auto LargeStackSize      = rtos::LargeStackSize;
   static constexpr auto ExtraLargeStackSize = rtos::ExtraLargeStackSize;
+  static constexpr auto HugeStackSize       = rtos::HugeStackSize;
 
   template <typename Impl, std::size_t StackSize = MediumStackSize>
   using Task = rtos::Task<Impl, StackSize>;

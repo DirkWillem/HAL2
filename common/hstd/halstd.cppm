@@ -7,6 +7,7 @@ export import :mp.values;
 
 export import :array;
 export import :atomic;
+export import :buffers;
 export import :callback;
 export import :constants;
 export import :crc;

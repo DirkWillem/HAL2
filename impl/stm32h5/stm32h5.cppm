@@ -7,12 +7,13 @@ export module hal.stm32h5;
 export import :clocks;
 export import :dma;
 export import :i2s;
+export import :nvic;
 export import :peripherals;
 export import :pin;
 export import :spi;
 export import :system;
+export import :tim;
 export import :uart;
-export import :nvic;
 export import :usb;
 
 namespace stm32h5 {

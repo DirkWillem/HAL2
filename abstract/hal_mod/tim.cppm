@@ -21,20 +21,9 @@ namespace hal {
 export template <typename Impl>
 concept Tim = requires(Impl& impl, const Impl& cimpl) {
   impl.Start();
-  impl.StartWithInterrupt();
-  impl.Stop();
-  impl.StopWithInterrupt();
-
-  { Impl::Frequency() } -> hstd::Frequency;
-  requires hstd::IsConstantExpression<Impl::Frequency()>();
-
-  impl.SetPeriod(std::declval<uint32_t>());
 
   { cimpl.GetCounter() } -> std::convertible_to<uint32_t>;
   impl.ResetCounter();
-
-  impl.EnableInterrupt();
-  impl.DisableInterrupt();
 };
 
 namespace concepts {
@@ -97,28 +86,20 @@ concept BurstDmaPwmChannel = requires(Impl& impl) {
   impl.Disable();
 };
 
-/**
- * Implementation of std::chrono clock using a hardware timer
- * @tparam T Timer typer
- * @tparam FClock Clock Frequency
- */
-export template <Tim T, hstd::Frequency auto FClock>
-struct TimClock {
-  using duration   = typename std::decay_t<decltype(FClock)>::DefaultPeriodType;
-  using rep        = typename duration::rep;
-  using period     = typename duration::period;
-  using time_point = std::chrono::time_point<TimClock<T, FClock>, duration>;
+export template <Tim T, hstd::Duration D>
+class TimClock {
+ public:
+  using duration   = D;
+  using rep        = typename D::rep;
+  using period     = typename D::period;
+  using time_point = std::chrono::time_point<TimClock<T, D>, duration>;
 
-  static constexpr auto is_steady = false;
+  static constexpr auto is_steady = true;
 
   static time_point now() noexcept {
-    constexpr auto FTim = T::Frequency().template As<hstd::Hz>();
-    constexpr auto FClk = FClock.template As<hstd::Hz>();
+    T& tim = T::instance();
 
-    static_assert(FTim <= FClk);
-
-    constexpr auto Ratio = FClk.count / FTim.count;
-    return time_point{duration{T::instance().GetCounter() * Ratio}};
+    return time_point{tim.GetCounter() * T::template TickPeriod<duration>()};
   }
 };
 

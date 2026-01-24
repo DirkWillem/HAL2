@@ -345,6 +345,7 @@ function(add_stm32h5_hal VARIANT XMLFILE)
             stm32h5/pin.cppm
             stm32h5/spi.cppm
             stm32h5/system.cppm
+            stm32h5/tim.cppm
             stm32h5/uart.cppm
             stm32h5/usb.cppm
 

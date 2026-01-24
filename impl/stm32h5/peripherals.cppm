@@ -124,4 +124,54 @@ export [[nodiscard]] consteval SpiId GetSpiForI2s(I2sId id) {
   }
 }
 
+export enum class TimId {
+  Tim1,
+  Tim2,
+  Tim3,
+  Tim4,
+  Tim5,
+  Tim6,
+  Tim7,
+  Tim8,
+  Tim12,
+  Tim15
+};
+
+export [[nodiscard]] TIM_TypeDef* GetTimPointer(TimId id) {
+  using enum TimId;
+
+  if (id == Tim1) {
+    return TIM1;
+  }
+  if (id == Tim2) {
+    return TIM2;
+  }
+  if (id == Tim3) {
+    return TIM3;
+  }
+  if (id == Tim4) {
+    return TIM4;
+  }
+  if (id == Tim5) {
+    return TIM5;
+  }
+  if (id == Tim6) {
+    return TIM6;
+  }
+  if (id == Tim7) {
+    return TIM7;
+  }
+  if (id == Tim8) {
+    return TIM8;
+  }
+  if (id == Tim12) {
+    return TIM12;
+  }
+  if (id == Tim15) {
+    return TIM15;
+  }
+
+  std::unreachable();
+}
+
 }   // namespace stm32h5
