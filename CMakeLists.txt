@@ -19,11 +19,15 @@ endif ()
 
 add_subdirectory(common)
 
+# Add the logging abstractions early so that we can include them in other modules.
+add_subdirectory(logging/abstract)
+
 add_subdirectory(vendor)
 add_subdirectory(rtos)
 add_subdirectory(abstract)
 add_subdirectory(modbus)
 add_subdirectory(usb)
+add_subdirectory(logging)
 add_subdirectory(impl)
 
 if ("${TARGET}" STREQUAL "")

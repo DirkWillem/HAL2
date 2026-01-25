@@ -80,6 +80,3 @@ target_sources(statechart
 
         sc/statechart.cppm)
 target_link_libraries(statechart PRIVATE hstd project_settings)
-
-#add_subdirectory(sbs)
-#add_subdirectory(vrpc)
