@@ -12,6 +12,7 @@ license = "MIT"
 [project.scripts]
 "hal2.modbus_spec_gen" = "hal2.cli.modbus_spec_gen:main"
 "hal2.generate_stm32_pin_mapping" = "hal2.codegen.generate_stm32_pin_mapping:main"
+"hal2.log_viewer" = "hal2.cli.log_viewer:main"
 
 [build-system]
 requires = ["hatchling >= 1.26"]
