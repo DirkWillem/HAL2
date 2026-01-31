@@ -60,7 +60,7 @@ export template <typename T>
 concept ByteLike = std::is_same_v<std::decay_t<T>, std::byte>
                    || std::is_same_v<std::decay_t<T>, unsigned char>;
 
-export template <ByteLike TOut, typename TIn>
+export template <ByteLike TOut, typename TIn, std::size_t E>
 /**
  * Returns a byte view over the data contained in a span
  * @tparam TOut Output type, must be a type that is able to access the raw
@@ -69,8 +69,8 @@ export template <ByteLike TOut, typename TIn>
  * @param in Input span
  * @return Byte view over the passed span
  */
-std::span<TOut> ReinterpretSpanMut(std::span<TIn> in) noexcept {
-  return std::span{
+std::span<TOut, E> ReinterpretSpanMut(std::span<TIn, E> in) noexcept {
+  return std::span<TOut, E>{
       reinterpret_cast<TOut*>(in.data()),
       in.size() * (sizeof(TIn) / sizeof(TOut)),
   };

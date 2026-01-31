@@ -85,6 +85,40 @@ class WriteOnlyCircularBuffer {
     const T* ptr;
   };
 
+  WriteOnlyCircularBuffer() = default;
+
+  WriteOnlyCircularBuffer(const WriteOnlyCircularBuffer& rhs)
+      : storage{rhs.storage}
+      , initialized{false}
+      , h{nullptr}
+      , nh{storage.begin()} {};
+  WriteOnlyCircularBuffer& operator=(const WriteOnlyCircularBuffer& rhs) {
+    if (&rhs == this) {
+      return *this;
+    }
+
+    storage     = rhs.storage;
+    initialized = false;
+    h           = nullptr;
+    nh          = storage.begin();
+    return *this;
+  }
+
+  WriteOnlyCircularBuffer(WriteOnlyCircularBuffer&& rhs) noexcept
+      : storage{rhs.storage}
+      , initialized{false}
+      , h{nullptr}
+      , nh{storage.begin()} {};
+  WriteOnlyCircularBuffer& operator=(WriteOnlyCircularBuffer&& rhs) noexcept {
+    storage     = rhs.storage;
+    initialized = false;
+    h           = nullptr;
+    nh          = storage.begin();
+    return *this;
+  }
+
+  ~WriteOnlyCircularBuffer() = default;
+
   /**
    * @brief Pushes a value to the buffer.
    * @param value Value to push.

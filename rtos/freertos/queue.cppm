@@ -3,6 +3,7 @@ module;
 #include <array>
 #include <concepts>
 #include <optional>
+#include <span>
 
 #include <FreeRTOS.h>
 #include <queue.h>
@@ -22,9 +23,12 @@ class Queue {
   static constexpr auto QueueSize = QS;
 
   Queue() noexcept
-      : queue{xQueueCreateStatic(
-            QueueSize, sizeof(T),
-            hstd::ReinterpretSpanMut<uint8_t>(buffer).data(), &static_queue)} {}
+      : queue{xQueueCreateStatic(QueueSize, sizeof(T),
+                                 reinterpret_cast<uint8_t*>(buffer.data()),
+                                 &static_queue)} {}
+
+  Queue(const Queue&)            = delete;
+  Queue& operator=(const Queue&) = delete;
 
   bool Enqueue(const T& item, hstd::Duration auto timeout) noexcept {
     return xQueueSendToBack(queue, &item, ToTicks(timeout)) == pdPASS;
@@ -51,6 +55,10 @@ class Queue {
     }
 
     return {};
+  }
+
+  [[nodiscard]] uint32_t size() const noexcept {
+    return uxQueueMessagesWaiting(queue);
   }
 
  private:

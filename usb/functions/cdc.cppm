@@ -221,6 +221,11 @@ class CdcAcmInterface {
    */
   void FlushWrite() noexcept { tud_cdc_n_write_flush(interface); }
 
+  bool ReadyToWrite() {
+    const auto n_available = tud_cdc_n_write_available(interface);
+    return n_available > 0;
+  }
+
  protected:
   uint8_t interface;   //!< Interface number.
 

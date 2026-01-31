@@ -1,26 +1,32 @@
 module;
 
 #include <bit>
+#include <chrono>
+#include <cstring>
 #include <span>
 
 export module logging:sink.usb_cdc;
 
 import hal.usb.abstract;
 
+import rtos.concepts;
+
 namespace logging::sink {
 
 /**
  * @brief Logging sink that logs to a USB CDC-ACM interface.
+ * @tparam OS RTOS type.
  * @tparam Ifc USB CDC-ACM interface to use for logging.
  */
-export template <hal::usb::concepts::CdcAcmInterface Ifc>
+export template <rtos::concepts::Rtos                OS,
+                 hal::usb::concepts::CdcAcmInterface Ifc>
 class UsbCdc {
  public:
   /**
    * @brief Constructor.
    * @param interface CDC-ACM interface to use.
    */
-  UsbCdc(Ifc& interface)
+  explicit UsbCdc(Ifc& interface)
       : interface{interface} {}
 
   /**
@@ -28,7 +34,12 @@ class UsbCdc {
    * @param data Data to write.
    */
   void Write(std::span<const std::byte> data) noexcept {
-    interface.Write(data, true);
+    using namespace std::chrono_literals;
+
+    // Message can directly be written.
+    if (interface.ReadyToWrite()) {
+      interface.Write(data, true);
+    }
   }
 
  private:

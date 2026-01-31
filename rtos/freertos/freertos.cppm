@@ -56,6 +56,9 @@ export struct FreeRtos {
   template <typename Impl, std::size_t StackSize = MediumStackSize>
   using Task = rtos::Task<Impl, StackSize>;
 
+  template <typename T, std::size_t N>
+  using Queue = Queue<T, N>;
+
   static void Yield() { taskYIELD(); }
 };
 

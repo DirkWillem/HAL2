@@ -13,6 +13,7 @@ target_sources(logging
 target_link_libraries(logging
         PUBLIC
         hstd
+        rtos_concepts
         hal_usb_abstract
         logging_abstract)
 

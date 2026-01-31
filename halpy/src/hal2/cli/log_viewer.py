@@ -12,6 +12,7 @@ import serial
 
 _HEADER_SPEC = "<IBHBB"
 _FOOTER_SPEC = "<H"
+_OVERHEAD_LEN = struct.calcsize(_HEADER_SPEC) + struct.calcsize(_FOOTER_SPEC)
 
 
 class ArgSpecJson(TypedDict):
@@ -78,18 +79,18 @@ def _fmt_log_line(*, log_level: int, timestamp: int, module: str, msg: str):
 
 def _color(log_level: int) -> str:
     return {
-        10: colorama.Fore.BLUE + colorama.Style.DIM,  # TRACE
-        20: colorama.Fore.BLUE,  # DEBUG
-        30: colorama.Fore.WHITE,  # INFO
+        10: colorama.Fore.WHITE + colorama.Style.DIM,  # TRACE
+        20: colorama.Fore.WHITE,  # DEBUG
+        30: colorama.Fore.BLUE,  # INFO
         40: colorama.Fore.YELLOW,  # WARN
         50: colorama.Fore.RED,  # ERROR
         60: colorama.Fore.RED + colorama.Style.BRIGHT,  # FATAL
     }.get(log_level)
 
 
-def _get_module_id(data: bytes):
-    _, _, module_id, _, _ = struct.unpack(_HEADER_SPEC, data[: struct.calcsize(_HEADER_SPEC)])
-    return module_id
+def _get_basic_frame_info(data: bytes):
+    _, _, module_id, _, payload_len = struct.unpack(_HEADER_SPEC, data[: struct.calcsize(_HEADER_SPEC)])
+    return module_id, payload_len
 
 
 class LogModuleSpecJson(TypedDict):
@@ -175,10 +176,22 @@ def main():
                 raw_message = ser.read(ser.in_waiting)
 
                 try:
-                    _module_id = _get_module_id(raw_message)
-                    if _module_id not in modules:
-                        raise RuntimeError(f"Unknown module id: {_module_id}")
-                    print(modules[_module_id].decode(raw_message))
+                    while len(raw_message) > 0:
+                        _module_id, payload_len = _get_basic_frame_info(raw_message)
+                        msg_len = payload_len + _OVERHEAD_LEN
+                        current_message = raw_message[:msg_len]
+                        raw_message = raw_message[msg_len:]
+
+                        if _module_id not in modules:
+                            raise RuntimeError(f"Unknown module id: {_module_id}")
+                        print(modules[_module_id].decode(current_message))
+
+                        if len(raw_message) == 0:
+                            break
+
+                        if raw_message[0] != ord("L"):
+                            break
+                        raw_message = raw_message[1:]
                 except Exception as e:
                     print(f"{_color(60)}{_fmt_time(0)} [FATAL] Invalid message: {e}{colorama.Style.RESET_ALL}")
 
