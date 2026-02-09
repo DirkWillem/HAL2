@@ -2,6 +2,7 @@ module;
 
 #include <concepts>
 #include <cstdint>
+#include <numbers>
 
 export module math;
 
@@ -15,6 +16,9 @@ export import :geometry.coordinate;
 export import :lut;
 
 namespace math {
+
+export inline constexpr auto Pi    = std::numbers::pi_v<float>;
+export inline constexpr auto TwoPi = 2.F * Pi;
 
 export template <std::unsigned_integral T>
 constexpr T FastCeil(float f) {

@@ -28,6 +28,68 @@ class WriteOnlyCircularBuffer {
   /**
    * @brief Iterator.
    */
+  class ReverseIterator {
+   public:
+    using iterator_category = std::forward_iterator_tag;
+    using difference_type   = std::ptrdiff_t;
+    using value_type        = T;
+    using pointer           = const T*;
+    using reference         = const T&;
+
+    explicit constexpr ReverseIterator(const T* head,
+                                       const T* before_storage_begin,
+                                       const T* storage_last_element,
+                                       const T* ptr) noexcept
+        : head{head}
+        , before_storage_begin{before_storage_begin}
+        , storage_last_element{storage_last_element}
+        , ptr{ptr} {}
+
+    constexpr reference operator*() const noexcept { return *ptr; }
+
+    constexpr ReverseIterator operator++() noexcept {
+      --ptr;
+      if (ptr == before_storage_begin) {
+        ptr = storage_last_element;
+      }
+      if (ptr == head) {
+        ptr = nullptr;
+      }
+      return *this;
+    }
+
+    constexpr ReverseIterator operator++(int) noexcept {
+      auto result = *this;
+      --ptr;
+      if (ptr == before_storage_begin) {
+        ptr = storage_last_element;
+      }
+      if (ptr == head) {
+        ptr = nullptr;
+      }
+      return result;
+    }
+
+    friend constexpr bool operator==(const ReverseIterator& lhs,
+                                     const ReverseIterator& rhs) noexcept {
+      return lhs.ptr == rhs.ptr;
+    }
+
+    friend constexpr bool operator!=(const ReverseIterator& lhs,
+                                     const ReverseIterator& rhs) noexcept {
+      return lhs.ptr != rhs.ptr;
+    }
+
+   private:
+    const T* head;
+    const T* before_storage_begin;
+    const T* storage_last_element;
+    const T* ptr;
+  };
+
+  /**
+   * @brief Iterator.
+   */
   class Iterator {
    public:
     using iterator_category = std::forward_iterator_tag;
@@ -165,6 +227,25 @@ class WriteOnlyCircularBuffer {
 
   constexpr Iterator end() const noexcept {
     return Iterator{nh, storage.begin(), storage.end(), nullptr};
+  }
+
+  constexpr ReverseIterator rbegin() const noexcept {
+    // Edge case - Empty buffer.
+    if (!initialized && nh == storage.begin()) {
+      return rend();
+    }
+
+    return ReverseIterator{h, std::prev(storage.begin()), &storage[N - 1], h};
+  }
+
+  constexpr ReverseIterator rend() const noexcept {
+    if (initialized) {
+      return ReverseIterator{h, std::prev(storage.begin()), &storage[N - 1],
+                             nullptr};
+    } else {
+      return ReverseIterator{h, std::prev(storage.begin()), &storage[N - 1],
+                             &storage[N - 1]};
+    }
   }
 
   /**

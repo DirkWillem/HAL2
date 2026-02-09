@@ -20,6 +20,7 @@ target_sources(hal2_test_helpers
         helpers/matchers.cppm
 
         helpers/mocks/mock_performance_timer.cppm
+        helpers/mocks/mock_clock.cppm
 
         helpers/buffer.cppm)
 

@@ -107,6 +107,72 @@ TEST(WriteOnlyCircularBuffer, IterateMultipleTimesFull) {
   ASSERT_EQ(counter, 5);
 }
 
+TEST(WriteOnlyCircularBuffer, ReverseIterateNotFull) {
+  hstd::WriteOnlyCircularBuffer<int, 5> buf{};
+
+  // Add 3 elements.
+  for (std::size_t i = 0; i < 3; ++i) {
+    buf.Push(i);
+  }
+
+  int counter = 3;
+  for (auto it = buf.rbegin(); it != buf.rend(); ++it) {
+    --counter;
+    ASSERT_EQ(*it, counter);
+  }
+
+  // Validate we saw 2, 1, 0;
+  ASSERT_EQ(counter, 0);
+}
+
+TEST(WriteOnlyCircularBuffer, ReverseIterateFull) {
+  hstd::WriteOnlyCircularBuffer<int, 5> buf{};
+
+  // Add 3 elements.
+  for (std::size_t i = 0; i < 5; ++i) {
+    buf.Push(i);
+  }
+
+  int counter = 5;
+  for (auto it = buf.rbegin(); it != buf.rend(); ++it) {
+    --counter;
+    ASSERT_EQ(*it, counter);
+  }
+
+  // Validate we saw 4, 3, 2, 1, 0.
+  ASSERT_EQ(counter, 0);
+}
+
+TEST(WriteOnlyCircularBuffer, ReverseIterateFullNotAligned) {
+  hstd::WriteOnlyCircularBuffer<int, 5> buf{};
+
+  // Add 3 elements.
+  for (std::size_t i = 0; i < 8; ++i) {
+    buf.Push(i);
+  }
+
+  int counter = 8;
+  for (auto it = buf.rbegin(); it != buf.rend(); ++it) {
+    --counter;
+    ASSERT_EQ(*it, counter);
+  }
+
+  // Validate we saw 7, 6, 5, 4, 3.
+  ASSERT_EQ(counter, 3);
+}
+
+TEST(WriteOnlyCircularBuffer, ReverseIterateEmpty) {
+  hstd::WriteOnlyCircularBuffer<int, 5> buf{};
+
+  int counter = 0;
+  for (auto it = buf.rbegin(); it != buf.rend(); ++it) {
+    ++counter;
+  }
+
+  // Validate we saw no entries.
+  ASSERT_EQ(counter, 0);
+}
+
 TEST(WriteOnlyCircularBuffer, IndexingUninitializedBuffer) {
   hstd::WriteOnlyCircularBuffer<int, 5> buf{};
 

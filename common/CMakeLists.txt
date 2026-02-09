@@ -44,7 +44,7 @@ target_sources(hstd_dsp
         PUBLIC
         FILE_SET CXX_MODULES FILES
         hstd_dsp/hstd_dsp.cppm)
-target_link_libraries(hstd_dsp PUBLIC hstd)
+target_link_libraries(hstd_dsp PUBLIC hstd cmsis_dsp math)
 
 
 # Proxy library for CMSIS-DSP which allows disabling it under certain build conditions

@@ -22,6 +22,20 @@ template <typename T>
 concept Duration = is_duration_v<T>;
 
 template <typename T>
+struct is_time_point : std::false_type {};
+
+template <typename Clock, typename Rep, typename Period>
+struct is_time_point<
+    std::chrono::time_point<Clock, std::chrono::duration<Rep, Period>>>
+    : std::true_type {};
+
+template <typename T>
+inline constexpr bool is_time_point_v = is_time_point<T>::value;
+
+template <typename T>
+concept TimePoint = is_time_point_v<T>;
+
+template <typename T>
 struct is_frequency : public std::false_type {};
 
 template <typename T>
@@ -174,7 +188,7 @@ struct DurationFactory {
 
   Rep count;
 };
-}   // namespace halstd
+}   // namespace hstd
 
 namespace hstd {
 
@@ -184,7 +198,7 @@ inline constexpr bool IsDurationFactory = false;
 template <typename Rep, typename R>
 inline constexpr bool IsDurationFactory<DurationFactory<Rep, R>> = true;
 
-}   // namespace halstd
+}   // namespace hstd
 
 export namespace hstd {
 /**
@@ -207,6 +221,20 @@ template <ToDuration T>
   } else {
     return src.MakeDuration();
   }
+}
+
+/**
+ * @brief Converts the given duration to a floating-point representation in
+ * seconds in millisecond precision.
+ * @param d Duration to convert.
+ * @return Duration in seconds.
+ */
+float ToSeconds(hstd::Duration auto d) noexcept {
+  return static_cast<float>(
+             std::chrono::duration_cast<
+                 std::chrono::duration<uint32_t, std::milli>>(MakeDuration(d))
+                 .count())
+         / 1'000.F;
 }
 
 template <typename R, typename B>
@@ -275,26 +303,24 @@ constexpr auto operator""_us(unsigned long long int v) {
 template <typename C>
 concept Clock = std::chrono::is_clock_v<C>;
 #else
-template<class>
+template <class>
 struct is_clock : std::false_type {};
 
-template<class T>
-    requires
-        requires
-{
-  typename T::rep;
-  typename T::period;
-  typename T::duration;
-  typename T::time_point;
-  T::is_steady; // type is not checked
-  T::now();     // return type is not checked
-}
+template <class T>
+  requires requires {
+    typename T::rep;
+    typename T::period;
+    typename T::duration;
+    typename T::time_point;
+    T::is_steady;   // type is not checked
+    T::now();       // return type is not checked
+  }
 struct is_clock<T> : std::true_type {};
 
 /**
  * Concept that wraps the std::chrono::is_clock condition
  */
-template<typename C>
+template <typename C>
 concept Clock = is_clock<C>::value;
 #endif
 
@@ -307,4 +333,4 @@ concept SystemClock = Clock<C> && requires(C clk) {
   { clk.BlockFor(std::declval<typename C::duration>()) };
 };
 
-}   // namespace halstd
+}   // namespace hstd

@@ -1,25 +1,47 @@
 module;
 
 #include <array>
+#include <chrono>
 #include <concepts>
 
 export module hstd.dsp;
 
 import hstd;
+import math;
 
 namespace hstd::dsp {
 
 /**
- * @brief IIR filter that approximates an N-point moving average filter.
+ * @brief Calculates a filter sample count to approximate a moving average over
+ * the given time window.
+ * @param t_window Desired window time.
+ * @param fs Sampling frequency.
+ * @return Filter sample count.
+ */
+export constexpr std::size_t CalculateFilterSize(Duration auto  t_window,
+                                                 Frequency auto fs) {
+  const float fs_hz = static_cast<float>(fs.template As<Hz>().count);
+  const float t_window_s =
+      static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(
+                             hstd::MakeDuration(t_window))
+                             .count())
+      / 1000.F;
+
+  return math::FastCeil<std::size_t>(t_window_s * fs_hz);
+}
+
+/**
+ * @brief Filter that implements an exponentially weighted moving average
+ * (EWMA) by approxomating an N-sample moving average.
  */
 export template <std::floating_point F>
-class MovingAverageIir {
+class ExponentialMovingAverage {
  public:
   /**
    * @brief Constructor.
    * @param n Number of samples to approximate.
    */
-  constexpr explicit MovingAverageIir(std::size_t n) noexcept
+  constexpr explicit ExponentialMovingAverage(std::size_t n) noexcept
       : n{n}
       , state{}
       , alpha{static_cast<F>(n - 1) / static_cast<F>(n)}
@@ -50,12 +72,29 @@ class MovingAverageIir {
   }
 
   /**
+   * @brief Initializes the filter to the given value.
+   * @param value Value to initialize the filter to.
+   * @return Current filter value.
+   */
+  constexpr F Initialize(F value) {
+    state     = value;
+    n_samples = n;
+    return state;
+  }
+
+  /**
    * @brief Returns whether the filter is initialized.
    * @return Whether the filter is initialized.
    */
   [[nodiscard]] constexpr bool Initialized() const noexcept {
     return n == n_samples;
   }
+
+  /**
+   * @brief Returns the current value of the filter.
+   * @return Current value of the filter.
+   */
+  [[nodiscard]] constexpr F value() const noexcept { return state; }
 
  private:
   std::size_t n_samples{0};
@@ -64,5 +103,4 @@ class MovingAverageIir {
   F           alpha;
   F           one_over_n;
 };
-
 }   // namespace hstd::dsp
