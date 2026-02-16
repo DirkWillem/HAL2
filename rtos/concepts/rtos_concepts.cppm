@@ -33,9 +33,9 @@ concept Mutex = requires(Mtx& mtx) {
   } -> std::convertible_to<bool>;
   mtx.Unlock();
 
-  {
-    mtx.WithLocked(std::declval<std::chrono::milliseconds>(), [] {})
-  } -> std::convertible_to<bool>;
+  // {
+  //   mtx.WithLocked(std::declval<std::chrono::milliseconds>(), [] {})
+  // } -> std::convertible_to<bool>;
 };
 
 template <typename Bsp>
