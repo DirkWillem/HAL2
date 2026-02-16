@@ -165,7 +165,7 @@ const uint16_t* GetDescriptorString(uint8_t index, uint16_t) {
   case StringIdProduct: WriteDescriptor(buffer, DS::Product); break;
   case StringIdSerialNumber: WriteDescriptor(buffer, DS::SerialNumber); break;
   default: {
-    auto       endpoint_idx     = index - StringIdEndpoint0;
+    auto endpoint_idx = static_cast<std::size_t>(index - StringIdEndpoint0);
     const auto endpoint_strings = std::span{DS::Endpoints};
     if (endpoint_idx < endpoint_strings.size()) {
       WriteDescriptor(buffer, endpoint_strings[endpoint_idx]);
