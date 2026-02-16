@@ -19,10 +19,10 @@ namespace stm32h5 {
  */
 export template <typename Impl = hstd::Empty>
 void InitializeUsbDevice() {
-  constexpr RCC_PeriphCLKInitTypeDef clk_init = {
-      .PeriphClockSelection = RCC_PERIPHCLK_USB,
-      .UsbClockSelection    = RCC_USBCLKSOURCE_HSI48,
-  };
+  RCC_PeriphCLKInitTypeDef clk_init = {};
+  clk_init.PeriphClockSelection     = RCC_PERIPHCLK_USB;
+  clk_init.UsbClockSelection        = RCC_USBCLKSOURCE_HSI48;
+
   HAL_RCCEx_PeriphCLKConfig(&clk_init);
   HAL_PWREx_EnableVddUSB();
   __HAL_RCC_USB_CLK_ENABLE();
@@ -33,18 +33,17 @@ void InitializeUsbDevice() {
 
   hpcd.Instance = USB_DRD_FS;
 
-  hpcd.Init = {
-      .dev_endpoints            = 8,
-      .speed                    = USBD_FS_SPEED,
-      .phy_itface               = PCD_PHY_EMBEDDED,
-      .Sof_enable               = DISABLE,
-      .low_power_enable         = DISABLE,
-      .lpm_enable               = DISABLE,
-      .battery_charging_enable  = DISABLE,
-      .vbus_sensing_enable      = DISABLE,
-      .bulk_doublebuffer_enable = DISABLE,
-      .iso_singlebuffer_enable  = DISABLE,
-  };
+  hpcd.Init.dev_endpoints            = 8;
+  hpcd.Init.speed                    = USBD_FS_SPEED;
+  hpcd.Init.phy_itface               = PCD_PHY_EMBEDDED;
+  hpcd.Init.Sof_enable               = DISABLE;
+  hpcd.Init.low_power_enable         = DISABLE;
+  hpcd.Init.lpm_enable               = DISABLE;
+  hpcd.Init.battery_charging_enable  = DISABLE;
+  hpcd.Init.vbus_sensing_enable      = DISABLE;
+  hpcd.Init.bulk_doublebuffer_enable = DISABLE;
+  hpcd.Init.iso_singlebuffer_enable  = DISABLE;
+
   HAL_PCD_Init(&hpcd);
 }
 
