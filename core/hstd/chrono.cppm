@@ -237,6 +237,20 @@ float ToSeconds(hstd::Duration auto d) noexcept {
          / 1'000.F;
 }
 
+/**
+ * @brief Converts the given time point to a floating-point representation in
+ * seconds in millisecond precision.
+ * @param d Time point to convert.
+ * @return Time since epoch in seconds.
+ */
+float ToSeconds(hstd::TimePoint auto tp) noexcept {
+  return static_cast<float>(std::chrono::duration_cast<
+                                std::chrono::duration<uint32_t, std::milli>>(
+                                tp.time_since_epoch())
+                                .count())
+         / 1'000.F;
+}
+
 template <typename R, typename B>
 struct is_frequency<Freq<R, B>> : std::true_type {};
 
