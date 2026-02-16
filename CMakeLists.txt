@@ -1,4 +1,3 @@
-#include(cmake/setup_python.cmake)
 include(cmake/utilities.cmake)
 
 if (NOT CMAKE_CROSSCOMPILING)
@@ -17,25 +16,28 @@ if (NOT CMAKE_CROSSCOMPILING)
     FetchContent_MakeAvailable(argparse)
 endif ()
 
-add_subdirectory(common)
-
-# Add the logging abstractions early so that we can include them in other modules.
-add_subdirectory(logging/abstract)
-
 add_subdirectory(vendor)
-add_subdirectory(rtos)
-add_subdirectory(abstract)
-add_subdirectory(modbus)
-add_subdirectory(usb)
-add_subdirectory(logging)
+add_subdirectory(core)
 add_subdirectory(impl)
 
-if ("${TARGET}" STREQUAL "")
-    set(TARGET "desktop")
-endif ()
-
-if (${TARGET} STREQUAL "desktop")
-    add_subdirectory(test)
-endif ()
-
 include(cmake/add_application.cmake)
+
+
+function(ADD_LOGGING)
+    add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/modules/logging)
+endfunction()
+
+function(ADD_MODBUS)
+    add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/modules/modbus)
+endfunction()
+
+function(ADD_FREERTOS)
+    add_freertos_kernel()
+    add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/modules/rtos_freertos)
+endfunction()
+
+function(ADD_USB)
+    add_tinyusb_core()
+    add_add_tinyusb_function()
+    add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/modules/usb)
+endfunction()

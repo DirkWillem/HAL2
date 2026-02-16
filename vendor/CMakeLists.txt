@@ -1,11 +1,18 @@
 add_subdirectory(linker)
-add_subdirectory(cmsis_dsp)
 
 add_library(stm32_system STATIC
         stm32_system/syscalls.c
         stm32_system/sysmem.c)
 
+add_subdirectory(cmsis_dsp)
+
+
 target_link_libraries(CMSISDSP PRIVATE project_settings)
+# Proxy library for CMSIS-DSP which allows disabling it under certain build conditions
+add_library(cmsis_dsp INTERFACE)
+target_link_libraries(cmsis_dsp INTERFACE CMSISDSP)
+target_compile_definitions(cmsis_dsp INTERFACE HAS_CMSIS_DSP)
+
 
 function(add_stm32g0_vendor_hal SERIES VARIANT)
     string(TOUPPER "${VARIANT}" VARIANT_UPPER)
@@ -191,14 +198,14 @@ function(add_stm32h7_dualcore_vendor_hal VARIANT BOOT_TYPE)
     endif ()
 endfunction()
 
-function(ADD_FREERTOS CORE PORT)
+function(ADD_FREERTOS_PORT CORE PORT)
     add_library(freertos_config INTERFACE)
-    target_include_directories(freertos_config SYSTEM INTERFACE freertos_conf)
+    target_include_directories(freertos_config SYSTEM INTERFACE ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/freertos_conf)
     target_compile_definitions(freertos_config INTERFACE projCOVERAGE_TEST=0 ${CORE})
 
     set(FREERTOS_PORT ${PORT})
 
-    add_subdirectory(freertos)
+    add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/freertos)
 endfunction()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
@@ -212,11 +219,13 @@ if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
     endif ()
 
     # FreeRTOS
-    add_freertos(CORE_CM0 "GCC_ARM_CM0")
-    target_link_libraries(freertos_kernel PUBLIC project_settings)
-    target_link_libraries(freertos_kernel_include INTERFACE project_settings)
-    target_link_libraries(freertos_kernel_port_headers INTERFACE project_settings)
-    target_link_libraries(freertos_kernel_port PUBLIC project_settings)
+    function(ADD_FREERTOS_KERNEL)
+        add_freertos_port(CORE_CM0 "GCC_ARM_CM0")
+        target_link_libraries(freertos_kernel PUBLIC project_settings)
+        target_link_libraries(freertos_kernel_include INTERFACE project_settings)
+        target_link_libraries(freertos_kernel_port_headers INTERFACE project_settings)
+        target_link_libraries(freertos_kernel_port PUBLIC project_settings)
+    endfunction()
 
     # HAL
     add_stm32g0_vendor_hal(stm32g0x0 stm32g030)
@@ -234,11 +243,13 @@ if ("${TARGET}" STREQUAL "arm-cortex-m4")
     endif ()
 
     # FreeRTOS
-    add_freertos(CORE_CM4 "GCC_ARM_CM4F")
-    target_link_libraries(freertos_kernel PUBLIC project_settings)
-    target_link_libraries(freertos_kernel_include INTERFACE project_settings)
-    target_link_libraries(freertos_kernel_port_headers INTERFACE project_settings)
-    target_link_libraries(freertos_kernel_port PUBLIC project_settings)
+    function(ADD_FREERTOS_KERNEL)
+        add_freertos_port(CORE_CM4 "GCC_ARM_CM4F")
+        target_link_libraries(freertos_kernel PUBLIC project_settings)
+        target_link_libraries(freertos_kernel_include INTERFACE project_settings)
+        target_link_libraries(freertos_kernel_port_headers INTERFACE project_settings)
+        target_link_libraries(freertos_kernel_port PUBLIC project_settings)
+    endfunction()
 
     # HAL
     add_stm32g4_vendor_hal(stm32g474)
@@ -269,11 +280,13 @@ if ("${TARGET}" STREQUAL "arm-cortex-m33")
     endif ()
 
     # FreeRTOS
-    add_freertos(CORE_CM33 "GCC_ARM_CM33_NTZ_NONSECURE")
-    target_link_libraries(freertos_kernel PUBLIC project_settings)
-    target_link_libraries(freertos_kernel_include INTERFACE project_settings)
-    target_link_libraries(freertos_kernel_port_headers INTERFACE project_settings)
-    target_link_libraries(freertos_kernel_port PUBLIC project_settings)
+    function(ADD_FREERTOS_KERNEL)
+        add_freertos_port(CORE_CM33 "GCC_ARM_CM33_NTZ_NONSECURE")
+        target_link_libraries(freertos_kernel PUBLIC project_settings)
+        target_link_libraries(freertos_kernel_include INTERFACE project_settings)
+        target_link_libraries(freertos_kernel_port_headers INTERFACE project_settings)
+        target_link_libraries(freertos_kernel_port PUBLIC project_settings)
+    endfunction()
 
     add_stm32h5_vendor_hal(stm32h533)
 endif ()
@@ -336,45 +349,51 @@ endif ()
 
 # TinyUSB
 if (CMAKE_CROSSCOMPILING)
-    add_subdirectory(tinyusb/src)
-
-    function(add_tinyusb TARGET CONFIG_HEADER_INCLUDE_DIR)
-        add_library(${TARGET})
-        # Add TinyUSB sources
-        tinyusb_target_add(${TARGET})
-
-        # Add config headers
-        target_sources(
-                ${TARGET}
-                PUBLIC
-                FILE_SET config_hdr TYPE HEADERS
-                BASE_DIRS "${CONFIG_HEADER_INCLUDE_DIR}"
-                FILES
-                "${CONFIG_HEADER_INCLUDE_DIR}/tusb_config.h"
-        )
-
-        # Add fsdev driver
-        target_sources(
-                ${TARGET}
-                PUBLIC
-                FILE_SET fsdev_hdr TYPE HEADERS
-                BASE_DIRS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev"
-                FILES
-                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_at32.h"
-                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_ch32.h"
-                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_common.h"
-                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_stm32.h"
-        )
-
-        target_sources(
-                ${TARGET}
-                PRIVATE
-                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/dcd_stm32_fsdev.c"
-                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_common.c"
-                "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/hcd_stm32_fsdev.c"
-        )
-
-        # Add STM32 fsdev driver
-        target_include_directories(${TARGET} PRIVATE ${CONFIG_HEADER_INCLUDE_DIR})
+    function(ADD_TINYUSB_CORE)
+        add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src)
     endfunction()
+    macro(ADD_ADD_TINYUSB_FUNCTION)
+    
+        function(add_tinyusb TARGET CONFIG_HEADER_INCLUDE_DIR)
+            
+
+            add_library(${TARGET})
+            # Add TinyUSB sources
+            tinyusb_target_add(${TARGET})
+    
+            # Add config headers
+            target_sources(
+                    ${TARGET}
+                    PUBLIC
+                    FILE_SET config_hdr TYPE HEADERS
+                    BASE_DIRS "${CONFIG_HEADER_INCLUDE_DIR}"
+                    FILES
+                    "${CONFIG_HEADER_INCLUDE_DIR}/tusb_config.h"
+            )
+    
+            # Add fsdev driver
+            target_sources(
+                    ${TARGET}
+                    PUBLIC
+                    FILE_SET fsdev_hdr TYPE HEADERS
+                    BASE_DIRS "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev"
+                    FILES
+                    "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_at32.h"
+                    "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_ch32.h"
+                    "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_common.h"
+                    "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_stm32.h"
+            )
+    
+            target_sources(
+                    ${TARGET}
+                    PRIVATE
+                    "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/dcd_stm32_fsdev.c"
+                    "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_common.c"
+                    "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/hcd_stm32_fsdev.c"
+            )
+    
+            # Add STM32 fsdev driver
+            target_include_directories(${TARGET} PRIVATE ${CONFIG_HEADER_INCLUDE_DIR})
+        endfunction()
+    endmacro()
 endif ()
