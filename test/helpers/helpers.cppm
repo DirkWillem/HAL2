@@ -1,5 +1,4 @@
-export module hal2.testing.helpers;
-
+export module hal.test.helpers;
 
 export import :buffers;
 

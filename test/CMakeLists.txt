@@ -34,10 +34,10 @@ target_link_libraries(hal2_test_helpers PUBLIC
 
 # hstd tests
 add_executable(hal2_test_hstd
-        hstd/test_crc.cpp
-        hstd/test_logic.cpp
-        hstd/test_memory.cpp
-        hstd/test_buffer.cpp)
+        core/hstd/test_crc.cpp
+        core/hstd/test_logic.cpp
+        core/hstd/test_memory.cpp
+        core/hstd/test_buffer.cpp)
 target_link_libraries(hal2_test_hstd
         PRIVATE
         hstd
@@ -45,39 +45,12 @@ target_link_libraries(hal2_test_hstd
 add_test(hal2_test_hstd hal2_test_hstd)
 
 
-
-# Logging tests
-add_executable(hal2_test_logging
-        logging/test_encoding_binary.cpp)
-target_link_libraries(hal2_test_logging
-        PRIVATE
-        # Module under test
-        logging
-        # Helpers
-        hal2_test_helpers
-        # Google Test
-        GTest::gtest GTest::gmock GTest::gtest_main)
-add_test(hal2_test_logging hal2_test_logging)
-
 # Math tests
 add_executable(hal2_test_math
-        math/test_coordinate.cpp)
+        core/math/test_coordinate.cpp)
 target_link_libraries(hal2_test_math
         PRIVATE
         math
         GTest::gtest GTest::gmock GTest::gtest_main)
 add_test(hal2_test_math hal2_test_math)
 
-# MODBUS tests
-add_executable(hal2_test_modbus
-        modbus/test_bit_storage.cpp
-        modbus/test_encoding_rtu_decoder.cpp
-        modbus/test_encoding_rtu_encoder.cpp
-        modbus/test_server.cpp
-        modbus/test_server_frames.cpp)
-target_link_libraries(hal2_test_modbus
-        PRIVATE
-        modbus_encoding_rtu modbus_server
-        hal2_test_helpers
-        GTest::gtest GTest::gmock GTest::gtest_main)
-add_test(hal2_test_modbus hal2_test_modbus)

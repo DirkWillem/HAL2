@@ -4,11 +4,11 @@ module;
 
 #include <gmock/gmock.h>
 
-export module hal2.testing.helpers:mocks.performance_timer;
+export module hal.test.helpers:mocks.performance_timer;
 
 import hal.abstract;
 
-namespace hal2::testing::helpers {
+namespace hal::test::helpers {
 
 export class MockPerformanceTimer {
  public:
@@ -39,4 +39,4 @@ export class MockPerformanceTimer {
 
 static_assert(hal::PerformanceTimer<MockPerformanceTimer>);
 
-}   // namespace hal2::testing::helpers
+}   // namespace hal::test::helpers

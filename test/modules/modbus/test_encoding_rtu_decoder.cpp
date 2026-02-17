@@ -9,14 +9,14 @@ import hstd;
 import modbus.core;
 import modbus.encoding.rtu;
 
-import hal2.testing.helpers;
+import hal.test.helpers;
 
 using namespace ::testing;
 
 using namespace modbus;
 using namespace modbus::encoding::rtu;
 
-using namespace hal2::testing::helpers;
+using namespace hal::test::helpers;
 
 using namespace hstd::literals;
 

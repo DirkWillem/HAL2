@@ -4,11 +4,11 @@ module;
 
 #include <gmock/gmock.h>
 
-export module hal2.testing.helpers:mocks.clock;
+export module hal.test.helpers:mocks.clock;
 
 import hstd;
 
-namespace hal2::testing::helpers {
+namespace hal::test::helpers {
 
 /**
  * @brief Provides a mock clock implementation that conforms to the STL clock
@@ -60,4 +60,4 @@ export class MockClock {
   }
 };
 
-}   // namespace hal2::testing::helpers
+}   // namespace hal::test::helpers

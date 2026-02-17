@@ -7,10 +7,10 @@
 
 import logging;
 
-import hal2.testing.helpers;
+import hal.test.helpers;
 
 using namespace ::testing;
-using namespace ::hal2::testing::helpers;
+using namespace ::hal::test::helpers;
 
 using HelloMsg = logging::Message<"Hello World!">;
 using CountMsg = logging::Message<"Count={}, stdev={}", uint32_t, float>;
