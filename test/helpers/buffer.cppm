@@ -2,8 +2,6 @@ module;
 
 #include <bit>
 #include <concepts>
-#include <functional>
-#include <memory>
 #include <optional>
 #include <span>
 

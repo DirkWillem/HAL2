@@ -31,7 +31,7 @@ function(ADD_LOGGING)
     add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/modules/logging)
 
     # If not cross-compiling, add unit tests.
-    if (NOT CROSSCOMPILING)
+    if (NOT CMAKE_CROSSCOMPILING)
         add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test/modules/logging)
     endif()
 endfunction()
@@ -40,7 +40,7 @@ function(ADD_MODBUS)
     add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/modules/modbus)
 
     # If not cross-compiling, add unit tests.
-    if (NOT CROSSCOMPILING)
+    if (NOT CMAKE_CROSSCOMPILING)
         add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test/modules/logging)
     endif()
 endfunction()
