@@ -11,3 +11,6 @@ target_sources(rtos_concepts
         FILE_SET CXX_MODULES FILES
         abstract/rtos_concepts.cppm)
 target_link_libraries(rtos_concepts PRIVATE project_settings)
+
+
+set_target_properties(rtos_check rtos_concepts PROPERTIES FOLDER hal/core)

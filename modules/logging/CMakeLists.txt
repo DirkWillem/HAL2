@@ -30,6 +30,8 @@ target_link_libraries(logging
         hal_usb_abstract
         logging_abstract)
 
+set_target_properties(logging_abstract logging PROPERTIES FOLDER hal/modules/logging)
+
 # Logging spec generator
 if (NOT CMAKE_CROSSCOMPILING)
     add_library(logging_spec_gen)
@@ -55,4 +57,6 @@ if (NOT CMAKE_CROSSCOMPILING)
             FILES 
             test_helpers/logging_test_helpers.cppm)
     target_link_libraries(logging_test_helpers PUBLIC logging_abstract)
+
+    set_target_properties(logging_spec_gen logging_test_helpers PROPERTIES FOLDER hal/modules/logging)
 endif ()

@@ -9,6 +9,7 @@ export import :dma;
 export import :i2s;
 export import :nvic;
 export import :peripherals;
+export import :pin_interrupt;
 export import :pin;
 export import :spi;
 export import :system;

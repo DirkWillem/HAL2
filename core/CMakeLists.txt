@@ -27,6 +27,8 @@ target_sources(hstd
         hstd/halstd.cppm)
 target_link_libraries(hstd PUBLIC project_settings)
 
+set_target_properties(hstd PROPERTIES FOLDER hal/core)
+
 # Math library
 add_library(math)
 target_sources(math
@@ -45,6 +47,8 @@ target_sources(math
         math/settings.cppm)
 target_link_libraries(math PUBLIC hstd cmsis_dsp)
 
+set_target_properties(math PROPERTIES FOLDER hal/core)
+
 # hstd DSP library.
 add_library(hstd_dsp)
 target_sources(hstd_dsp
@@ -52,6 +56,8 @@ target_sources(hstd_dsp
         FILE_SET CXX_MODULES FILES
         hstd_dsp/hstd_dsp.cppm)
 target_link_libraries(hstd_dsp PUBLIC hstd cmsis_dsp math)
+
+set_target_properties(hstd_dsp PROPERTIES FOLDER hal/core)
 
 # Statechart library
 add_library(statechart)
@@ -63,6 +69,8 @@ target_sources(statechart
 
         sc/statechart.cppm)
 target_link_libraries(statechart PRIVATE hstd project_settings)
+
+set_target_properties(statechart PROPERTIES FOLDER hal/core)
 
 # RTOS concepts libraries.
 add_subdirectory(rtos)

@@ -32,6 +32,8 @@ target_link_libraries(hal2_test_helpers PUBLIC
         GTest::gtest
         GTest::gmock)
 
+set_target_properties(hal2_test_helpers PROPERTIES FOLDER hal/test)
+
 # hstd tests
 add_executable(hal2_test_hstd
         core/hstd/test_crc.cpp
@@ -44,6 +46,7 @@ target_link_libraries(hal2_test_hstd
         GTest::gtest GTest::gmock GTest::gtest_main)
 add_test(hal2_test_hstd hal2_test_hstd)
 
+set_target_properties(hal2_test_hstd PROPERTIES FOLDER hal/test)
 
 # Math tests
 add_executable(hal2_test_math
@@ -54,3 +57,4 @@ target_link_libraries(hal2_test_math
         GTest::gtest GTest::gmock GTest::gtest_main)
 add_test(hal2_test_math hal2_test_math)
 
+set_target_properties(hal2_test_math PROPERTIES FOLDER hal/test)

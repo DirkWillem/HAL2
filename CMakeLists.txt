@@ -1,3 +1,5 @@
+set_property(DIRECTORY ${CMAKE_CURRENT_LIST_DIR} PROPERTY FOLDER hal2)
+
 include(cmake/utilities.cmake)
 
 if (NOT CMAKE_CROSSCOMPILING)

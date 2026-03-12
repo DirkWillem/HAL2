@@ -28,4 +28,6 @@ function(add_hal_usb_lib VARIANT TINYUSB_TARGET)
             rtos_concepts
             freertos_kernel_include
             freertos_kernel_port_headers)
+
+    set_target_properties(hal_usb_${VARIANT} PROPERTIES FOLDER hal/modules/usb)
 endfunction()

@@ -20,7 +20,7 @@ concept CustomInterruptPriority = requires {
 }   // namespace concepts
 
 template <typename Impl>
-consteval uint32_t GetIrqPrio(IRQn_Type irqn) noexcept {
+constexpr uint32_t GetIrqPrio(IRQn_Type irqn) noexcept {
   if constexpr (concepts::CustomInterruptPriority<Impl>) {
     return static_cast<uint32_t>(irqn);
   }
@@ -28,10 +28,16 @@ consteval uint32_t GetIrqPrio(IRQn_Type irqn) noexcept {
   return 0;
 }
 
-export template<IRQn_Type Irqn, typename PrioImpl>
+export template <IRQn_Type Irqn, typename PrioImpl>
 void EnableInterrupt() noexcept {
   NVIC_SetPriority(Irqn, GetIrqPrio<PrioImpl>(Irqn));
   NVIC_EnableIRQ(Irqn);
+}
+
+export template <typename PrioImpl>
+void EnableInterrupt(IRQn_Type irqn) {
+  NVIC_SetPriority(irqn, GetIrqPrio<PrioImpl>(irqn));
+  NVIC_EnableIRQ(irqn);
 }
 
 }   // namespace stm32h5

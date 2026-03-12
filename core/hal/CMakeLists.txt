@@ -19,6 +19,8 @@ target_sources(hal_abstract
 
 target_link_libraries(hal_abstract PRIVATE project_settings hstd rtos_concepts)
 
+set_target_properties(hal_abstract PROPERTIES FOLDER hal/core)
+
 # HAL USB abstract library
 add_library(hal_usb_abstract STATIC)
 target_sources(hal_usb_abstract
@@ -27,3 +29,5 @@ target_sources(hal_usb_abstract
         FILES
         usb_abstract/usb_abstract.cppm)
 target_link_libraries(hal_usb_abstract PUBLIC hstd)
+
+set_target_properties(hal_usb_abstract PROPERTIES FOLDER hal/core)

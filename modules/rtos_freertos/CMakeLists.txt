@@ -18,3 +18,5 @@ target_link_libraries(rtos_freertos
         project_settings
         hstd
         hal_abstract)
+
+set_target_properties(rtos_freertos PROPERTIES FOLDER hal/modules/freertos)

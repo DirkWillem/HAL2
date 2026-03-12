@@ -5,6 +5,8 @@ function(add_linkopts VARIANT)
             "${CMAKE_CURRENT_FUNCTION_LIST_DIR}")
     target_link_options("${VARIANT}_linkopts" INTERFACE
             -T${CMAKE_CURRENT_FUNCTION_LIST_DIR}/${VARIANT}.ld -flto -Wl,-Map=output.map)
+
+    set_target_properties("${VARIANT}_linkopts" PROPERTIES FOLDER hal/impl/vendor)
 endfunction()
 
 function(add_multicore_linkopts VARIANT CORE)

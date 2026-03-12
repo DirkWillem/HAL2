@@ -5,6 +5,28 @@ import hal.stm32h5;
 
 import rtos.check;
 
+template <unsigned P>
+void HandlePinInterrupt() noexcept {
+  using namespace stm32h5;
+  using PinInt = PinInterrupt<PinInterruptImplMarker>;
+
+  if constexpr (hal::IsPeripheralInUse<PinInt>()) {
+    if constexpr (PinInt::PinInterruptActive(P, hal::Edge::Rising)) {
+      if (__HAL_GPIO_EXTI_GET_RISING_IT(GetHalPin(P))) {
+        __HAL_GPIO_EXTI_CLEAR_RISING_IT(GetHalPin(P));
+        PinInt::instance().HandleInterrupt<P, hal::Edge::Rising>();
+      }
+    }
+
+    if constexpr (PinInt::PinInterruptActive(P, hal::Edge::Falling)) {
+      if (__HAL_GPIO_EXTI_GET_FALLING_IT(GetHalPin(P))) {
+        __HAL_GPIO_EXTI_CLEAR_FALLING_IT(GetHalPin(P));
+        PinInt::instance().HandleInterrupt<P, hal::Edge::Falling>();
+      }
+    }
+  }
+}
+
 extern "C" {
 
 //
@@ -100,15 +122,11 @@ UART_IRQ_HANDLER(LPUART1)
     }                                                      \
   }
 
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t size) {
-  HANDLE_UART_RECEIVE_CALLBACK(Usart1)
-  HANDLE_UART_RECEIVE_CALLBACK(Usart2)
-  HANDLE_UART_RECEIVE_CALLBACK(Usart3)
-  HANDLE_UART_RECEIVE_CALLBACK(Uart4)
-  HANDLE_UART_RECEIVE_CALLBACK(Uart5)
-  HANDLE_UART_RECEIVE_CALLBACK(LpUart1)
-}
-
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t size){
+    HANDLE_UART_RECEIVE_CALLBACK(Usart1) HANDLE_UART_RECEIVE_CALLBACK(Usart2)
+        HANDLE_UART_RECEIVE_CALLBACK(Usart3) HANDLE_UART_RECEIVE_CALLBACK(Uart4)
+            HANDLE_UART_RECEIVE_CALLBACK(Uart5)
+                HANDLE_UART_RECEIVE_CALLBACK(LpUart1)}
 #define HANDLE_UART_TX_CALLBACK(Inst)                      \
   if constexpr (hal::IsPeripheralInUse<stm32h5::Inst>()) { \
     if (huart == &stm32h5::Inst::instance().huart) {       \
@@ -116,14 +134,10 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t size) {
     }                                                      \
   }
 
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
-  HANDLE_UART_TX_CALLBACK(Usart1)
-  HANDLE_UART_TX_CALLBACK(Usart2)
-  HANDLE_UART_TX_CALLBACK(Usart3)
-  HANDLE_UART_TX_CALLBACK(Uart4)
-  HANDLE_UART_TX_CALLBACK(Uart5)
-  HANDLE_UART_TX_CALLBACK(LpUart1)
-}
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart){
+    HANDLE_UART_TX_CALLBACK(Usart1) HANDLE_UART_TX_CALLBACK(Usart2)
+        HANDLE_UART_TX_CALLBACK(Usart3) HANDLE_UART_TX_CALLBACK(Uart4)
+            HANDLE_UART_TX_CALLBACK(Uart5) HANDLE_UART_TX_CALLBACK(LpUart1)}
 
 /**
  * SPI Interrupts
@@ -150,8 +164,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
   }
 
 SPI_I2S_IRQ_HANDLER(SPI1, I2S1)
-SPI_I2S_IRQ_HANDLER(SPI2, I2S2)
-void SPI3_IRQHandler() {
+    SPI_I2S_IRQ_HANDLER(SPI2, I2S2) void SPI3_IRQHandler() {
   constexpr auto SpiInst = stm32h5::SpiIdFromName("SPI3");
   if constexpr (hal::IsPeripheralInUse<stm32h5::Spi<SpiInst>>()) {
     stm32h5::Spi<SpiInst>::instance().HandleInterrupt();
@@ -170,13 +183,9 @@ SPI_IRQ_HANDLER(SPI4)
     }                                                      \
   }
 
-void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef* hspi) {
-  HANDLE_SPI_RX_CALLBACK(Spi1)
-  HANDLE_SPI_RX_CALLBACK(Spi2)
-  HANDLE_SPI_RX_CALLBACK(Spi3)
-  HANDLE_SPI_RX_CALLBACK(Spi4)
-}
-
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef* hspi){
+    HANDLE_SPI_RX_CALLBACK(Spi1) HANDLE_SPI_RX_CALLBACK(Spi2)
+        HANDLE_SPI_RX_CALLBACK(Spi3) HANDLE_SPI_RX_CALLBACK(Spi4)}
 #define HANDLE_SPI_TX_CALLBACK(Inst)                       \
   if constexpr (hal::IsPeripheralInUse<stm32h5::Inst>()) { \
     if (hspi == &stm32h5::Inst::instance().hspi) {         \
@@ -184,12 +193,9 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef* hspi) {
     }                                                      \
   }
 
-void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef* hspi) {
-  HANDLE_SPI_TX_CALLBACK(Spi1)
-  HANDLE_SPI_TX_CALLBACK(Spi2)
-  HANDLE_SPI_TX_CALLBACK(Spi3)
-  HANDLE_SPI_TX_CALLBACK(Spi4)
-}
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef* hspi){
+    HANDLE_SPI_TX_CALLBACK(Spi1) HANDLE_SPI_TX_CALLBACK(Spi2)
+        HANDLE_SPI_TX_CALLBACK(Spi3) HANDLE_SPI_TX_CALLBACK(Spi4)}
 
 #define HANDLE_I2S_HALF_RECEIVE_CALLBACK(Inst)             \
   if constexpr (hal::IsPeripheralInUse<stm32h5::Inst>()) { \
@@ -211,9 +217,21 @@ void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef* hspi) {
   HANDLE_I2S_HALF_RECEIVE_CALLBACK(I2s3)
 }
 
-void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef* hspi) {
-  HANDLE_I2S_RECEIVE_CALLBACK(I2s1)
-  HANDLE_I2S_RECEIVE_CALLBACK(I2s2)
-  HANDLE_I2S_RECEIVE_CALLBACK(I2s3)
-}
+void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef* hspi){
+    HANDLE_I2S_RECEIVE_CALLBACK(I2s1) HANDLE_I2S_RECEIVE_CALLBACK(I2s2)
+        HANDLE_I2S_RECEIVE_CALLBACK(I2s3)}
+
+//
+// Pin interrupts
+//
+
+#define EXTI_HANDLER(N)                          \
+  [[maybe_unused]] void EXTI##N##_IRQHandler() { \
+    HandlePinInterrupt<N>();                     \
+  }
+
+EXTI_HANDLER(0) EXTI_HANDLER(1) EXTI_HANDLER(2) EXTI_HANDLER(3) EXTI_HANDLER(4)
+    EXTI_HANDLER(5) EXTI_HANDLER(6) EXTI_HANDLER(7) EXTI_HANDLER(8)
+        EXTI_HANDLER(9) EXTI_HANDLER(10) EXTI_HANDLER(11) EXTI_HANDLER(12)
+            EXTI_HANDLER(13) EXTI_HANDLER(14) EXTI_HANDLER(15)
 }

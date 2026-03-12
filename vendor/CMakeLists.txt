@@ -141,6 +141,8 @@ function(add_stm32h5_vendor_hal VARIANT)
             "stm32h5xx_device/Source/Templates/gcc/startup_${VARIANT}xx.s"
             "stm32h5xx_device/Source/Templates/system_stm32h5xx.c")
     target_link_libraries("${VARIANT}_vendor" PUBLIC "${VARIANT}_st_hal" "${VARIANT}_linkopts")
+
+    set_target_properties("${VARIANT}_device" "${VARIANT}_st_hal" "${VARIANT}_vendor" PROPERTIES FOLDER hal/impl/vendor)
 endfunction()
 
 
