@@ -14,11 +14,8 @@ namespace stm32h5 {
  * @brief Initializes the USB peripheral as a USB device. The STM32H5 HAL
  * library does not implement USB functionality, for this, TinyUSB should be
  * used.
- *
- * @tparam Impl Implementation type, used to derive USB interrupt priority.
  */
-export template <typename Impl = hstd::Empty>
-void InitializeUsbDevice() {
+export void InitializeUsbDevice() {
   RCC_PeriphCLKInitTypeDef clk_init = {};
   clk_init.PeriphClockSelection     = RCC_PERIPHCLK_USB;
   clk_init.UsbClockSelection        = RCC_USBCLKSOURCE_HSI48;
@@ -26,8 +23,6 @@ void InitializeUsbDevice() {
   HAL_RCCEx_PeriphCLKConfig(&clk_init);
   HAL_PWREx_EnableVddUSB();
   __HAL_RCC_USB_CLK_ENABLE();
-
-  stm32h5::EnableInterrupt<USB_DRD_FS_IRQn, Impl>();
 
   PCD_HandleTypeDef hpcd;
 

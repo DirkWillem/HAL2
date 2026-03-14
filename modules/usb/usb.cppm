@@ -126,7 +126,7 @@ class UsbTask : public OS::template Task<UsbTask<OS>, OS::MediumStackSize> {
   template <typename... Args>
   explicit UsbTask(Args&&... base_args)
       : OS::template Task<UsbTask, OS::MediumStackSize>{
-            std::forward<Args>(base_args)..., configMAX_PRIORITIES - 2} {}
+            std::forward<Args>(base_args)..., configMAX_PRIORITIES - 1} {}
 
   [[noreturn]] void operator()() {
     using namespace std::chrono_literals;
