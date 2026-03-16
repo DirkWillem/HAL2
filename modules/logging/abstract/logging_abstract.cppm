@@ -8,6 +8,8 @@ module;
 
 export module logging.abstract;
 
+export import :enumeration;
+
 import hstd;
 
 namespace logging {
@@ -22,13 +24,28 @@ export enum class Level : uint8_t {
   Fatal = 60,
 };
 
+template <typename T>
+struct MsgArgTypeHelper;
+
+template <typename T>
+  requires(std::is_integral_v<T> || std::is_floating_point_v<T>)
+struct MsgArgTypeHelper<T> {
+  using Type = T;
+};
+
+template <typename T>
+  requires(concepts::Enum<T>)
+struct MsgArgTypeHelper<T> {
+  using Type = T::EnumType;
+};
+
 export template <hstd::StaticString Msg, typename... Args>
 class Message {
  public:
-  explicit Message(Args... args)
-      : args{std::forward<Args>(args)...} {}
+  explicit Message(typename MsgArgTypeHelper<Args>::Type... args)
+      : args{std::forward<typename MsgArgTypeHelper<Args>::Type>(args)...} {}
 
-  std::tuple<Args...> args;
+  std::tuple<typename MsgArgTypeHelper<Args>::Type...> args;
 };
 
 export template <uint16_t I, hstd::StaticString N, typename... Msgs>

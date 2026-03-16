@@ -4,6 +4,8 @@ target_sources(logging_abstract
         PUBLIC
         FILE_SET CXX_MODULES FILES
         abstract/logging_abstract.cppm
+
+        abstract/enumeration.cppm
 )
 
 target_link_libraries(logging_abstract
