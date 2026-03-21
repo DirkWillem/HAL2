@@ -1,53 +1,117 @@
-import struct
-from typing import TypedDict, Optional
+import dataclasses
 import argparse
-import sys
-
-import json
 import pathlib
+import json
+import sys
+import serial
+import struct
 
 import colorama
-import serial
+
+from hal2.logging.spec_json import LogSpecJson
+from hal2.logging.spec import LoggingSpec
 
 
-_HEADER_SPEC = "<IBHBB"
-_FOOTER_SPEC = "<H"
-_OVERHEAD_LEN = struct.calcsize(_HEADER_SPEC) + struct.calcsize(_FOOTER_SPEC)
+@dataclasses.dataclass
+class FrameHeader:
+    """Log frame header."""
+
+    timestamp: int
+    """Log timestamp, in milliseconds."""
+    level: int
+    """Log level."""
+    module_id: int
+    """Log message module ID."""
+    message_id: int
+    """Log message ID."""
+    payload_len: int
+    """Log payload length."""
 
 
-class ArgSpecJson(TypedDict):
-    name: str
-    type: str
-    format: Optional[str]
+@dataclasses.dataclass
+class FrameFooter:
+    """Log frame footer."""
+
+    crc: int
+    """Frame CRC."""
 
 
-class LogMessageSpecJson(TypedDict):
-    id: int
-    message_template: str
-    arguments: list[ArgSpecJson]
+@dataclasses.dataclass
+class Frame:
+    """Log frame."""
+
+    header: FrameHeader
+    """Frame header."""
+    payload: bytes
+    """Frame payload bytes."""
+    footer: FrameFooter
+    """Frame footer."""
 
 
-def _type_struct_fmt(typename: str):
-    fmts = {
-        "uint8": "B",
-        "uint16": "<H",
-        "uint32": "<I",
-        "uint64": "<Q",
-        "int8": "b",
-        "int16": "<h",
-        "int32": "<i",
-        "int64": "<q",
-        "float32": "<f",
-        "float64": "<d",
-    }
+_LEVEL_COLORS = {
+    10: colorama.Fore.WHITE + colorama.Style.DIM,  # TRACE
+    20: colorama.Fore.WHITE,  # DEBUG
+    30: colorama.Fore.BLUE,  # INFO
+    40: colorama.Fore.YELLOW,  # WARN
+    50: colorama.Fore.RED,  # ERROR
+    60: colorama.Fore.RED + colorama.Style.BRIGHT,  # FATAL
+}
 
-    if typename not in fmts:
-        raise RuntimeError(f"Invalid typename '{typename}'")
+_LEVEL_VALUE_COLORS = {
+    10: colorama.Fore.WHITE,  # TRACE
+    20: colorama.Fore.WHITE + colorama.Style.BRIGHT,  # DEBUG
+    30: colorama.Fore.BLUE + colorama.Style.BRIGHT,  # INFO
+    40: colorama.Fore.YELLOW + colorama.Style.BRIGHT,  # WARN
+    50: colorama.Fore.RED + colorama.Style.BRIGHT,  # ERROR
+    60: colorama.Fore.WHITE + colorama.Back.RED + colorama.Style.BRIGHT,  # FATAL
+}
 
-    return fmts[typename]
+
+def read_frame(ser: serial.Serial) -> Frame:
+    """
+    Reads a log frame from the serial.
+
+    Args:
+        ser: Serial to read from.
+
+    Returns:
+        Decoded frame.
+    """
+
+    # Read header
+    header_fmt = "<IBHBB"
+    header_n_bytes = struct.calcsize(header_fmt)
+    header_bytes = ser.read(header_n_bytes)
+
+    # Decode header.
+    timestamp, level, module_id, message_id, payload_len = struct.unpack(header_fmt, header_bytes)
+    header = FrameHeader(
+        timestamp=timestamp,
+        level=level,
+        module_id=module_id,
+        message_id=message_id,
+        payload_len=payload_len,
+    )
+
+    # Read payload if present.
+    if header.payload_len > 0:
+        payload_bytes = ser.read(header.payload_len)
+    else:
+        payload_bytes = bytes()
+
+    # Read footer.
+    footer_fmt = "<H"
+    footer_n_bytes = struct.calcsize(footer_fmt)
+    footer_bytes = ser.read(footer_n_bytes)
+
+    # Decode footer
+    (crc,) = struct.unpack(footer_fmt, footer_bytes)
+    footer = FrameFooter(crc=crc)
+
+    return Frame(header=header, payload=payload_bytes, footer=footer)
 
 
-def _fmt_time(timestamp_ms: int) -> str:
+def format_ts(timestamp_ms: int) -> str:
     SECOND = 1000
     MINUTE = 60 * SECOND
     HOUR = 60 * MINUTE
@@ -64,136 +128,67 @@ def _fmt_time(timestamp_ms: int) -> str:
     return f"{hours:02}:{minutes:02}:{seconds:02}.{timestamp_ms:03}"
 
 
-def _fmt_log_level(log_level: int) -> str:
-    lvl_name = {10: "TRACE", 20: "DEBUG", 30: "INFO", 40: "WARN", 50: "ERROR", 60: "FATAL"}.get(log_level)
 
-    return f"{lvl_name:<5}"
+def print_message(timestamp: int, level: int, module: str, message: str):
+    level_names = {
+        10: "TRACE",
+        20: "DEBUG",
+        30: "INFO",
+        40: "WARN",
+        50: "ERROR",
+        60: "FATAL"
+    }
 
+    lvl = f"{level_names.get(level, "???"):<5}"
 
-def _fmt_log_line(*, log_level: int, timestamp: int, module: str, msg: str):
-    return (
-        f"{_color(log_level)}{_fmt_time(timestamp)} [{_fmt_log_level(log_level)}] {module}:  "
-        f"{msg}{colorama.Style.RESET_ALL}"
-    )
+    if level in _LEVEL_COLORS:
+        lvl = f"{_LEVEL_COLORS[level]}{lvl}{colorama.Style.RESET_ALL}"
 
-
-def _color(log_level: int) -> str:
-    return {
-        10: colorama.Fore.WHITE + colorama.Style.DIM,  # TRACE
-        20: colorama.Fore.WHITE,  # DEBUG
-        30: colorama.Fore.BLUE,  # INFO
-        40: colorama.Fore.YELLOW,  # WARN
-        50: colorama.Fore.RED,  # ERROR
-        60: colorama.Fore.RED + colorama.Style.BRIGHT,  # FATAL
-    }.get(log_level)
-
-
-def _get_basic_frame_info(data: bytes):
-    _, _, module_id, _, payload_len = struct.unpack(_HEADER_SPEC, data[: struct.calcsize(_HEADER_SPEC)])
-    return module_id, payload_len
-
-
-class LogModuleSpecJson(TypedDict):
-    id: int
-    name: str
-    messages: list[LogMessageSpecJson]
-
-
-class LogMessage:
-    def __init__(self, json_spec: LogMessageSpecJson):
-        self._create_fmt_string(json_spec)
-        self._args = [(arg["name"], _type_struct_fmt(arg["type"])) for arg in json_spec["arguments"]]
-
-    def decode(self, payload: bytes):
-        arg_values = dict()
-
-        for arg_name, arg_fmt in self._args:
-            arg_values[arg_name] = struct.unpack(arg_fmt, payload[: struct.calcsize(arg_fmt)])[0]
-            payload = payload[struct.calcsize(arg_fmt) :]
-
-        return self._template.format_map(arg_values)
-
-    def _create_fmt_string(self, json_spec: LogMessageSpecJson):
-        result = json_spec["message_template"]
-
-        for arg in json_spec["arguments"]:
-            if arg["format"] is not None:
-                result = result.replace(f"{arg['name']}:{arg['format']}", arg["name"])
-
-        self._template = result
-
-
-class LogModule:
-    def __init__(self, json_spec):
-        self._id = json_spec["id"]
-        self._name = json_spec["name"]
-
-        self._messages = {msg_json["id"]: LogMessage(msg_json) for msg_json in json_spec["messages"]}
-
-    def decode(self, raw_message: bytes):
-        # Read header and footer.
-        timestamp, log_level, module_id, message_id, actual_payload_len = struct.unpack(
-            _HEADER_SPEC, raw_message[: struct.calcsize(_HEADER_SPEC)]
-        )
-        (crc,) = struct.unpack(_FOOTER_SPEC, raw_message[-struct.calcsize(_FOOTER_SPEC) :])
-
-        # Calculate actual payload length, compare to received payload length.
-        actual_payload_len = len(raw_message) - struct.calcsize(_HEADER_SPEC) - struct.calcsize(_FOOTER_SPEC)
-
-        if actual_payload_len != actual_payload_len:
-            raise RuntimeError(f"Invalid payload length: {actual_payload_len} != {actual_payload_len}")
-
-        # Validate that the message is known.
-        if message_id not in self._messages:
-            raise RuntimeError(f"Invalid message id: {message_id}")
-
-        # Decode the payload.
-        payload = raw_message[struct.calcsize(_HEADER_SPEC) : -struct.calcsize(_FOOTER_SPEC)]
-        msg = self._messages[message_id].decode(payload)
-
-        # Create the log line.
-        return _fmt_log_line(log_level=log_level, timestamp=timestamp, module=self._name, msg=msg)
+    print(f"{format_ts(timestamp)} [{lvl}] {module}: {message}")
 
 
 def main():
+    # Define and parse command-line arguments.
     parser = argparse.ArgumentParser(description="Read and log binary log messages")
     parser.add_argument("--log-spec", type=pathlib.Path, help="Path to the JSON log specification file", required=True)
     parser.add_argument("--port", type=str, help="Serial port to read from", required=True)
     args = parser.parse_args()
 
+    # Read logging spec definition.
     with args.log_spec.open("r") as fin:
-        json_spec = json.load(fin)
+        json_spec: LogSpecJson = json.load(fin)
 
-    modules = {json_module["id"]: LogModule(json_module) for json_module in json_spec["modules"]}
+    # Create specification
+    spec = LoggingSpec(json_spec)
 
+    # Open serial and start reading messages.
     with serial.Serial(args.port, timeout=None) as ser:
-        print(_fmt_log_line(log_level=20, timestamp=0, module="LogViewer", msg=f"Logging messages received on port {args.port}"))
-        print(_fmt_log_line(log_level=20, timestamp=0, module="LogViewer", msg=f"Parsing messages based on {args.log_spec}"))
-
         while True:
+            # Start reading until we receive the start byte (b"L")
             start_byte = ser.read(1)
-            if start_byte == b"L":
-                raw_message = ser.read(ser.in_waiting)
+            if start_byte != b"L":
+                continue
 
-                try:
-                    while len(raw_message) > 0:
-                        _module_id, payload_len = _get_basic_frame_info(raw_message)
-                        msg_len = payload_len + _OVERHEAD_LEN
-                        current_message = raw_message[:msg_len]
-                        raw_message = raw_message[msg_len:]
+            try:
+                frame = read_frame(ser)
 
-                        if _module_id not in modules:
-                            raise RuntimeError(f"Unknown module id: {_module_id}")
-                        print(modules[_module_id].decode(current_message))
+                msg_pre = _LEVEL_COLORS[frame.header.level]
+                val_pre = colorama.Style.RESET_ALL + _LEVEL_VALUE_COLORS[frame.header.level]
+                val_post = colorama.Style.RESET_ALL + _LEVEL_COLORS[frame.header.level]
 
-                        if len(raw_message) == 0:
-                            break
+                module, msg = spec.decode(
+                    module_id=frame.header.module_id,
+                    msg_id=frame.header.message_id,
+                    payload=frame.payload,
+                    wrap_value=(val_pre, val_post),
+                )
 
-                        if raw_message[0] != ord("L"):
-                            break
-                        raw_message = raw_message[1:]
-                except Exception as e:
-                    print(f"{_color(60)}{_fmt_time(0)} [FATAL] Invalid message: {e}{colorama.Style.RESET_ALL}")
+                msg = f"{msg_pre}{msg}{colorama.Style.RESET_ALL}"
+
+                print_message(frame.header.timestamp, frame.header.level, module, msg)
+            except Exception as e:
+                exc_msg = f"{_LEVEL_COLORS[60]}{e}{colorama.Style.RESET_ALL}"
+                print_message(0, 60, "Logger", exc_msg)
 
 
 if __name__ == "__main__":

@@ -31,10 +31,15 @@ struct ArgumentDescriptor {
   std::optional<std::string> format;   //!< Format specifier.
 
   [[nodiscard]] json ToJson() const {
+    json fmt = nullptr;
+    if (format.has_value()) {
+      fmt = *format;
+    }
+
     return {
         {"name", name},
         {"type", type},
-        {"format", format.has_value() ? json{*format} : nullptr},
+        {"format", fmt},
     };
   }
 };
@@ -269,7 +274,7 @@ struct MessageHelper<Message<MsgTemplate, Args...>> {
         }
         break;
       case ArgumentFormat:
-        if (std::isdigit(c) || c == '.' || c == '<' || c == '>') {
+        if (std::isdigit(c) || std::isalpha(c) || c == '.' || c == '<' || c == '>') {
           format_ss << c;
         } else if (c == '}') {
           result.push_back({name_ss.str(), format_ss.str()});
