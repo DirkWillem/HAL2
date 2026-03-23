@@ -17,8 +17,13 @@ export import :lut;
 
 namespace math {
 
-export inline constexpr auto Pi    = std::numbers::pi_v<float>;
-export inline constexpr auto TwoPi = 2.F * Pi;
+export inline constexpr auto Pi     = std::numbers::pi_v<float>;   //!< π.
+export inline constexpr auto TwoPi  = 2.F * Pi;                    //!< 2π.
+export inline constexpr auto HalfPi = Pi / 2.F;                    //!< π/2.
+
+export inline constexpr auto OneOverPi     = 1.F / Pi;       //!< 1/π.
+export inline constexpr auto OneOverTwoPi  = 1.F / TwoPi;    //!< 1/(2π).
+export inline constexpr auto OneOverHalfPi = 1.F / HalfPi;   //!< 2/π.
 
 export template <std::unsigned_integral T>
 constexpr T FastFloor(float f) {
