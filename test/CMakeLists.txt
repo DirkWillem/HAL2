@@ -19,8 +19,11 @@ target_sources(hal2_test_helpers
         helpers/helpers.cppm
         helpers/matchers.cppm
 
+        helpers/fakes/fake_rtos_i2c.cppm
+
         helpers/mocks/mock_performance_timer.cppm
         helpers/mocks/mock_clock.cppm
+        helpers/mocks/mock_rtos_i2c.cppm
 
         helpers/buffer.cppm)
 

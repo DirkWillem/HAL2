@@ -284,11 +284,20 @@ function(add_stm32h5_hal VARIANT XMLFILE)
             "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/spi_i2s_pin_mapping.cppm"
     )
 
+    generate_pin_mapping(
+            stm32h5
+            ${VARIANT}
+            i2c
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/i2c_pin_mapping.cppm"
+    )
+
     add_library("${VARIANT}_hal")
     target_sources("${VARIANT}_hal"
             PUBLIC
             FILE_SET CXX_MODULES
             FILES
+            stm32h5/internal/i2c_timing.cppm
             stm32h5/internal/i2s_config.cppm
             stm32h5/internal/i2s_pinout.cppm
             stm32h5/internal/spi_config.cppm
@@ -296,6 +305,7 @@ function(add_stm32h5_hal VARIANT XMLFILE)
 
             stm32h5/clocks.cppm
             stm32h5/dma.cppm
+            stm32h5/i2c.cppm
             stm32h5/i2s.cppm
             stm32h5/nvic.cppm
             stm32h5/peripherals.cppm
@@ -309,6 +319,7 @@ function(add_stm32h5_hal VARIANT XMLFILE)
 
             "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/uart_pin_mapping.cppm"
             "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/spi_i2s_pin_mapping.cppm"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/generated/${VARIANT}/stm32h5/mappings/i2c_pin_mapping.cppm"
 
             stm32h5/stm32h5.cppm
 

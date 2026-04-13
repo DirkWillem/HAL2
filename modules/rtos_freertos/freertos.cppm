@@ -31,7 +31,7 @@ namespace rtos {
 
 export struct SysCallIrqPrio {
   static uint32_t GetPriority(auto) noexcept {
-    return configMAX_SYSCALL_INTERRUPT_PRIORITY;
+    return configMAX_SYSCALL_INTERRUPT_LOGICAL_PRIORITY;
   }
 };
 

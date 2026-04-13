@@ -1,11 +1,23 @@
+from typing import Literal, cast
+
 import argparse
 import pathlib
 import sys
 
+
 from hal2.codegen.stm32_pin_af.stm32_xml_parser import parse_pin_xml_file
 from hal2.codegen.stm32_pin_af.periph_uart import gen_uart_mapping
 from hal2.codegen.stm32_pin_af.periph_spi_i2s import gen_spi_i2s_mapping
+from hal2.codegen.stm32_pin_af.periph_i2c import gen_i2c_mapping
 from hal2.codegen.clang.clang_format import format_file
+
+
+class CmdLineArgs:
+    xml_file: pathlib.Path
+    dst_file: pathlib.Path
+    mcu_family: str
+    mcu: str
+    gen: Literal["uart", "spi_i2s", "i2c"]
 
 
 def main():
@@ -17,12 +29,12 @@ def main():
     parser.add_argument(
         "--gen",
         type=str,
-        choices=["uart", "spi_i2s"],
+        choices=["uart", "spi_i2s", "i2c"],
         help="What type of file to generate",
         required=True,
     )
 
-    args = parser.parse_args()
+    args = cast(CmdLineArgs, cast(object, parser.parse_args()))
 
     try:
         data = parse_pin_xml_file(args.xml_file)
@@ -32,6 +44,8 @@ def main():
                 args.dst_file.write_text(gen_uart_mapping(data, args.mcu_family, args.mcu))
             case "spi_i2s":
                 args.dst_file.write_text(gen_spi_i2s_mapping(data, args.mcu_family, args.mcu))
+            case "i2c":
+                args.dst_file.write_text(gen_i2c_mapping(data, args.mcu_family, args.mcu))
 
         format_file(args.dst_file)
         return 0

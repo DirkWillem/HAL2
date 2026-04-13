@@ -21,8 +21,7 @@ export enum class UartId {
   LpUart1,
 };
 
-export [[nodiscard]] constexpr USART_TypeDef*
-GetUartPointer(UartId uart) noexcept {
+export [[nodiscard]] constexpr USART_TypeDef* GetUartPointer(UartId uart) noexcept {
   switch (uart) {
   case UartId::Usart1: return USART1;
   case UartId::Usart2: return USART2;
@@ -36,18 +35,16 @@ GetUartPointer(UartId uart) noexcept {
   std::unreachable();
 }
 
-export [[nodiscard]] consteval UartId
-UartIdFromName(std::string_view name) noexcept {
-  return hstd::StaticMap<std::string_view, UartId, 7>(
-      name, {{
-                {"USART1", UartId::Usart1},
-                {"USART2", UartId::Usart2},
-                {"USART3", UartId::Usart3},
-                {"UART4", UartId::Uart4},
-                {"UART5", UartId::Uart5},
-                {"USART6", UartId::Usart6},
-                {"LPUART1", UartId::LpUart1},
-            }});
+export [[nodiscard]] consteval UartId UartIdFromName(std::string_view name) noexcept {
+  return hstd::StaticMap<std::string_view, UartId, 7>(name, {{
+                                                                {"USART1", UartId::Usart1},
+                                                                {"USART2", UartId::Usart2},
+                                                                {"USART3", UartId::Usart3},
+                                                                {"UART4", UartId::Uart4},
+                                                                {"UART5", UartId::Uart5},
+                                                                {"USART6", UartId::Usart6},
+                                                                {"LPUART1", UartId::LpUart1},
+                                                            }});
 }
 
 export enum class SpiId { Spi1, Spi2, Spi3, Spi4 };
@@ -65,8 +62,7 @@ export [[nodiscard]] constexpr SPI_TypeDef* GetSpiPointer(SpiId id) noexcept {
   std::unreachable();
 }
 
-export [[nodiscard]] consteval SpiId
-SpiIdFromName(std::string_view name) noexcept {
+export [[nodiscard]] consteval SpiId SpiIdFromName(std::string_view name) noexcept {
   using enum SpiId;
 
   if (name == "SPI1") {
@@ -90,8 +86,7 @@ SpiIdFromName(std::string_view name) noexcept {
 
 export enum class I2sId { I2s1, I2s2, I2s3 };
 
-export [[nodiscard]] consteval I2sId
-I2sIdFromName(std::string_view name) noexcept {
+export [[nodiscard]] consteval I2sId I2sIdFromName(std::string_view name) noexcept {
   using enum I2sId;
 
   if (name == "I2S1") {
@@ -124,18 +119,7 @@ export [[nodiscard]] consteval SpiId GetSpiForI2s(I2sId id) {
   }
 }
 
-export enum class TimId {
-  Tim1,
-  Tim2,
-  Tim3,
-  Tim4,
-  Tim5,
-  Tim6,
-  Tim7,
-  Tim8,
-  Tim12,
-  Tim15
-};
+export enum class TimId { Tim1, Tim2, Tim3, Tim4, Tim5, Tim6, Tim7, Tim8, Tim12, Tim15 };
 
 export [[nodiscard]] TIM_TypeDef* GetTimPointer(TimId id) {
   using enum TimId;
@@ -169,6 +153,48 @@ export [[nodiscard]] TIM_TypeDef* GetTimPointer(TimId id) {
   }
   if (id == Tim15) {
     return TIM15;
+  }
+
+  std::unreachable();
+}
+
+/** @brief I2C peripherals present in the STM32H5 */
+export enum class I2cId {
+  I2c1,   //!< I2C1.
+  I2c2,   //!< I2C2.
+  I2c3,   //!< I2C3.
+};
+
+/**
+ * @brief Returns a pointer to the requested I2C instance.
+ * @param id ID of the I2C to get a pointer to.
+ * @return \c I2C_TypeDef pointer to the requested I2C instance.
+ */
+export [[nodiscard]] I2C_TypeDef* GetI2cPointer(I2cId id) {
+  using enum I2cId;
+
+  switch (id) {
+  case I2c1: return I2C1;
+  case I2c2: return I2C2;
+  case I2c3: return I2C3;
+  }
+
+  std::unreachable();
+}
+
+export [[nodiscard]] consteval I2cId I2cIdFromName(std::string_view name) noexcept {
+  using enum I2cId;
+
+  if (name == "I2C1") {
+    return I2c1;
+  }
+
+  if (name == "I2C2") {
+    return I2c2;
+  }
+
+  if (name == "I2C3") {
+    return I2c3;
   }
 
   std::unreachable();

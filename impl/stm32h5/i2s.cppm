@@ -64,8 +64,7 @@ class I2sImplBase<I2sOperatingMode::DmaRtos, OS> {
   DMA_HandleTypeDef* hdma_rx;
 };
 
-export template <typename Impl, I2sId Id, ClockSettings CS, I2sSettings IS,
-                 typename... Rest>
+export template <typename Impl, I2sId Id, ClockSettings CS, I2sSettings IS, typename... Rest>
 class I2sImpl
     : public hal::UsedPeripheral
     , I2sImplBase<IS.operating_mode, Rest...> {
@@ -116,8 +115,7 @@ class I2sImpl
    * @param half_bit Bit that should be set when the buffer is half full.
    * @param full_bit Bit that should be set when the buffer is full.
    */
-  void Receive(std::span<uint16_t>                          into,
-               I2sImplBase<IS.operating_mode, Rest...>::EG& event_group,
+  void Receive(std::span<uint16_t> into, I2sImplBase<IS.operating_mode, Rest...>::EG& event_group,
                uint32_t half_bit, uint32_t full_bit) noexcept
     requires((IS.transmit_mode == I2sTransmitMode::Rx
               || IS.transmit_mode == I2sTransmitMode::Duplex)
@@ -136,7 +134,7 @@ class I2sImpl
   {
     // Set up pins, source clock and I2S master
     PinoutHelper::SetupPins(pinout);
-    if (!SetupSourceClock<SpiId, IS.source_clock>()) {
+    if (!SetupSpiSourceClock<SpiId, IS.source_clock>()) {
       return;
     }
     if (!InitializePeripheral()) {
@@ -147,16 +145,15 @@ class I2sImpl
     if constexpr (IS.transmit_mode == I2sTransmitMode::Tx
                   || IS.transmit_mode == I2sTransmitMode::Duplex) {
       auto& htxdma = dma.template SetupChannel<TxDmaChannel>(
-          hal::DmaDirection::MemToPeriph, hal::DmaMode::Normal,
-          hal::DmaDataWidth::HalfWord, false, hal::DmaDataWidth::HalfWord,
-          true);
+          hal::DmaDirection::MemToPeriph, hal::DmaMode::Normal, hal::DmaDataWidth::HalfWord, false,
+          hal::DmaDataWidth::HalfWord, true);
       __HAL_LINKDMA(&hi2s, hdmatx, htxdma);
     }
     if constexpr (IS.transmit_mode == I2sTransmitMode::Rx
                   || IS.transmit_mode == I2sTransmitMode::Duplex) {
       auto& hrxdma = dma.template SetupChannel<RxDmaChannel>(
-          hal::DmaDirection::PeriphToMem, hal::DmaMode::Circular,
-          hal::DmaDataWidth::Word, false, hal::DmaDataWidth::Word, true);
+          hal::DmaDirection::PeriphToMem, hal::DmaMode::Circular, hal::DmaDataWidth::Word, false,
+          hal::DmaDataWidth::Word, true);
       __HAL_LINKDMA(&hi2s, hdmarx, hrxdma);
     }
 
@@ -167,8 +164,7 @@ class I2sImpl
   /** @brief Receive half complete callback. */
   void HalfReceiveComplete() noexcept {
     if constexpr (IS.operating_mode == I2sOperatingMode::DmaRtos) {
-      auto& [eg, hbit, fbit] =
-          I2sImplBase<IS.operating_mode, Rest...>::rx_event_group;
+      auto& [eg, hbit, fbit] = I2sImplBase<IS.operating_mode, Rest...>::rx_event_group;
       eg->SetBitsFromInterrupt(hbit);
     }
   }
@@ -176,8 +172,7 @@ class I2sImpl
   /** @brief Receive complete callback. */
   void ReceiveComplete() noexcept {
     if constexpr (IS.operating_mode == I2sOperatingMode::DmaRtos) {
-      auto& [eg, hbit, fbit] =
-          I2sImplBase<IS.operating_mode, Rest...>::rx_event_group;
+      auto& [eg, hbit, fbit] = I2sImplBase<IS.operating_mode, Rest...>::rx_event_group;
       eg->SetBitsFromInterrupt(fbit);
     }
   }
@@ -185,8 +180,7 @@ class I2sImpl
   /** @brief Transmit half complete callback. */
   void HalfTransmitComplete() noexcept {
     if constexpr (IS.operating_mode == I2sOperatingMode::DmaRtos) {
-      auto& [eg, hbit, fbit] =
-          I2sImplBase<IS.operating_mode, Rest...>::tx_event_group;
+      auto& [eg, hbit, fbit] = I2sImplBase<IS.operating_mode, Rest...>::tx_event_group;
       eg->SetBitsFromInterrupt(hbit);
     }
   }
@@ -194,8 +188,7 @@ class I2sImpl
   /** @brief Transmit complete callback. */
   void TransmitComplete() noexcept {
     if constexpr (IS.operating_mode == I2sOperatingMode::DmaRtos) {
-      auto& [eg, hbit, fbit] =
-          I2sImplBase<IS.operating_mode, Rest...>::tx_event_group;
+      auto& [eg, hbit, fbit] = I2sImplBase<IS.operating_mode, Rest...>::tx_event_group;
       eg->SetBitsFromInterrupt(fbit);
     }
   }
@@ -208,16 +201,14 @@ class I2sImpl
 
     hi2s.Instance = GetSpiPointer(SpiId);
     hi2s.Init     = {
-            .Mode       = GetHalMode(),
-            .Standard   = static_cast<uint32_t>(IS.standard),
-            .DataFormat = static_cast<uint32_t>(IS.data_format),
-            .MCLKOutput = IS.master_clock_output ? I2S_MCLKOUTPUT_ENABLE
-                                                 : I2S_MCLKOUTPUT_DISABLE,
-            .AudioFreq  = static_cast<uint32_t>(
-            IS.audio_frequency.template As<hstd::Hz>().count),
-            .CPOL               = static_cast<uint32_t>(IS.clock_polarity),
-            .FirstBit           = static_cast<uint32_t>(IS.bit_order),
-            .WSInversion        = static_cast<uint32_t>(IS.ws_inversion),
+            .Mode        = GetHalMode(),
+            .Standard    = static_cast<uint32_t>(IS.standard),
+            .DataFormat  = static_cast<uint32_t>(IS.data_format),
+            .MCLKOutput  = IS.master_clock_output ? I2S_MCLKOUTPUT_ENABLE : I2S_MCLKOUTPUT_DISABLE,
+            .AudioFreq   = static_cast<uint32_t>(IS.audio_frequency.template As<hstd::Hz>().count),
+            .CPOL        = static_cast<uint32_t>(IS.clock_polarity),
+            .FirstBit    = static_cast<uint32_t>(IS.bit_order),
+            .WSInversion = static_cast<uint32_t>(IS.ws_inversion),
             .Data24BitAlignment = static_cast<uint32_t>(IS.data_24bit_alignment),
             .MasterKeepIOState  = static_cast<uint32_t>(IS.keep_io_state),
     };

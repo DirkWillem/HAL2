@@ -144,7 +144,7 @@ void EnableSpiClock() noexcept {
 }
 
 export template <SpiId Id, SpiSourceClock SC>
-bool SetupSourceClock() {
+bool SetupSpiSourceClock() {
   using enum SpiSourceClock;
 
   if constexpr (Id == SpiId::Spi1) {
@@ -375,7 +375,7 @@ class SpiImpl
 
     // Set up pins and SPI master
     PinoutHelper::SetupPins(pinout);
-    if (!SetupSourceClock<Id, SS.source_clock>()) {
+    if (!SetupSpiSourceClock<Id, SS.source_clock>()) {
       while (true) {}
     }
     EnableSpiClock<Id>();

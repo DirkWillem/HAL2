@@ -6,6 +6,7 @@ export module hal.stm32h5;
 
 export import :clocks;
 export import :dma;
+export import :i2c;
 export import :i2s;
 export import :nvic;
 export import :peripherals;

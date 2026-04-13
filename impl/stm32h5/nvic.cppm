@@ -12,9 +12,7 @@ namespace concepts {
 
 export template <typename Impl>
 concept CustomInterruptPriority = requires {
-  {
-    Impl::GetPriority(std::declval<IRQn_Type>())
-  } -> std::convertible_to<uint32_t>;
+  { Impl::GetPriority(std::declval<IRQn_Type>()) } -> std::convertible_to<uint32_t>;
 };
 
 }   // namespace concepts
@@ -22,7 +20,7 @@ concept CustomInterruptPriority = requires {
 template <typename Impl>
 constexpr uint32_t GetIrqPrio(IRQn_Type irqn) noexcept {
   if constexpr (concepts::CustomInterruptPriority<Impl>) {
-    return static_cast<uint32_t>(irqn);
+    return Impl::GetPriority(irqn);
   }
 
   return 0;

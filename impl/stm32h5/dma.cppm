@@ -40,8 +40,7 @@ export enum class SpiDmaRequest {
   Rx,   //!< SPI receive
 };
 
-[[nodiscard]] constexpr uint32_t
-GetDmaRequestId(UartId uart, UartDmaRequest request) noexcept {
+[[nodiscard]] constexpr uint32_t GetDmaRequestId(UartId uart, UartDmaRequest request) noexcept {
   switch (request) {
   case UartDmaRequest::Tx:
     switch (uart) {
@@ -72,8 +71,7 @@ GetDmaRequestId(UartId uart, UartDmaRequest request) noexcept {
   std::unreachable();
 }
 
-[[nodiscard]] constexpr uint32_t
-GetDmaRequestId(SpiId spi, SpiDmaRequest request) noexcept {
+[[nodiscard]] constexpr uint32_t GetDmaRequestId(SpiId spi, SpiDmaRequest request) noexcept {
   switch (request) {
   case SpiDmaRequest::Tx:
     switch (spi) {
@@ -90,6 +88,32 @@ GetDmaRequestId(SpiId spi, SpiDmaRequest request) noexcept {
     case SpiId::Spi2: return GPDMA1_REQUEST_SPI2_RX;
     case SpiId::Spi3: return GPDMA1_REQUEST_SPI3_RX;
     case SpiId::Spi4: return GPDMA1_REQUEST_SPI4_RX;
+    }
+
+    std::unreachable();
+  }
+
+  std::unreachable();
+}
+
+[[nodiscard]] constexpr uint32_t GetDmaRequestId(I2cId i2c, I2cDmaRequest request) noexcept {
+  using enum I2cDmaRequest;
+  using enum I2cId;
+
+  switch (request) {
+  case Tx:
+    switch (i2c) {
+    case I2c1: return GPDMA1_REQUEST_I2C1_TX;
+    case I2c2: return GPDMA1_REQUEST_I2C2_TX;
+    case I2c3: return GPDMA1_REQUEST_I2C3_TX;
+    }
+
+    std::unreachable();
+  case Rx:
+    switch (i2c) {
+    case I2c1: return GPDMA1_REQUEST_I2C1_RX;
+    case I2c2: return GPDMA1_REQUEST_I2C2_RX;
+    case I2c3: return GPDMA1_REQUEST_I2C3_RX;
     }
 
     std::unreachable();
@@ -116,8 +140,7 @@ GetDmaRequestId(SpiId spi, SpiDmaRequest request) noexcept {
   std::unreachable();
 }
 
-[[nodiscard]] uint32_t
-ToHalSrcDataWidth(hal::DmaDataWidth data_width) noexcept {
+[[nodiscard]] uint32_t ToHalSrcDataWidth(hal::DmaDataWidth data_width) noexcept {
   switch (data_width) {
   case hal::DmaDataWidth::Byte: return DMA_SRC_DATAWIDTH_BYTE;
   case hal::DmaDataWidth::HalfWord: return DMA_SRC_DATAWIDTH_HALFWORD;
@@ -127,8 +150,7 @@ ToHalSrcDataWidth(hal::DmaDataWidth data_width) noexcept {
   std::unreachable();
 }
 
-[[nodiscard]] uint32_t
-ToHalDstDataWidth(hal::DmaDataWidth data_width) noexcept {
+[[nodiscard]] uint32_t ToHalDstDataWidth(hal::DmaDataWidth data_width) noexcept {
   switch (data_width) {
   case hal::DmaDataWidth::Byte: return DMA_DEST_DATAWIDTH_BYTE;
   case hal::DmaDataWidth::HalfWord: return DMA_DEST_DATAWIDTH_HALFWORD;
@@ -138,8 +160,7 @@ ToHalDstDataWidth(hal::DmaDataWidth data_width) noexcept {
   std::unreachable();
 }
 
-[[nodiscard]] constexpr uint32_t
-ToHalDmaPriority(hal::DmaPriority prio) noexcept {
+[[nodiscard]] constexpr uint32_t ToHalDmaPriority(hal::DmaPriority prio) noexcept {
   switch (prio) {
   case hal::DmaPriority::Low: return DMA_LOW_PRIORITY_LOW_WEIGHT;
   case hal::DmaPriority::Medium: return DMA_LOW_PRIORITY_MID_WEIGHT;
@@ -164,12 +185,10 @@ void SetupDma(std::size_t n_used_channels) noexcept {
 
   // Enable interrupts for all enabled channels
   constexpr std::array<IRQn_Type, 16> ChannelIrqns{
-      GPDMA1_Channel0_IRQn, GPDMA1_Channel1_IRQn, GPDMA1_Channel2_IRQn,
-      GPDMA1_Channel3_IRQn, GPDMA1_Channel4_IRQn, GPDMA1_Channel5_IRQn,
-      GPDMA1_Channel6_IRQn, GPDMA1_Channel7_IRQn, GPDMA2_Channel0_IRQn,
-      GPDMA2_Channel1_IRQn, GPDMA2_Channel2_IRQn, GPDMA2_Channel3_IRQn,
-      GPDMA2_Channel4_IRQn, GPDMA2_Channel5_IRQn, GPDMA2_Channel6_IRQn,
-      GPDMA2_Channel7_IRQn,
+      GPDMA1_Channel0_IRQn, GPDMA1_Channel1_IRQn, GPDMA1_Channel2_IRQn, GPDMA1_Channel3_IRQn,
+      GPDMA1_Channel4_IRQn, GPDMA1_Channel5_IRQn, GPDMA1_Channel6_IRQn, GPDMA1_Channel7_IRQn,
+      GPDMA2_Channel0_IRQn, GPDMA2_Channel1_IRQn, GPDMA2_Channel2_IRQn, GPDMA2_Channel3_IRQn,
+      GPDMA2_Channel4_IRQn, GPDMA2_Channel5_IRQn, GPDMA2_Channel6_IRQn, GPDMA2_Channel7_IRQn,
   };
 
   [ChannelIrqns]<std::size_t... Idxs>(std::index_sequence<Idxs...>) {
@@ -215,8 +234,7 @@ export template <typename Impl, typename Channels>
 class DmaImpl;
 
 export template <typename Impl, hal::DmaChannel... Channels>
-class DmaImpl<Impl, hal::DmaChannels<Channels...>>
-    : public hal::UsedPeripheral {
+class DmaImpl<Impl, hal::DmaChannels<Channels...>> : public hal::UsedPeripheral {
   struct LinkedList {
     DMA_NodeTypeDef  node;
     DMA_QListTypeDef list;
@@ -263,8 +281,7 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
    * @return Whether the given DMA channel is in use.
    */
   template <unsigned DmaInst, unsigned Chan>
-    requires((DmaInst == 1 && Chan < NGpDma1Channels)
-             || (DmaInst == 2 && Chan < NGpDma2Channels))
+    requires((DmaInst == 1 && Chan < NGpDma1Channels) || (DmaInst == 2 && Chan < NGpDma2Channels))
   [[nodiscard]] static consteval bool ChannelInUse() noexcept {
     if constexpr (DmaInst == 1) {
       constexpr auto Idx = Chan;
@@ -289,38 +306,33 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
    */
   template <hal::DmaChannelId Chan>
   [[nodiscard]] DMA_HandleTypeDef&
-  SetupChannel(hal::DmaDirection dir, hal::DmaMode mode,
-               hal::DmaDataWidth periph_data_width, bool periph_inc,
-               hal::DmaDataWidth mem_data_width, bool mem_inc) noexcept {
+  SetupChannel(hal::DmaDirection dir, hal::DmaMode mode, hal::DmaDataWidth periph_data_width,
+               bool periph_inc, hal::DmaDataWidth mem_data_width, bool mem_inc) noexcept {
     constexpr auto     Idx  = ChanList::template DmaChannelIndex<Chan>();
     DMA_HandleTypeDef& hdma = hdmas[Idx];
     LinkedList&        ll   = linked_list_cfgs[Idx];
 
-    hdma.Instance = DmaChannel<Chan>();
-    const auto src_inc =
-        (dir == hal::DmaDirection::MemToPeriph && mem_inc)
-        || (dir == hal::DmaDirection::PeriphToMem && periph_inc);
+    hdma.Instance      = DmaChannel<Chan>();
+    const auto src_inc = (dir == hal::DmaDirection::MemToPeriph && mem_inc)
+                         || (dir == hal::DmaDirection::PeriphToMem && periph_inc);
     const auto dst_inc = (dir == hal::DmaDirection::MemToPeriph && periph_inc)
                          || (dir == hal::DmaDirection::PeriphToMem && mem_inc);
 
-    const auto src_width = dir == hal::DmaDirection::MemToPeriph
-                               ? mem_data_width
-                               : periph_data_width;
-    const auto dst_width = dir == hal::DmaDirection::MemToPeriph
-                               ? periph_data_width
-                               : mem_data_width;
+    const auto src_width =
+        dir == hal::DmaDirection::MemToPeriph ? mem_data_width : periph_data_width;
+    const auto dst_width =
+        dir == hal::DmaDirection::MemToPeriph ? periph_data_width : mem_data_width;
 
     if (mode == hal::DmaMode::Normal) {
       hdma.Init = {
-          .Request       = GetDmaRequestId(Chan::Peripheral, Chan::Request),
-          .BlkHWRequest  = DMA_BREQ_SINGLE_BURST,
-          .Direction     = ToHalDmaDirection(dir),
-          .SrcInc        = src_inc ? DMA_SINC_INCREMENTED : DMA_SINC_FIXED,
-          .DestInc       = dst_inc ? DMA_DINC_INCREMENTED : DMA_DINC_FIXED,
-          .SrcDataWidth  = ToHalSrcDataWidth(src_width),
-          .DestDataWidth = ToHalDstDataWidth(dst_width),
-          .Priority =
-              ToHalDmaPriority(ChanList::template DmaChannelPriority<Chan>()),
+          .Request               = GetDmaRequestId(Chan::Peripheral, Chan::Request),
+          .BlkHWRequest          = DMA_BREQ_SINGLE_BURST,
+          .Direction             = ToHalDmaDirection(dir),
+          .SrcInc                = src_inc ? DMA_SINC_INCREMENTED : DMA_SINC_FIXED,
+          .DestInc               = dst_inc ? DMA_DINC_INCREMENTED : DMA_DINC_FIXED,
+          .SrcDataWidth          = ToHalSrcDataWidth(src_width),
+          .DestDataWidth         = ToHalDstDataWidth(dst_width),
+          .Priority              = ToHalDmaPriority(ChanList::template DmaChannelPriority<Chan>()),
           .SrcBurstLength        = 1,
           .DestBurstLength       = 1,
           .TransferAllocatedPort = 0,
@@ -334,13 +346,13 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
           .NodeType = DMA_GPDMA_LINEAR_NODE,
           .Init =
               {
-                  .Request = GetDmaRequestId(Chan::Peripheral, Chan::Request),
-                  .BlkHWRequest = DMA_BREQ_SINGLE_BURST,
-                  .Direction    = ToHalDmaDirection(dir),
-                  .SrcInc  = src_inc ? DMA_SINC_INCREMENTED : DMA_SINC_FIXED,
-                  .DestInc = dst_inc ? DMA_DINC_INCREMENTED : DMA_DINC_FIXED,
-                  .SrcDataWidth  = ToHalSrcDataWidth(src_width),
-                  .DestDataWidth = ToHalDstDataWidth(dst_width),
+                  .Request               = GetDmaRequestId(Chan::Peripheral, Chan::Request),
+                  .BlkHWRequest          = DMA_BREQ_SINGLE_BURST,
+                  .Direction             = ToHalDmaDirection(dir),
+                  .SrcInc                = src_inc ? DMA_SINC_INCREMENTED : DMA_SINC_FIXED,
+                  .DestInc               = dst_inc ? DMA_DINC_INCREMENTED : DMA_DINC_FIXED,
+                  .SrcDataWidth          = ToHalSrcDataWidth(src_width),
+                  .DestDataWidth         = ToHalDstDataWidth(dst_width),
                   .SrcBurstLength        = 1,
                   .DestBurstLength       = 1,
                   .TransferAllocatedPort = 0,
@@ -368,14 +380,12 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
         while (true);
       }
 
-      hdma.InitLinkedList = {
-        .Priority      = ToHalDmaPriority(
-                      ChanList::template DmaChannelPriority<Chan>()),
-        .LinkStepMode = DMA_LSM_FULL_EXECUTION,
-        .LinkAllocatedPort = DMA_LINK_ALLOCATED_PORT0,
-        .TransferEventMode=DMA_TCEM_BLOCK_TRANSFER,
-        .LinkedListMode = DMA_LINKEDLIST_CIRCULAR
-      };
+      hdma.InitLinkedList = {.Priority =
+                                 ToHalDmaPriority(ChanList::template DmaChannelPriority<Chan>()),
+                             .LinkStepMode      = DMA_LSM_FULL_EXECUTION,
+                             .LinkAllocatedPort = DMA_LINK_ALLOCATED_PORT0,
+                             .TransferEventMode = DMA_TCEM_BLOCK_TRANSFER,
+                             .LinkedListMode    = DMA_LINKEDLIST_CIRCULAR};
 
       if (HAL_DMAEx_List_Init(&hdma) != HAL_OK) {
         while (true) {}
@@ -408,8 +418,7 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>>
    * @tparam Chan DMA channel number.
    */
   template <unsigned DmaInst, unsigned Chan>
-    requires((DmaInst == 1 && Chan < NGpDma1Channels)
-             || (DmaInst == 2 && Chan < NGpDma2Channels))
+    requires((DmaInst == 1 && Chan < NGpDma1Channels) || (DmaInst == 2 && Chan < NGpDma2Channels))
   void HandleInterrupt() noexcept {
     if constexpr (DmaInst == 1) {
       HAL_DMA_IRQHandler(&hdmas[Chan]);
