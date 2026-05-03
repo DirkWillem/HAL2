@@ -21,21 +21,47 @@ target_sources(logging
         logging.cppm
 
         encoding/binary.cppm
-
-        sink/usb_cdc.cppm
 )
 
 target_link_libraries(logging
         PUBLIC
         hstd
         rtos_concepts
+        logging_abstract)
+
+# Logging sinks
+add_library(logging_sink_usb)
+target_sources(logging_sink_usb
+        PUBLIC
+        FILE_SET CXX_MODULES FILES
+        sink/usb_cdc.cppm)
+target_link_libraries(logging_sink_usb
+        PUBLIC
+        hstd
+        rtos_concepts
         hal_usb_abstract
         logging_abstract)
 
-set_target_properties(logging_abstract logging PROPERTIES FOLDER hal/modules/logging)
+add_library(logging_sink_rtos_uart)
+target_sources(logging_sink_rtos_uart
+        PUBLIC
+        FILE_SET CXX_MODULES FILES
+        sink/rtos_uart.cppm)
+target_link_libraries(logging_sink_rtos_uart
+        PUBLIC
+        hstd
+        rtos_concepts
+        hal_abstract
+        logging_abstract)
 
-# Logging spec generator
+
+set_target_properties(logging_abstract logging logging_sink_usb logging_sink_rtos_uart PROPERTIES FOLDER hal/modules/logging)
+
+
+
+# Desktop-only
 if (NOT CMAKE_CROSSCOMPILING)
+    # Logging spec generator
     add_library(logging_spec_gen)
     target_sources(logging_spec_gen
             PUBLIC
@@ -52,6 +78,7 @@ if (NOT CMAKE_CROSSCOMPILING)
             argparse
     )
 
+    # Test helpers
     add_library(logging_test_helpers)
     target_sources(logging_test_helpers
             PUBLIC

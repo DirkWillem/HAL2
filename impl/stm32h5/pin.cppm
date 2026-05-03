@@ -32,7 +32,13 @@ export enum class Port : uint8_t {
   F,
 #endif
 #ifdef GPIOG
-  G
+  G,
+#endif
+#ifdef GPIOH
+  H,
+#endif
+#ifdef GPIOI
+  I,
 #endif
 };
 
@@ -97,11 +103,16 @@ void EnablePortClk(Port port) {
 #ifdef GPIOF
   case Port::F: __HAL_RCC_GPIOF_CLK_ENABLE(); break;
 #endif
+#ifdef GPIOG
+  case Port::G: __HAL_RCC_GPIOG_CLK_ENABLE(); break;
+#endif
+#ifdef GPIOI
+  case Port::I: __HAL_RCC_GPIOI_CLK_ENABLE(); break;
+#endif
   }
 }
 
-[[nodiscard]] constexpr uint32_t ToHalMode(hal::PinDirection dir,
-                                           hal::PinMode      mode) {
+[[nodiscard]] constexpr uint32_t ToHalMode(hal::PinDirection dir, hal::PinMode mode) {
   switch (dir) {
   case hal::PinDirection::Input: return GPIO_MODE_INPUT;
   case hal::PinDirection::Output:
@@ -146,13 +157,9 @@ export struct PinId {
     return port == rhs.port && num == rhs.num;
   }
 
-  [[nodiscard]] constexpr auto* hal_port() const noexcept {
-    return GetHalPort(port);
-  }
+  [[nodiscard]] constexpr auto* hal_port() const noexcept { return GetHalPort(port); }
 
-  [[nodiscard]] constexpr auto hal_pin() const noexcept {
-    return GetHalPin(num);
-  }
+  [[nodiscard]] constexpr auto hal_pin() const noexcept { return GetHalPin(num); }
 
   static consteval PinId Make(std::string_view port, PinNum num) {
 #ifdef GPIOA
@@ -190,6 +197,16 @@ export struct PinId {
       return {.port = Port::G, .num = num};
     }
 #endif
+#ifdef GPIOH
+    if (port == "H") {
+      return {.port = Port::H, .num = num};
+    }
+#endif
+#ifdef GPIOI
+    if (port == "I") {
+      return {.port = Port::I, .num = num};
+    }
+#endif
     std::unreachable();
   }
 };
@@ -219,8 +236,7 @@ export struct Pin {
    * @param pull Pin pull-up / pull-down
    * @param mode Pin mode
    */
-  static void Initialize(PinId id, hal::PinDirection dir,
-                         hal::PinPull pull = hal::PinPull::NoPull,
+  static void Initialize(PinId id, hal::PinDirection dir, hal::PinPull pull = hal::PinPull::NoPull,
                          hal::PinMode mode = hal::PinMode::PushPull) noexcept {
     EnablePortClk(id.port);
 
@@ -241,10 +257,8 @@ export struct Pin {
    * @param pull Pin pull-up / pull-down
    * @param mode Pin mode
    */
-  static void
-  InitializeAlternate(PinId id, unsigned af,
-                      hal::PinPull pull = hal::PinPull::NoPull,
-                      hal::PinMode mode = hal::PinMode::PushPull) noexcept {
+  static void InitializeAlternate(PinId id, unsigned af, hal::PinPull pull = hal::PinPull::NoPull,
+                                  hal::PinMode mode = hal::PinMode::PushPull) noexcept {
     EnablePortClk(id.port);
 
     GPIO_InitTypeDef init{
@@ -263,9 +277,8 @@ export struct Pin {
    * @param edge Edge to detect
    * @param pull Pin pull-up / pull-down
    */
-  static void
-  InitializeInterrupt(PinId id, hal::Edge edge,
-                      hal::PinPull pull = hal::PinPull::NoPull) noexcept {
+  static void InitializeInterrupt(PinId id, hal::Edge edge,
+                                  hal::PinPull pull = hal::PinPull::NoPull) noexcept {
     EnablePortClk(id.port);
 
     GPIO_InitTypeDef init{
@@ -330,16 +343,13 @@ export class Gpo {
    * @param value Pin value to write
    */
   void Write(bool value) const noexcept {
-    HAL_GPIO_WritePin(pin.hal_port(), pin.hal_pin(),
-                      value ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(pin.hal_port(), pin.hal_pin(), value ? GPIO_PIN_SET : GPIO_PIN_RESET);
   }
 
   /**
    * Toggles the pin
    */
-  void Toggle() const noexcept {
-    HAL_GPIO_TogglePin(pin.hal_port(), pin.hal_pin());
-  }
+  void Toggle() const noexcept { HAL_GPIO_TogglePin(pin.hal_port(), pin.hal_pin()); }
 
  private:
   PinId pin;

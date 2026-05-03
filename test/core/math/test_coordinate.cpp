@@ -1,8 +1,8 @@
-import math;
-
 #include <cmath>
 
 #include <gtest/gtest.h>
+
+import math;
 
 using namespace math;
 

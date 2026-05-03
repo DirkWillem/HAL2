@@ -11,6 +11,8 @@ module;
 #include <stm32h5xx_hal_i2c.h>
 #include <stm32h5xx_hal_rcc.h>
 
+#include <internal/peripheral_availability.h>
+
 export module hal.stm32h5:i2c;
 
 import hal.abstract;
@@ -132,6 +134,7 @@ bool SetupI2cSourceClock() noexcept {
   using enum I2cSourceClock;
   using enum I2cId;
 
+#ifdef HAS_I2C_1_2_3
   if constexpr (Id == I2c1) {
     hstd::Assert(hstd::IsOneOf<Default, Pclk1, Pll3R, Hsi, Csi>(SrcClk),
                  "I2C1 source clock must be one of PCLK1, PLL3R, HSI or CSI.");
@@ -185,6 +188,26 @@ bool SetupI2cSourceClock() noexcept {
 
     return HAL_RCCEx_PeriphCLKConfig(&clk_init) == HAL_OK;
   }
+#endif
+#ifdef HAS_I2C_4
+  if constexpr (Id == I2c4) {
+    hstd::Assert(hstd::IsOneOf<Default, Pclk3, Pll3R, Hsi, Csi>(SrcClk),
+                 "I2C4 source clock must be one of PCLK3, PLL3R, HSI or CSI.");
+
+    RCC_PeriphCLKInitTypeDef clk_init{.PeriphClockSelection = RCC_PERIPHCLK_I2C4};
+
+    switch (SrcClk) {
+    case Default: [[fallthrough]];
+    case Pclk3: clk_init.I2c1ClockSelection = RCC_I2C4CLKSOURCE_PCLK3; break;
+    case Pll3R: clk_init.I2c1ClockSelection = RCC_I2C4CLKSOURCE_PLL3R; break;
+    case Hsi: clk_init.I2c1ClockSelection = RCC_I2C4CLKSOURCE_HSI; break;
+    case Csi: clk_init.I2c1ClockSelection = RCC_I2C4CLKSOURCE_CSI; break;
+    default: return false;   // Unreachable.
+    }
+
+    return HAL_RCCEx_PeriphCLKConfig(&clk_init) == HAL_OK;
+  }
+#endif
 }
 
 /**
@@ -204,9 +227,14 @@ consteval auto I2cSourceClockFrequency(I2cSourceClock source_clock, I2cId id) {
   // Handle default source clock.
   if (source_clock == Default) {
     switch (id) {
+#ifdef HAS_I2C_1_2_3
     case I2c1: [[fallthrough]];
     case I2c2: source_clock = Pclk1; break;
     case I2c3: source_clock = Pclk3; break;
+#endif
+#ifdef HAS_I2C_4
+    case I2c4: source_clock = Pclk3; break;
+#endif
     default: std::unreachable();
     }
   }
@@ -230,9 +258,14 @@ consteval auto I2cSourceClockFrequency(I2cSourceClock source_clock, I2cId id) {
  */
 void EnableI2cClk(I2cId id) {
   switch (id) {
+#ifdef HAS_I2C_1_2_3
   case I2cId::I2c1: __HAL_RCC_I2C1_CLK_ENABLE(); break;
   case I2cId::I2c2: __HAL_RCC_I2C2_CLK_ENABLE(); break;
   case I2cId::I2c3: __HAL_RCC_I2C3_CLK_ENABLE(); break;
+#endif
+#ifdef HAS_I2C_4
+  case I2cId::I2c4: __HAL_RCC_I2C4_CLK_ENABLE(); break;
+#endif
   default: std::unreachable();
   }
 }
@@ -240,9 +273,14 @@ void EnableI2cClk(I2cId id) {
 template <I2cId Id>
 constexpr IRQn_Type GetI2cEventIrqn() noexcept {
   switch (Id) {
+#ifdef HAS_I2C_1_2_3
   case I2cId::I2c1: return I2C1_EV_IRQn;
   case I2cId::I2c2: return I2C2_EV_IRQn;
   case I2cId::I2c3: return I2C3_EV_IRQn;
+#endif
+#ifdef HAS_I2C_4
+  case I2cId::I2c4: return I2C4_EV_IRQn;
+#endif
   default: std::unreachable();
   }
 }
@@ -250,9 +288,14 @@ constexpr IRQn_Type GetI2cEventIrqn() noexcept {
 template <I2cId Id>
 consteval IRQn_Type GetI2cErrIrqn() noexcept {
   switch (Id) {
+#ifdef HAS_I2C_1_2_3
   case I2cId::I2c1: return I2C1_ER_IRQn;
   case I2cId::I2c2: return I2C2_ER_IRQn;
   case I2cId::I2c3: return I2C3_ER_IRQn;
+#endif
+#ifdef HAS_I2C_4
+  case I2cId::I2c4: return I2C4_ER_IRQn;
+#endif
   default: std::unreachable();
   }
 }
@@ -542,8 +585,13 @@ class I2c : public hal::UnusedPeripheral<I2c<Id>> {
   I2C_HandleTypeDef hi2c{};
 };
 
+#ifdef HAS_I2C_1_2_3
 export using I2c1 = I2c<I2cId::I2c1>;
 export using I2c2 = I2c<I2cId::I2c2>;
 export using I2c3 = I2c<I2cId::I2c3>;
+#endif
+#ifdef HAS_I2C_4
+export using I2c4 = I2c<I2cId::I2c4>;
+#endif
 
 }   // namespace stm32h5

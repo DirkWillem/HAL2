@@ -27,6 +27,8 @@ export enum class SpiSourceClock : uint8_t {
   Hsi,     //!< HSI clock
   Csi,     //!< CSI clock
   Hse,     //!< HSE clock
+  // Available on SPI5
+  Pclk3,   //!< Peripheral clock 3
   // Available on all SPI instances
   Per,   //!< PER clock
 
@@ -43,14 +45,14 @@ export enum class SpiBitOrder : uint32_t {
  */
 export template <typename F = hstd::Hz>
 struct SpiSettings {
-  SpiSourceClock           source_clock;     //!< SPI source clock
-  F                        frequency;        //!< SPI Frequency
-  SpiOperatingMode         operating_mode;   //!< SPI operating mode
-  hal::SpiMode             mode = hal::SpiMode::Master;   //!< SPI mode
-  hal::SpiTransmissionType transmission_type;        //!< SPI transmission type
-  unsigned                 data_size = 8;            //!< SPI data size
-  SpiBitOrder bit_order   = SpiBitOrder::MsbFirst;   //!< SPI bit order
-  bool        hardware_cs = false;                   //!< Hardware Chip Select
+  SpiSourceClock           source_clock;                          //!< SPI source clock
+  F                        frequency;                             //!< SPI Frequency
+  SpiOperatingMode         operating_mode;                        //!< SPI operating mode
+  hal::SpiMode             mode = hal::SpiMode::Master;           //!< SPI mode
+  hal::SpiTransmissionType transmission_type;                     //!< SPI transmission type
+  unsigned                 data_size   = 8;                       //!< SPI data size
+  SpiBitOrder              bit_order   = SpiBitOrder::MsbFirst;   //!< SPI bit order
+  bool                     hardware_cs = false;                   //!< Hardware Chip Select
 };
 
 }   // namespace stm32h5

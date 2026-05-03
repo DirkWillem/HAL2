@@ -290,7 +290,14 @@ if ("${TARGET}" STREQUAL "arm-cortex-m33")
         target_link_libraries(freertos_kernel_port PUBLIC project_settings)
     endfunction()
 
-    add_stm32h5_vendor_hal(stm32h533)
+    # Vendor HAL
+    if ("${STM32H5_VARIANT}" STREQUAL "STM32H533RE")
+        add_stm32h5_vendor_hal(stm32h533)
+    endif()
+
+    if ("${STM32H5_VARIANT}" STREQUAL "STM32H563VI")
+        add_stm32h5_vendor_hal(stm32h563)
+    endif()
 endif ()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m0plus"

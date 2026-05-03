@@ -15,7 +15,7 @@ using namespace ::hal::test::helpers;
 using HelloMsg = logging::Message<"Hello World!">;
 using CountMsg = logging::Message<"Count={}, stdev={}", uint32_t, float>;
 
-using MyModule = logging::Module<0xABCD, HelloMsg, CountMsg>;
+using MyModule = logging::Module<0xABCD, "My.Module", HelloMsg, CountMsg>;
 
 class BinaryEncoding : public Test {
  public:

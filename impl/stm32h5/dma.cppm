@@ -173,7 +173,7 @@ export enum class SpiDmaRequest {
 
 template <typename Impl>
 void SetupDma(std::size_t n_used_channels) noexcept {
-#if defined(STM32H533xx)
+#if defined(STM32H533xx) || defined(STM32H563xx)
   // Enable clocks
   if (n_used_channels > 0) {
     __HAL_RCC_GPDMA1_CLK_ENABLE();
@@ -240,7 +240,7 @@ class DmaImpl<Impl, hal::DmaChannels<Channels...>> : public hal::UsedPeripheral 
     DMA_QListTypeDef list;
   };
 
-#if defined(STM32H533xx)
+#if defined(STM32H533xx) || defined(STM32H563xx)
   static constexpr auto NGpDma1Channels = 8u;
   static constexpr auto NGpDma2Channels = 8u;
 #else

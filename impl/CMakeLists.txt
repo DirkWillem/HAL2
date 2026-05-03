@@ -328,6 +328,7 @@ function(add_stm32h5_hal VARIANT XMLFILE)
             BASE_DIRS "${CMAKE_CURRENT_LIST_DIR}/stm32h5"
             FILES
             "${CMAKE_CURRENT_LIST_DIR}/stm32h5/interrupts.h"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32h5/internal/peripheral_availability.h"
     )
 
     target_link_libraries("${VARIANT}_hal"
@@ -417,7 +418,11 @@ if ("${TARGET}" STREQUAL "arm-cortex-m7")
 endif ()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m33")
-    add_stm32h5_hal(stm32h533 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32H533RETx.xml")
+    if ("${STM32H5_VARIANT}" STREQUAL "STM32H533RE")
+        add_stm32h5_hal(stm32h533 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32H533RETx.xml")
+    elseif("${STM32H5_VARIANT}" STREQUAL "STM32H563VI")
+        add_stm32h5_hal(stm32h563 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32H563VITx.xml")
+    endif()
 endif ()
 
 if (NOT CMAKE_CROSSCOMPILING)

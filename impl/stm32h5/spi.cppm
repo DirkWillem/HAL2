@@ -10,6 +10,8 @@ module;
 #include <stm32h5xx_hal_rcc.h>
 #include <stm32h5xx_hal_spi.h>
 
+#include <internal/peripheral_availability.h>
+
 export module hal.stm32h5:spi;
 
 import hal.abstract;
@@ -46,16 +48,23 @@ enum class SpiBaudPrescaler : uint32_t {
 [[nodiscard]] constexpr IRQn_Type GetIrqn(SpiId id) noexcept {
   using enum SpiId;
   switch (id) {
+#ifdef HAS_SPI_1_2_3
   case Spi1: return SPI1_IRQn;
   case Spi2: return SPI2_IRQn;
   case Spi3: return SPI3_IRQn;
+#endif
+#ifdef HAS_SPI_4
   case Spi4: return SPI4_IRQn;
+#endif
+#ifdef HAS_SPI_5_6
+  case Spi5: return SPI5_IRQn;
+  case Spi6: return SPI6_IRQn;
+#endif
   default: std::unreachable();
   }
 }
 
-[[nodiscard]] constexpr uint32_t
-ToHalMasterDirection(const hal::SpiTransmissionType tt) noexcept {
+[[nodiscard]] constexpr uint32_t ToHalMasterDirection(const hal::SpiTransmissionType tt) noexcept {
   switch (tt) {
   case hal::SpiTransmissionType::FullDuplex: return SPI_DIRECTION_2LINES;
   case hal::SpiTransmissionType::HalfDuplex: return SPI_DIRECTION_1LINE;
@@ -123,6 +132,7 @@ export template <SpiId Id>
 void EnableSpiClock() noexcept {
   using enum SpiId;
 
+#ifdef HAS_SPI_1_2_3
   if constexpr (Id == Spi1) {
     __HAL_RCC_SPI1_CLK_ENABLE();
     return;
@@ -135,9 +145,20 @@ void EnableSpiClock() noexcept {
     __HAL_RCC_SPI3_CLK_ENABLE();
     return;
   }
-#ifdef SPI4
+#endif
+#ifdef HAS_SPI_4
   if constexpr (Id == Spi4) {
     __HAL_RCC_SPI4_CLK_ENABLE();
+    return;
+  }
+#endif
+#ifdef HAS_SPI_5_6
+  if constexpr (Id == Spi5) {
+    __HAL_RCC_SPI5_CLK_ENABLE();
+    return;
+  }
+  if constexpr (Id == Spi6) {
+    __HAL_RCC_SPI6_CLK_ENABLE();
     return;
   }
 #endif
@@ -147,13 +168,13 @@ export template <SpiId Id, SpiSourceClock SC>
 bool SetupSpiSourceClock() {
   using enum SpiSourceClock;
 
+#ifdef HAS_SPI_1_2_3
   if constexpr (Id == SpiId::Spi1) {
     RCC_PeriphCLKInitTypeDef init = {
         .PeriphClockSelection = RCC_PERIPHCLK_SPI1,
     };
 
-    hstd::Unimplemented(SC == AudioClk || SC == Per,
-                        "AUDIOCLK en PER source clocks");
+    hstd::Unimplemented(SC == AudioClk || SC == Per, "AUDIOCLK en PER source clocks");
 
     switch (SC) {
     case Pll1Q: init.Spi1ClockSelection = RCC_SPI1CLKSOURCE_PLL1Q; break;
@@ -170,8 +191,7 @@ bool SetupSpiSourceClock() {
         .PeriphClockSelection = RCC_PERIPHCLK_SPI2,
     };
 
-    hstd::Unimplemented(SC == AudioClk || SC == Per,
-                        "AUDIOCLK en PER source clocks");
+    hstd::Unimplemented(SC == AudioClk || SC == Per, "AUDIOCLK en PER source clocks");
 
     switch (SC) {
     case Pll1Q: init.Spi2ClockSelection = RCC_SPI2CLKSOURCE_PLL1Q; break;
@@ -188,8 +208,7 @@ bool SetupSpiSourceClock() {
         .PeriphClockSelection = RCC_PERIPHCLK_SPI3,
     };
 
-    hstd::Unimplemented(SC == AudioClk || SC == Per,
-                        "AUDIOCLK en PER source clocks");
+    hstd::Unimplemented(SC == AudioClk || SC == Per, "AUDIOCLK en PER source clocks");
 
     switch (SC) {
     case Pll1Q: init.Spi3ClockSelection = RCC_SPI3CLKSOURCE_PLL1Q; break;
@@ -200,6 +219,65 @@ bool SetupSpiSourceClock() {
 
     return HAL_RCCEx_PeriphCLKConfig(&init) == HAL_OK;
   }
+#endif
+#ifdef HAS_SPI_4
+  if constexpr (Id == SpiId::Spi4) {
+    RCC_PeriphCLKInitTypeDef init = {
+        .PeriphClockSelection = RCC_PERIPHCLK_SPI4,
+    };
+
+    hstd::Unimplemented(SC == AudioClk || SC == Per, "AUDIOCLK en PER source clocks");
+
+    switch (SC) {
+    case Pclk2: init.Spi3ClockSelection = RCC_SPI4CLKSOURCE_PCLK2; break;
+    case Pll2Q: init.Spi3ClockSelection = RCC_SPI4CLKSOURCE_PLL2Q; break;
+    case Hsi: init.Spi3ClockSelection = RCC_SPI4CLKSOURCE_HSI; break;
+    case Csi: init.Spi3ClockSelection = RCC_SPI4CLKSOURCE_CSI; break;
+    case Hse: init.Spi3ClockSelection = RCC_SPI4CLKSOURCE_HSE; break;
+    default: break;
+    }
+
+    return HAL_RCCEx_PeriphCLKConfig(&init) == HAL_OK;
+  }
+#endif
+#ifdef HAS_SPI_5_6
+  if constexpr (Id == SpiId::Spi5) {
+    RCC_PeriphCLKInitTypeDef init = {
+        .PeriphClockSelection = RCC_PERIPHCLK_SPI5,
+    };
+
+    hstd::Unimplemented(SC == AudioClk || SC == Per, "AUDIOCLK en PER source clocks");
+
+    switch (SC) {
+    case Pclk3: init.Spi3ClockSelection = RCC_SPI5CLKSOURCE_PCLK3; break;
+    case Pll2Q: init.Spi3ClockSelection = RCC_SPI5CLKSOURCE_PLL2Q; break;
+    case Hsi: init.Spi3ClockSelection = RCC_SPI5CLKSOURCE_HSI; break;
+    case Csi: init.Spi3ClockSelection = RCC_SPI5CLKSOURCE_CSI; break;
+    case Hse: init.Spi3ClockSelection = RCC_SPI5CLKSOURCE_HSE; break;
+    default: break;
+    }
+
+    return HAL_RCCEx_PeriphCLKConfig(&init) == HAL_OK;
+  }
+  if constexpr (Id == SpiId::Spi6) {
+    RCC_PeriphCLKInitTypeDef init = {
+        .PeriphClockSelection = RCC_PERIPHCLK_SPI5,
+    };
+
+    hstd::Unimplemented(SC == AudioClk || SC == Per, "AUDIOCLK en PER source clocks");
+
+    switch (SC) {
+    case Pclk2: init.Spi3ClockSelection = RCC_SPI6CLKSOURCE_PCLK2; break;
+    case Pll2Q: init.Spi3ClockSelection = RCC_SPI6CLKSOURCE_PLL2Q; break;
+    case Hsi: init.Spi3ClockSelection = RCC_SPI6CLKSOURCE_HSI; break;
+    case Csi: init.Spi3ClockSelection = RCC_SPI6CLKSOURCE_CSI; break;
+    case Hse: init.Spi3ClockSelection = RCC_SPI6CLKSOURCE_HSE; break;
+    default: break;
+    }
+
+    return HAL_RCCEx_PeriphCLKConfig(&init) == HAL_OK;
+  }
+#endif
 
   std::unreachable();
 }
@@ -215,10 +293,9 @@ void EnableSpiInterrupt() noexcept {
 }
 
 template <typename T, SpiSettings SS>
-concept SpiData =
-    std::is_same_v<std::remove_cvref_t<T>,
-                   std::conditional_t<(SS.data_size > 8), uint16_t, uint8_t>>
-    || (SS.data_size == 8 && std::is_same_v<std::remove_cvref_t<T>, std::byte>);
+concept SpiData = std::is_same_v<std::remove_cvref_t<T>,
+                                 std::conditional_t<(SS.data_size > 8), uint16_t, uint8_t>>
+                  || (SS.data_size == 8 && std::is_same_v<std::remove_cvref_t<T>, std::byte>);
 
 /**
  * @brief SPI peripheral implementation.
@@ -230,8 +307,7 @@ concept SpiData =
  * @tparam Rest Rest arguments, dependent on operating mode. For \c DmaRtos
  * mode, this must be the RTOS type.
  */
-export template <typename Impl, SpiId Id, ClockSettings CS, SpiSettings SS,
-                 typename... Rest>
+export template <typename Impl, SpiId Id, ClockSettings CS, SpiSettings SS, typename... Rest>
 class SpiImpl
     : public hal::UsedPeripheral
     , SpiImplBase<SS.operating_mode, Rest...> {
@@ -241,10 +317,9 @@ class SpiImpl
   friend void ::HAL_SPI_TxCpltCallback(SPI_HandleTypeDef*);
 
  public:
-  static constexpr auto Mode = SS.mode;   //!< SPI mode.
-  static constexpr auto TransmissionType =
-      SS.transmission_type;                        //!< SPI transmission type.
-  static constexpr auto DataSize = SS.data_size;   //!< SPI data size.
+  static constexpr auto Mode             = SS.mode;                //!< SPI mode.
+  static constexpr auto TransmissionType = SS.transmission_type;   //!< SPI transmission type.
+  static constexpr auto DataSize         = SS.data_size;           //!< SPI data size.
 
   /** Pinout type */
   using Pinout = PinoutHelper::Pinout;
@@ -329,18 +404,14 @@ class SpiImpl
    * transmitted.
    */
   template <SpiData<SS> D>
-  bool
-  Transmit(std::span<D>                                          buffer,
-           typename SpiImplBase<SS.operating_mode, Rest...>::EG& event_group,
-           uint32_t                                              bitmask)
+  bool Transmit(std::span<D>                                          buffer,
+                typename SpiImplBase<SS.operating_mode, Rest...>::EG& event_group, uint32_t bitmask)
     requires(SS.operating_mode == SpiOperatingMode::DmaRtos)
   {
-    SpiImplBase<SS.operating_mode, Rest...>::tx_event_group =
-        std::make_pair(&event_group, bitmask);
+    SpiImplBase<SS.operating_mode, Rest...>::tx_event_group = std::make_pair(&event_group, bitmask);
 
-    return HAL_SPI_Transmit_DMA(
-               &hspi, hstd::ReinterpretSpan<const uint8_t>(buffer).data(),
-               buffer.size_bytes())
+    return HAL_SPI_Transmit_DMA(&hspi, hstd::ReinterpretSpan<const uint8_t>(buffer).data(),
+                                buffer.size_bytes())
            == HAL_OK;
   }
 
@@ -386,15 +457,15 @@ class SpiImpl
     // Setup Tx and Rx DMA channels
     if constexpr (hal::SpiTransmitEnabled(SS.transmission_type)) {
       auto& htxdma = dma.template SetupChannel<TxDmaChannel>(
-          hal::DmaDirection::MemToPeriph, hal::DmaMode::Normal,
-          hal::DmaDataWidth::Byte, false, hal::DmaDataWidth::Byte, true);
+          hal::DmaDirection::MemToPeriph, hal::DmaMode::Normal, hal::DmaDataWidth::Byte, false,
+          hal::DmaDataWidth::Byte, true);
       __HAL_LINKDMA(&hspi, hdmatx, htxdma);
       this->hdma_tx = &htxdma;
     }
     if constexpr (hal::SpiReceiveEnabled(SS.transmission_type)) {
       auto& hrxdma = dma.template SetupChannel<RxDmaChannel>(
-          hal::DmaDirection::PeriphToMem, hal::DmaMode::Normal,
-          hal::DmaDataWidth::Byte, false, hal::DmaDataWidth::Byte, true);
+          hal::DmaDirection::PeriphToMem, hal::DmaMode::Normal, hal::DmaDataWidth::Byte, false,
+          hal::DmaDataWidth::Byte, true);
       __HAL_LINKDMA(&hspi, hdmarx, hrxdma);
       this->hdma_rx = &hrxdma;
     }
@@ -409,8 +480,7 @@ class SpiImpl
   void ReceiveComplete() noexcept {
     // Handle DMA+RTOS callback through event group.
     if constexpr (SS.operating_mode == SpiOperatingMode::DmaRtos) {
-      auto& [eg, bitmask] =
-          SpiImplBase<SS.operating_mode, Rest...>::rx_event_group;
+      auto& [eg, bitmask] = SpiImplBase<SS.operating_mode, Rest...>::rx_event_group;
       eg->SetBitsFromInterrupt(bitmask);
     }
 
@@ -428,8 +498,7 @@ class SpiImpl
   void TransmitComplete() noexcept {
     // Handle DMA+RTOS callback through event group.
     if constexpr (SS.operating_mode == SpiOperatingMode::DmaRtos) {
-      auto& [eg, bitmask] =
-          SpiImplBase<SS.operating_mode, Rest...>::tx_event_group;
+      auto& [eg, bitmask] = SpiImplBase<SS.operating_mode, Rest...>::tx_event_group;
       eg->SetBitsFromInterrupt(bitmask);
     }
 
@@ -450,33 +519,32 @@ class SpiImpl
    *
    * @return Source clock frequency to this SPI peripheral.
    */
-  [[nodiscard]] static constexpr hstd::Frequency auto
-  SpiSourceFrequency() noexcept {
+  [[nodiscard]] static constexpr hstd::Frequency auto SpiSourceFrequency() noexcept {
     using enum SpiId;
     using enum SpiSourceClock;
 
+#ifdef HAS_SPI_1_2_3
     // SPI1/2/3
     if (Id == Spi1 || Id == Spi2 || Id == Spi3) {
-      hstd::Assert(
-          hstd::IsOneOf<Pll1Q, Pll2P, Pll3P, AudioClk, Per>(SS.source_clock),
-          "SPI 1, 2 and 3 clock source must be valid");
+      hstd::Assert(hstd::IsOneOf<Pll1Q, Pll2P, Pll3P, AudioClk, Per>(SS.source_clock),
+                   "SPI 1, 2 and 3 clock source must be valid");
 
       switch (SS.source_clock) {
       case Pll1Q: return CS.pll.pll1.OutputQ(CS.Pll1SourceClockFrequency());
       case Pll2P: return CS.pll.pll2.OutputP(CS.Pll2SourceClockFrequency());
       case Pll3P: return CS.pll.pll3.OutputP(CS.Pll3SourceClockFrequency());
-      case AudioClk:
-        hstd::Unimplemented(SS.source_clock == AudioClk, "AUDIOCLK SPI source");
+      case AudioClk: hstd::Unimplemented(SS.source_clock == AudioClk, "AUDIOCLK SPI source");
       case Per: hstd::Unimplemented(SS.source_clock == Per, "PER SPI source");
       default: std::unreachable();
       }
     }
+#endif
 
+#ifdef HAS_SPI_4
     // SPI4
     if (Id == Spi4) {
-      hstd::Assert(
-          hstd::IsOneOf<Pclk2, Pll2Q, Hsi, Csi, Hse, Per>(SS.source_clock),
-          "SPI 4 clock source must be valid");
+      hstd::Assert(hstd::IsOneOf<Pclk2, Pll2Q, Hsi, Csi, Hse, Per>(SS.source_clock),
+                   "SPI 4 clock source must be valid");
 
       switch (SS.source_clock) {
       case Pclk2:
@@ -490,6 +558,43 @@ class SpiImpl
       default: std::unreachable();
       }
     }
+#endif
+#ifdef HAS_SPI_5_6
+    // SPI5
+    if (Id == Spi5) {
+      hstd::Assert(hstd::IsOneOf<Pclk3, Pll2Q, Hsi, Csi, Hse, Per>(SS.source_clock),
+                   "SPI 5 clock source must be valid");
+
+      switch (SS.source_clock) {
+      case Pclk3:
+        return CS.system_clock_settings.Apb3PeripheralsClockFrequency(
+            CS.SysClkSourceClockFrequency());
+      case Pll2Q: return CS.pll.pll2.OutputQ(CS.Pll2SourceClockFrequency());
+      case Hsi: return CS.HsiFrequency();
+      case Csi: return CS.CsiFrequency();
+      case Hse: return CS.HseFrequency();
+      case Per: hstd::Unimplemented(SS.source_clock == Per, "PER SPI source");
+      default: std::unreachable();
+      }
+    }
+    // SPI6
+    if (Id == Spi6) {
+      hstd::Assert(hstd::IsOneOf<Pclk2, Pll2Q, Hsi, Csi, Hse, Per>(SS.source_clock),
+                   "SPI 6 clock source must be valid");
+
+      switch (SS.source_clock) {
+      case Pclk2:
+        return CS.system_clock_settings.Apb2PeripheralsClockFrequency(
+            CS.SysClkSourceClockFrequency());
+      case Pll2Q: return CS.pll.pll2.OutputQ(CS.Pll2SourceClockFrequency());
+      case Hsi: return CS.HsiFrequency();
+      case Csi: return CS.CsiFrequency();
+      case Hse: return CS.HseFrequency();
+      case Per: hstd::Unimplemented(SS.source_clock == Per, "PER SPI source");
+      default: std::unreachable();
+      }
+    }
+#endif
 
     std::unreachable();
   }
@@ -500,8 +605,7 @@ class SpiImpl
    *
    * @return Optimal SPI baud rate prescaler value.
    */
-  [[nodiscard]] static constexpr SpiBaudPrescaler
-  FindPrescalerValue() noexcept {
+  [[nodiscard]] static constexpr SpiBaudPrescaler FindPrescalerValue() noexcept {
     const auto f_src = SpiSourceFrequency().template As<hstd::Hz>();
 
     const std::array<std::tuple<SpiBaudPrescaler, hstd::Hz>, 8> options{{
@@ -521,9 +625,8 @@ class SpiImpl
     const auto desired = SS.frequency.template As<hstd::Hz>();
 
     for (const auto [prescale, actual_baud] : options) {
-      const auto err = (actual_baud > desired ? (actual_baud - desired)
-                                              : (desired - actual_baud))
-                           .count;
+      const auto err =
+          (actual_baud > desired ? (actual_baud - desired) : (desired - actual_baud)).count;
 
       if (err < best_err) {
         best_err      = err;
@@ -539,12 +642,12 @@ class SpiImpl
 
     hspi.Instance = GetSpiPointer(Id);
     hspi.Init     = {
-            .Mode        = SPI_MODE_MASTER,
-            .Direction   = ToHalMasterDirection(SS.transmission_type),
-            .DataSize    = ToHalDataSize(SS.data_size),
-            .CLKPolarity = SPI_POLARITY_LOW,
-            .CLKPhase    = SPI_PHASE_1EDGE,
-            .NSS         = SS.hardware_cs ? SPI_NSS_HARD_OUTPUT : SPI_NSS_SOFT,
+            .Mode              = SPI_MODE_MASTER,
+            .Direction         = ToHalMasterDirection(SS.transmission_type),
+            .DataSize          = ToHalDataSize(SS.data_size),
+            .CLKPolarity       = SPI_POLARITY_LOW,
+            .CLKPhase          = SPI_PHASE_1EDGE,
+            .NSS               = SS.hardware_cs ? SPI_NSS_HARD_OUTPUT : SPI_NSS_SOFT,
             .BaudRatePrescaler = static_cast<uint32_t>(Presc),
             .FirstBit          = static_cast<uint32_t>(SS.bit_order),
             .TIMode            = SPI_TIMODE_DISABLE,
@@ -579,9 +682,17 @@ class Spi : public hal::UnusedPeripheral<Spi<Id>> {
   SPI_HandleTypeDef hspi{};
 };
 
+#ifdef HAS_SPI_1_2_3
 export using Spi1 = Spi<SpiId::Spi1>;
 export using Spi2 = Spi<SpiId::Spi2>;
 export using Spi3 = Spi<SpiId::Spi3>;
+#endif
+#ifdef HAS_SPI_4
 export using Spi4 = Spi<SpiId::Spi4>;
+#endif
+#ifdef HAS_SPI_5_6
+export using Spi5 = Spi<SpiId::Spi5>;
+export using Spi6 = Spi<SpiId::Spi6>;
+#endif
 
 }   // namespace stm32h5

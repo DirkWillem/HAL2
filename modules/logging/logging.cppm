@@ -10,8 +10,6 @@ export import logging.abstract;
 
 export import :encoding.binary;
 
-export import :sink.usb_cdc;
-
 namespace logging {
 
 template <hstd::Clock C, concepts::Encoding E, concepts::Sink S,

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <internal/peripheral_availability.h>
+
 import hal.abstract;
 import hal.stm32h5;
 
@@ -103,25 +105,63 @@ DMA_IRQ_HANDLER(2, 7)
     }                                                              \
   }
 
+#ifdef HAS_USART_1_2_3_6
 UART_IRQ_HANDLER(USART1)
 UART_IRQ_HANDLER(USART2)
 UART_IRQ_HANDLER(USART3)
+UART_IRQ_HANDLER(USART6)
+#endif
+#ifdef HAS_UART_4_5
 UART_IRQ_HANDLER(UART4)
 UART_IRQ_HANDLER(UART5)
-UART_IRQ_HANDLER(USART6)
+#endif
+#ifdef HAS_LPUART_1
 UART_IRQ_HANDLER(LPUART1)
+#endif
+#ifdef HAS_USART_10_11
+UART_IRQ_HANDLER(USART10)
+UART_IRQ_HANDLER(USART11)
+#endif
+#ifdef HAS_UART_7_8_9_12
+UART_IRQ_HANDLER(UART7)
+UART_IRQ_HANDLER(UART8)
+UART_IRQ_HANDLER(UART9)
+UART_IRQ_HANDLER(UART12)
+#endif
 
-#define HANDLE_UART_RECEIVE_CALLBACK(Inst)                                       \
+#define HANDLE_UART_RX_CALLBACK(Inst)                                            \
   if constexpr (hal::IsPeripheralInUse<stm32h5::Inst>()) {                       \
     if (huart == &stm32h5::Inst::instance().huart) {                             \
       stm32h5::Inst::instance().ReceiveComplete(static_cast<std::size_t>(size)); \
     }                                                                            \
   }
 
-void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t size){
-    HANDLE_UART_RECEIVE_CALLBACK(Usart1) HANDLE_UART_RECEIVE_CALLBACK(Usart2)
-        HANDLE_UART_RECEIVE_CALLBACK(Usart3) HANDLE_UART_RECEIVE_CALLBACK(Uart4)
-            HANDLE_UART_RECEIVE_CALLBACK(Uart5) HANDLE_UART_RECEIVE_CALLBACK(LpUart1)}
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t size) {
+#ifdef HAS_USART_1_2_3_6
+  HANDLE_UART_RX_CALLBACK(Usart1);
+  HANDLE_UART_RX_CALLBACK(Usart2);
+  HANDLE_UART_RX_CALLBACK(Usart3);
+  HANDLE_UART_RX_CALLBACK(Usart6);
+#endif
+#ifdef HAS_UART_4_5
+  HANDLE_UART_RX_CALLBACK(Uart4);
+  HANDLE_UART_RX_CALLBACK(Uart5);
+#endif
+#ifdef HAS_LPUART_1
+  HANDLE_UART_RX_CALLBACK(LpUart1);
+#endif
+#ifdef HAS_USART_10_11
+  HANDLE_UART_RX_CALLBACK(Usart10);
+  HANDLE_UART_RX_CALLBACK(Usart11);
+#endif
+#ifdef HAS_UART_7_8_9_12
+  HANDLE_UART_RX_CALLBACK(Uart7);
+  HANDLE_UART_RX_CALLBACK(Uart8);
+  HANDLE_UART_RX_CALLBACK(Uart9);
+  HANDLE_UART_RX_CALLBACK(Uart12);
+#endif
+}
+
 #define HANDLE_UART_TX_CALLBACK(Inst)                      \
   if constexpr (hal::IsPeripheralInUse<stm32h5::Inst>()) { \
     if (huart == &stm32h5::Inst::instance().huart) {       \
@@ -129,11 +169,31 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t size){
     }                                                      \
   }
 
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart){
-    HANDLE_UART_TX_CALLBACK(Usart1) HANDLE_UART_TX_CALLBACK(Usart2) HANDLE_UART_TX_CALLBACK(Usart3)
-        HANDLE_UART_TX_CALLBACK(Uart4) HANDLE_UART_TX_CALLBACK(Uart5)
-            HANDLE_UART_TX_CALLBACK(LpUart1)}
-
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart) {
+#ifdef HAS_USART_1_2_3_6
+  HANDLE_UART_TX_CALLBACK(Usart1);
+  HANDLE_UART_TX_CALLBACK(Usart2);
+  HANDLE_UART_TX_CALLBACK(Usart3);
+  HANDLE_UART_TX_CALLBACK(Usart6);
+#endif
+#ifdef HAS_UART_4_5
+  HANDLE_UART_TX_CALLBACK(Uart4);
+  HANDLE_UART_TX_CALLBACK(Uart5);
+#endif
+#ifdef HAS_LPUART_1
+  HANDLE_UART_TX_CALLBACK(LpUart1);
+#endif
+#ifdef HAS_USART_10_11
+  HANDLE_UART_TX_CALLBACK(Usart10);
+  HANDLE_UART_TX_CALLBACK(Usart11);
+#endif
+#ifdef HAS_UART_7_8_9_12
+  HANDLE_UART_TX_CALLBACK(Uart7);
+  HANDLE_UART_TX_CALLBACK(Uart8);
+  HANDLE_UART_TX_CALLBACK(Uart9);
+  HANDLE_UART_TX_CALLBACK(Uart12);
+#endif
+}
 /**
  * SPI Interrupts
  */
@@ -158,17 +218,18 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef* huart){
     }                                                                \
   }
 
-SPI_I2S_IRQ_HANDLER(SPI1, I2S1) SPI_I2S_IRQ_HANDLER(SPI2, I2S2) void SPI3_IRQHandler() {
-  constexpr auto SpiInst = stm32h5::SpiIdFromName("SPI3");
-  if constexpr (hal::IsPeripheralInUse<stm32h5::Spi<SpiInst>>()) {
-    stm32h5::Spi<SpiInst>::instance().HandleInterrupt();
-  }
-  constexpr auto I2sInst = stm32h5::I2sIdFromName("I2S3");
-  if constexpr (hal::IsPeripheralInUse<stm32h5::I2s<I2sInst>>()) {
-    stm32h5::I2s<I2sInst>::instance().HandleInterrupt();
-  }
-}
-SPI_IRQ_HANDLER(SPI4)
+#ifdef HAS_SPI_1_2_3
+SPI_I2S_IRQ_HANDLER(SPI1, I2S1);
+SPI_I2S_IRQ_HANDLER(SPI2, I2S2);
+SPI_I2S_IRQ_HANDLER(SPI3, I2S3);
+#endif
+#ifdef HAS_SPI_4
+SPI_IRQ_HANDLER(SPI4);
+#endif
+#ifdef HAS_SPI_5_6
+SPI_IRQ_HANDLER(SPI5);
+SPI_IRQ_HANDLER(SPI6);
+#endif
 
 #define HANDLE_SPI_RX_CALLBACK(Inst)                       \
   if constexpr (hal::IsPeripheralInUse<stm32h5::Inst>()) { \
@@ -177,9 +238,20 @@ SPI_IRQ_HANDLER(SPI4)
     }                                                      \
   }
 
-void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef* hspi){
-    HANDLE_SPI_RX_CALLBACK(Spi1) HANDLE_SPI_RX_CALLBACK(Spi2) HANDLE_SPI_RX_CALLBACK(Spi3)
-        HANDLE_SPI_RX_CALLBACK(Spi4)}
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef* hspi) {
+#ifdef HAS_SPI_1_2_3
+  HANDLE_SPI_RX_CALLBACK(Spi1);
+  HANDLE_SPI_RX_CALLBACK(Spi2);
+  HANDLE_SPI_RX_CALLBACK(Spi3);
+#endif
+#ifdef HAS_SPI_4
+  HANDLE_SPI_RX_CALLBACK(Spi4);
+#endif
+#ifdef HAS_SPI_5_6
+  HANDLE_SPI_RX_CALLBACK(Spi5);
+  HANDLE_SPI_RX_CALLBACK(Spi6);
+#endif
+}
 #define HANDLE_SPI_TX_CALLBACK(Inst)                       \
   if constexpr (hal::IsPeripheralInUse<stm32h5::Inst>()) { \
     if (hspi == &stm32h5::Inst::instance().hspi) {         \
@@ -187,10 +259,20 @@ void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef* hspi){
     }                                                      \
   }
 
-void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef* hspi){
-    HANDLE_SPI_TX_CALLBACK(Spi1) HANDLE_SPI_TX_CALLBACK(Spi2) HANDLE_SPI_TX_CALLBACK(Spi3)
-        HANDLE_SPI_TX_CALLBACK(Spi4)}
-
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef* hspi) {
+#ifdef HAS_SPI_1_2_3
+  HANDLE_SPI_TX_CALLBACK(Spi1);
+  HANDLE_SPI_TX_CALLBACK(Spi2);
+  HANDLE_SPI_TX_CALLBACK(Spi3);
+#endif
+#ifdef HAS_SPI_4
+  HANDLE_SPI_TX_CALLBACK(Spi4);
+#endif
+#ifdef HAS_SPI_5_6
+  HANDLE_SPI_TX_CALLBACK(Spi5);
+  HANDLE_SPI_TX_CALLBACK(Spi6);
+#endif
+}
 #define HANDLE_I2S_HALF_RECEIVE_CALLBACK(Inst)             \
   if constexpr (hal::IsPeripheralInUse<stm32h5::Inst>()) { \
     if (hspi == &stm32h5::Inst::instance().hi2s) {         \
@@ -206,14 +288,20 @@ void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef* hspi){
   }
 
 void HAL_I2S_RxHalfCpltCallback(I2S_HandleTypeDef* hspi) {
+#ifdef HAS_SPI_1_2_3
   HANDLE_I2S_HALF_RECEIVE_CALLBACK(I2s1)
   HANDLE_I2S_HALF_RECEIVE_CALLBACK(I2s2)
   HANDLE_I2S_HALF_RECEIVE_CALLBACK(I2s3)
+#endif
 }
 
-void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef* hspi){HANDLE_I2S_RECEIVE_CALLBACK(I2s1)
-                                                         HANDLE_I2S_RECEIVE_CALLBACK(I2s2)
-                                                             HANDLE_I2S_RECEIVE_CALLBACK(I2s3)}
+void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef* hspi) {
+#ifdef HAS_SPI_1_2_3
+  HANDLE_I2S_RECEIVE_CALLBACK(I2s1);
+  HANDLE_I2S_RECEIVE_CALLBACK(I2s2);
+  HANDLE_I2S_RECEIVE_CALLBACK(I2s3);
+#endif
+}
 
 /**
  * I2C Interrupts
@@ -227,9 +315,14 @@ void HAL_I2S_RxCpltCallback(I2S_HandleTypeDef* hspi){HANDLE_I2S_RECEIVE_CALLBACK
     }                                                             \
   }
 
+#ifdef HAS_I2C_1_2_3
 I2C_EV_IRQ_HANDLER(I2C1);
 I2C_EV_IRQ_HANDLER(I2C2);
 I2C_EV_IRQ_HANDLER(I2C3);
+#endif
+#ifdef HAS_I2C_4
+I2C_EV_IRQ_HANDLER(I2C4);
+#endif
 
 #define I2C_ER_IRQ_HANDLER(Name)                                  \
   void Name##_ER_IRQHandler() {                                   \
@@ -239,9 +332,14 @@ I2C_EV_IRQ_HANDLER(I2C3);
     }                                                             \
   }
 
+#ifdef HAS_I2C_1_2_3
 I2C_ER_IRQ_HANDLER(I2C1);
 I2C_ER_IRQ_HANDLER(I2C2);
 I2C_ER_IRQ_HANDLER(I2C3);
+#endif
+#ifdef HAS_I2C_4
+I2C_ER_IRQ_HANDLER(I2C4);
+#endif
 
 #define HANDLE_I2C_ERROR_CALLBACK(Inst)                    \
   if constexpr (hal::IsPeripheralInUse<stm32h5::Inst>()) { \
@@ -251,23 +349,22 @@ I2C_ER_IRQ_HANDLER(I2C3);
   }
 
 void HAL_I2C_ErrorCallback(I2C_HandleTypeDef* hi2c) {
+#ifdef HAS_I2C_1_2_3
   HANDLE_I2C_ERROR_CALLBACK(I2c1);
   HANDLE_I2C_ERROR_CALLBACK(I2c2);
   HANDLE_I2C_ERROR_CALLBACK(I2c3);
+#endif
+#ifdef HAS_I2C_4
+  HANDLE_I2C_ERROR_CALLBACK(I2c4);
+#endif
 }
-  
+
 #define HANDLE_I2C_RX_CALLBACK(Inst)                       \
   if constexpr (hal::IsPeripheralInUse<stm32h5::Inst>()) { \
     if (hi2c == &stm32h5::Inst::instance().hi2c) {         \
       stm32h5::Inst::instance().RxComplete();              \
     }                                                      \
   }
-
-void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef* hi2c) {
-  HANDLE_I2C_RX_CALLBACK(I2c1);
-  HANDLE_I2C_RX_CALLBACK(I2c2);
-  HANDLE_I2C_RX_CALLBACK(I2c3);
-}
 
 #define HANDLE_I2C_TX_CALLBACK(Inst)                       \
   if constexpr (hal::IsPeripheralInUse<stm32h5::Inst>()) { \
@@ -276,10 +373,26 @@ void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef* hi2c) {
     }                                                      \
   }
 
-void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef* hi2c) {
+void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef* hi2c) {
+#ifdef HAS_I2C_1_2_3
   HANDLE_I2C_TX_CALLBACK(I2c1);
   HANDLE_I2C_TX_CALLBACK(I2c2);
   HANDLE_I2C_TX_CALLBACK(I2c3);
+#endif
+#ifdef HAS_I2C_4
+  HANDLE_I2C_TX_CALLBACK(I2c4);
+#endif
+}
+
+void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef* hi2c) {
+#ifdef HAS_I2C_1_2_3
+  HANDLE_I2C_RX_CALLBACK(I2c1);
+  HANDLE_I2C_RX_CALLBACK(I2c2);
+  HANDLE_I2C_RX_CALLBACK(I2c3);
+#endif
+#ifdef HAS_I2C_4
+  HANDLE_I2C_RX_CALLBACK(I2c4);
+#endif
 }
 
 #define HANDLE_I2C_MEM_RX_CALLBACK(Inst)                   \
@@ -290,9 +403,14 @@ void HAL_I2C_MasterRxCpltCallback(I2C_HandleTypeDef* hi2c) {
   }
 
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef* hi2c) {
+#ifdef HAS_I2C_1_2_3
   HANDLE_I2C_MEM_RX_CALLBACK(I2c1);
   HANDLE_I2C_MEM_RX_CALLBACK(I2c2);
   HANDLE_I2C_MEM_RX_CALLBACK(I2c3);
+#endif
+#ifdef HAS_I2C_4
+  HANDLE_I2C_MEM_RX_CALLBACK(I2c4);
+#endif
 }
 
 #define HANDLE_I2C_MEM_TX_CALLBACK(Inst)                   \
@@ -303,9 +421,14 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef* hi2c) {
   }
 
 void HAL_I2C_MemTxCpltCallback(I2C_HandleTypeDef* hi2c) {
+#ifdef HAS_I2C_1_2_3
   HANDLE_I2C_MEM_TX_CALLBACK(I2c1);
   HANDLE_I2C_MEM_TX_CALLBACK(I2c2);
   HANDLE_I2C_MEM_TX_CALLBACK(I2c3);
+#endif
+#ifdef HAS_I2C_4
+  HANDLE_I2C_MEM_TX_CALLBACK(I2c4);
+#endif
 }
 
 //
@@ -332,5 +455,5 @@ EXTI_HANDLER(11);
 EXTI_HANDLER(12);
 EXTI_HANDLER(13);
 EXTI_HANDLER(14);
-EXTI_HANDLER(15)
+EXTI_HANDLER(15);
 }

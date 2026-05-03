@@ -24,7 +24,7 @@ add_subdirectory(impl)
 
 if (NOT CMAKE_CROSSCOMPILING)
     add_subdirectory(test)
-endif()
+endif ()
 
 include(cmake/add_application.cmake)
 
@@ -35,7 +35,7 @@ function(ADD_LOGGING)
     # If not cross-compiling, add unit tests.
     if (NOT CMAKE_CROSSCOMPILING)
         add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test/modules/logging)
-    endif()
+    endif ()
 endfunction()
 
 function(ADD_MODBUS)
@@ -44,14 +44,15 @@ function(ADD_MODBUS)
     # If not cross-compiling, add unit tests.
     if (NOT CMAKE_CROSSCOMPILING)
         add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test/modules/logging)
-    endif()
+    endif ()
 endfunction()
 
 function(ADD_FREERTOS)
     if (CMAKE_CROSSCOMPILING)
         add_freertos_kernel()
-        add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/modules/rtos_freertos)
-    endif()
+    endif ()
+
+    add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/modules/rtos_freertos)
 endfunction()
 
 function(ADD_USB)
@@ -59,6 +60,6 @@ function(ADD_USB)
         add_tinyusb_core()
         add_add_tinyusb_function()
         add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/modules/usb)
-    endif()
+    endif ()
 
 endfunction()

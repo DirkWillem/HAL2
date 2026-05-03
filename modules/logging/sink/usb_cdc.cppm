@@ -5,7 +5,7 @@ module;
 #include <cstring>
 #include <span>
 
-export module logging:sink.usb_cdc;
+export module logging.sink.usb;
 
 import hal.usb.abstract;
 
@@ -18,8 +18,7 @@ namespace logging::sink {
  * @tparam OS RTOS type.
  * @tparam Ifc USB CDC-ACM interface to use for logging.
  */
-export template <rtos::concepts::Rtos                OS,
-                 hal::usb::concepts::CdcAcmInterface Ifc>
+export template <rtos::concepts::Rtos OS, hal::usb::concepts::CdcAcmInterface Ifc>
 class UsbCdc {
  public:
   /**

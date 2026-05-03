@@ -5,6 +5,8 @@ module;
 
 #include <stm32h5xx_hal.h>
 
+#include <internal/peripheral_availability.h>
+
 export module hal.stm32h5:peripherals;
 
 import hstd;
@@ -12,51 +14,127 @@ import hstd;
 namespace stm32h5 {
 
 export enum class UartId {
+#ifdef HAS_USART_1_2_3_6
   Usart1,
   Usart2,
   Usart3,
+  Usart6,
+#endif
+#ifdef HAS_UART_4_5
   Uart4,
   Uart5,
-  Usart6,
+#endif
+#ifdef HAS_USART_10_11
+  Usart10,
+  Usart11,
+#endif
+#ifdef HAS_UART_7_8_9_12
+  Uart7,
+  Uart8,
+  Uart9,
+  Uart12,
+#endif
+#ifdef HAS_LPUART_1
   LpUart1,
+#endif
 };
 
 export [[nodiscard]] constexpr USART_TypeDef* GetUartPointer(UartId uart) noexcept {
+  using enum UartId;
+
   switch (uart) {
-  case UartId::Usart1: return USART1;
-  case UartId::Usart2: return USART2;
-  case UartId::Usart3: return USART3;
-  case UartId::Uart4: return UART4;
-  case UartId::Uart5: return UART5;
-  case UartId::Usart6: return USART6;
-  case UartId::LpUart1: return LPUART1;
+#ifdef HAS_USART_1_2_3_6
+  case Usart1: return USART1;
+  case Usart2: return USART2;
+  case Usart3: return USART3;
+  case Usart6: return USART6;
+#endif
+#ifdef HAS_UART_4_5
+  case Uart4: return UART4;
+  case Uart5: return UART5;
+#endif
+#ifdef HAS_USART_10_11
+  case Usart10: return USART10;
+  case Usart11: return USART11;
+#endif
+#ifdef HAS_UART_7_8_9_12
+  case Uart7: return UART7;
+  case Uart8: return UART8;
+  case Uart9: return UART9;
+  case Uart12: return UART12;
+#endif
+#ifdef HAS_LPUART_1
+  case LpUart1: return LPUART1;
+#endif
   }
 
   std::unreachable();
 }
 
-export [[nodiscard]] consteval UartId UartIdFromName(std::string_view name) noexcept {
-  return hstd::StaticMap<std::string_view, UartId, 7>(name, {{
-                                                                {"USART1", UartId::Usart1},
-                                                                {"USART2", UartId::Usart2},
-                                                                {"USART3", UartId::Usart3},
-                                                                {"UART4", UartId::Uart4},
-                                                                {"UART5", UartId::Uart5},
-                                                                {"USART6", UartId::Usart6},
-                                                                {"LPUART1", UartId::LpUart1},
-                                                            }});
+constexpr auto PeriphName(std::string_view name, auto id) {
+  return std::make_pair(name, id);
 }
 
-export enum class SpiId { Spi1, Spi2, Spi3, Spi4 };
+export [[nodiscard]] consteval UartId UartIdFromName(std::string_view name) noexcept {
+  using enum UartId;
+  return hstd::StaticMap<std::string_view, UartId>(name, std::array{
+#ifdef HAS_USART_1_2_3_6
+                                                             PeriphName("USART1", Usart1),
+                                                             PeriphName("USART2", Usart2),
+                                                             PeriphName("USART3", Usart3),
+                                                             PeriphName("USART6", Usart6),
+#endif
+#ifdef HAS_UART_4_5
+                                                             PeriphName("UART4", Uart4),
+                                                             PeriphName("UART5", Uart5),
+#endif
+#ifdef HAS_LPUART_1
+                                                             PeriphName("LPUART1", LpUart1),
+#endif
+#ifdef HAS_USART_10_11
+                                                             PeriphName("USART10", Usart10),
+                                                             PeriphName("USART11", Usart11),
+#endif
+#ifdef HAS_UART_7_8_9_12
+                                                             PeriphName("UART7", Uart7),
+                                                             PeriphName("UART8", Uart8),
+                                                             PeriphName("UART9", Uart9),
+                                                             PeriphName("UART12", Uart12),
+#endif
+                                                         });
+}
+
+export enum class SpiId {
+#ifdef HAS_SPI_1_2_3
+  Spi1,
+  Spi2,
+  Spi3,
+#endif
+#ifdef HAS_SPI_4
+  Spi4,
+#endif
+#ifdef HAS_SPI_5_6
+  Spi5,
+  Spi6,
+#endif
+};
 
 export [[nodiscard]] constexpr SPI_TypeDef* GetSpiPointer(SpiId id) noexcept {
   using enum SpiId;
 
   switch (id) {
+#ifdef HAS_SPI_1_2_3
   case Spi1: return SPI1;
   case Spi2: return SPI2;
   case Spi3: return SPI3;
+#endif
+#ifdef HAS_SPI_4
   case Spi4: return SPI4;
+#endif
+#ifdef HAS_SPI_5_6
+  case Spi5: return SPI5;
+  case Spi6: return SPI6;
+#endif
   }
 
   std::unreachable();
@@ -65,23 +143,20 @@ export [[nodiscard]] constexpr SPI_TypeDef* GetSpiPointer(SpiId id) noexcept {
 export [[nodiscard]] consteval SpiId SpiIdFromName(std::string_view name) noexcept {
   using enum SpiId;
 
-  if (name == "SPI1") {
-    return Spi1;
-  }
-
-  if (name == "SPI2") {
-    return Spi2;
-  }
-
-  if (name == "SPI3") {
-    return Spi3;
-  }
-
-  if (name == "SPI4") {
-    return Spi4;
-  }
-
-  std::unreachable();
+  return hstd::StaticMap<std::string_view, SpiId>(name, std::array{
+#ifdef HAS_SPI_1_2_3
+                                                            PeriphName("SPI1", Spi1),
+                                                            PeriphName("SPI2", Spi2),
+                                                            PeriphName("SPI3", Spi3),
+#endif
+#ifdef HAS_SPI_4
+                                                            PeriphName("SPI4", Spi4),
+#endif
+#ifdef HAS_SPI_5_6
+                                                            PeriphName("SPI5", Spi5),
+                                                            PeriphName("SPI6", Spi6),
+#endif
+                                                        });
 }
 
 export enum class I2sId { I2s1, I2s2, I2s3 };
@@ -89,34 +164,28 @@ export enum class I2sId { I2s1, I2s2, I2s3 };
 export [[nodiscard]] consteval I2sId I2sIdFromName(std::string_view name) noexcept {
   using enum I2sId;
 
-  if (name == "I2S1") {
-    return I2s1;
-  }
-
-  if (name == "I2S2") {
-    return I2s2;
-  }
-
-  if (name == "I2S3") {
-    return I2s3;
-  }
-
-  std::unreachable();
+  return hstd::StaticMap<std::string_view, I2sId>(name, std::array{
+#ifdef HAS_SPI_1_2_3
+                                                            PeriphName("I2S1", I2s1),
+                                                            PeriphName("I2S2", I2s2),
+                                                            PeriphName("I2S3", I2s3),
+#endif
+                                                        });
 }
 
 export [[nodiscard]] consteval SpiId GetSpiForI2s(I2sId id) {
   using enum SpiId;
   using enum I2sId;
 
-  if (id == I2s1) {
-    return Spi1;
+  switch (id) {
+#ifdef HAS_SPI_1_2_3
+  case I2s1: return Spi1;
+  case I2s2: return Spi2;
+  case I2s3: return Spi3;
+#endif
   }
-  if (id == I2s2) {
-    return Spi2;
-  }
-  if (id == I2s3) {
-    return Spi3;
-  }
+
+  std::unreachable();
 }
 
 export enum class TimId { Tim1, Tim2, Tim3, Tim4, Tim5, Tim6, Tim7, Tim8, Tim12, Tim15 };
@@ -160,9 +229,14 @@ export [[nodiscard]] TIM_TypeDef* GetTimPointer(TimId id) {
 
 /** @brief I2C peripherals present in the STM32H5 */
 export enum class I2cId {
+#ifdef HAS_I2C_1_2_3
   I2c1,   //!< I2C1.
   I2c2,   //!< I2C2.
   I2c3,   //!< I2C3.
+#endif
+#ifdef HAS_I2C_4
+  I2c4,   //!< I2C4.
+#endif
 };
 
 /**
@@ -185,19 +259,16 @@ export [[nodiscard]] I2C_TypeDef* GetI2cPointer(I2cId id) {
 export [[nodiscard]] consteval I2cId I2cIdFromName(std::string_view name) noexcept {
   using enum I2cId;
 
-  if (name == "I2C1") {
-    return I2c1;
-  }
-
-  if (name == "I2C2") {
-    return I2c2;
-  }
-
-  if (name == "I2C3") {
-    return I2c3;
-  }
-
-  std::unreachable();
+  return hstd::StaticMap<std::string_view, I2cId>(name, std::array{
+#ifdef HAS_I2C_1_2_3
+                                                            PeriphName("I2C1", I2c1),
+                                                            PeriphName("I2C2", I2c2),
+                                                            PeriphName("I2C3", I2c3),
+#endif
+#ifdef HAS_I2C_4
+                                                            PeriphName("I2C4", I2c4),
+#endif
+                                                        });
 }
 
 }   // namespace stm32h5
