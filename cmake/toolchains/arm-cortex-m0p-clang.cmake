@@ -21,9 +21,22 @@ if (HOMEBREW)
 
     if (FIND_LLVM_STATUS EQUAL 0)
         set(TOOLCHAIN_PREFIX "${LLVM_PREFIX}/bin/")
-        message("Using homebrew LLVM at ${LLVM_PREFIX}/bin")
+        message("Using homebrew LLVM at ${TOOLCHAIN_PREFIX}")
     else()
         message("Did not find LLVM")
+    endif()
+
+    execute_process(COMMAND "${HOMEBREW}" --prefix lld
+            RESULT_VARIABLE FIND_LLD_STATUS
+            OUTPUT_VARIABLE LLD_PREFIX
+            ERROR_VARIABLE FIND_LLD_ERR
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+    if (FIND_LLD_STATUS EQUAL 0)
+        set(LLD_PREFIX "${LLD_PREFIX}/bin/")
+        message("Using homebrew LLVM linker at ${LLD_PREFIX}")
+    else()
+        message("Did not find LLVM linker (ld.lld)")
     endif()
 endif()
 
@@ -46,7 +59,7 @@ set(CMAKE_C_COMPILER   ${TOOLCHAIN_PREFIX}clang${CLANG_VERSION_SUFFIX}${TOOLCHAI
 set(CMAKE_C_COMPILER_TARGET ${CLANG_TARGET_TRIPLE})
 set(CMAKE_CXX_COMPILER ${TOOLCHAIN_PREFIX}clang++${CLANG_VERSION_SUFFIX}${TOOLCHAIN_SUFFIX} ${MACHINE_FLAGS})
 set(CMAKE_CXX_COMPILER_TARGET ${CLANG_TARGET_TRIPLE})
-set(CMAKE_LINKER       ${TOOLCHAIN_PREFIX}ld.lld${TOOLCHAIN_SUFFIX})
+set(CMAKE_LINKER       ${LLD_PREFIX}ld.lld${TOOLCHAIN_SUFFIX})
 set(CMAKE_OBJCOPY      ${TOOLCHAIN_PREFIX}llvm-objcopy${CLANG_VERSION_SUFFIX}${TOOLCHAIN_SUFFIX} CACHE INTERNAL "")
 set(CMAKE_RANLIB       ${TOOLCHAIN_PREFIX}llvm-ranlib${CLANG_VERSION_SUFFIX}${TOOLCHAIN_SUFFIX} CACHE INTERNAL "")
 set(CMAKE_SIZE         ${TOOLCHAIN_PREFIX}llvm-size${CLANG_VERSION_SUFFIX}${TOOLCHAIN_SUFFIX} CACHE INTERNAL "")
@@ -90,7 +103,7 @@ set_flags_from_gcc(g++ c++ CMAKE_CXX_STANDARD_INCLUDE_DIRECTORIES)
 set(CMAKE_C_STANDARD_LIBRARIES "-L${ARM_LIBGCC_DIR} -L${CMAKE_SYSROOT}/lib/${ARM_MULTI_DIR} ${ARM_LIBGCC_DIR}/crti.o ${ARM_LIBGCC_DIR}/crtbegin.o -lm -Wl,--start-group -lgcc -lc_nano -lnosys -Wl,--end-group ${ARM_LIBGCC_DIR}/crtend.o ${ARM_LIBGCC_DIR}/crtn.o")
 set(CMAKE_CXX_STANDARD_LIBRARIES "-D_LIBCPP_FREESTANDING  -L${ARM_LIBGCC_DIR} -L${CMAKE_SYSROOT}/lib/${ARM_MULTI_DIR} ${ARM_LIBGCC_DIR}/crti.o ${ARM_LIBGCC_DIR}/crtbegin.o -lstdc++_nano -lm -Wl,--start-group -lgcc -lc_nano -lnosys -Wl,--end-group ${ARM_LIBGCC_DIR}/crtend.o ${ARM_LIBGCC_DIR}/crtn.o")
 
-set(CMAKE_EXE_LINKER_FLAGS_INIT "-D_LIBCPP_FREESTANDING -nodefaultlibs -Wl,-nostdlib -Wl,--gc-sections")
+set(CMAKE_EXE_LINKER_FLAGS_INIT "-D_LIBCPP_FREESTANDING -nodefaultlibs -Wl,-nostdlib -Wl,--gc-sections -fuse-ld=lld")
 #set(CMAKE_CXX_FLAGS_INIT -stdlib=libstdc++)
 
 set(CMAKE_FIND_ROOT_PATH "${CMAKE_SYSROOT}")

@@ -59,6 +59,51 @@ function(add_stm32g0_vendor_hal SERIES VARIANT)
     target_link_libraries("${VARIANT}_vendor" PUBLIC "${VARIANT}_st_hal")
 endfunction()
 
+function(add_stm32u0_vendor_hal SERIES VARIANT)
+    string(TOUPPER "${VARIANT}" VARIANT_UPPER)
+    string(TOUPPER "${SERIES}" SERIES_UPPER)
+
+    add_linkopts(${VARIANT})
+
+    # stm32u0xx_device library
+    add_library("${VARIANT}_device" INTERFACE
+            "stm32u0xx_device/Include/stm32u0xx.h"
+            "stm32u0xx_device/Include/${VARIANT}xx.h"
+            "stm32u0xx_device/Include/system_stm32u0xx.h")
+
+    target_include_directories("${VARIANT}_device" SYSTEM INTERFACE
+            stm32u0xx_device/Include)
+
+    target_link_libraries("${VARIANT}_device" INTERFACE
+            cmsis_core_includes
+            project_settings_base)
+
+    target_compile_definitions("${VARIANT}_device" INTERFACE
+            "CORE_CM0P" "STM32U0"
+            "${SERIES_UPPER}" "${SERIES_UPPER}xx"
+            "${VARIANT_UPPER}" "${VARIANT_UPPER}xx")
+
+    # stm32u0xx_hal library
+    file(GLOB HAL_HEADERS "stm32u0xx_hal/Inc/stm32u0xx_*.h")
+    file(GLOB HAL_SRCS "stm32u0xx_hal/Src/stm32u0xx_*.c")
+
+    add_library("${VARIANT}_st_hal" STATIC
+            ${HAL_HEADERS} ${HAL_SRCS})
+
+    target_include_directories("${VARIANT}_st_hal" SYSTEM PUBLIC
+            stm32u0xx_hal/Inc
+            hal_conf)
+
+    target_link_libraries("${VARIANT}_st_hal" PUBLIC
+            "${VARIANT}_device")
+
+    # stm32u0xx library
+    add_library("${VARIANT}_vendor" STATIC
+            "stm32u0xx_device/Source/Templates/gcc/startup_${VARIANT}xx.s"
+            "stm32u0xx_device/Source/Templates/system_stm32u0xx.c")
+    target_link_libraries("${VARIANT}_vendor" PUBLIC "${VARIANT}_st_hal")
+endfunction()
+
 function(add_stm32g4_vendor_hal VARIANT)
     string(TOUPPER "${VARIANT}" VARIANT_UPPER)
 
@@ -210,6 +255,7 @@ function(ADD_FREERTOS_PORT CORE PORT)
     add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/freertos)
 endfunction()
 
+# Cortex-M0+
 if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
     # CMSIS core includes
     if (NOT TARGET cmsis_core_includes)
@@ -230,8 +276,18 @@ if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
     endfunction()
 
     # HAL
-    add_stm32g0_vendor_hal(stm32g0x0 stm32g030)
-    add_stm32g0_vendor_hal(stm32g0x1 stm32g0b1)
+    # - STM32G0
+    if ("${STM32G0_VARIANT}" STREQUAL "STM32G030")
+        add_stm32g0_vendor_hal(stm32g0x0 stm32g030)
+    endif ()
+    if ("${STM32G0_VARIANT}" STREQUAL "STM32G0B1")
+        add_stm32g0_vendor_hal(stm32g0x1 stm32g0b1)
+    endif ()
+
+    # - STM32U0
+    if ("${STM32U0_VARIANT}" STREQUAL "STM32U083")
+        add_stm32u0_vendor_hal(stm32u083 stm32u083)
+    endif ()
 endif ()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m4")
@@ -293,11 +349,11 @@ if ("${TARGET}" STREQUAL "arm-cortex-m33")
     # Vendor HAL
     if ("${STM32H5_VARIANT}" STREQUAL "STM32H533RE")
         add_stm32h5_vendor_hal(stm32h533)
-    endif()
+    endif ()
 
     if ("${STM32H5_VARIANT}" STREQUAL "STM32H563VI")
         add_stm32h5_vendor_hal(stm32h563)
-    endif()
+    endif ()
 endif ()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m0plus"
@@ -362,14 +418,14 @@ if (CMAKE_CROSSCOMPILING)
         add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src)
     endfunction()
     macro(ADD_ADD_TINYUSB_FUNCTION)
-    
+
         function(add_tinyusb TARGET CONFIG_HEADER_INCLUDE_DIR)
-            
+
 
             add_library(${TARGET})
             # Add TinyUSB sources
             tinyusb_target_add(${TARGET})
-    
+
             # Add config headers
             target_sources(
                     ${TARGET}
@@ -379,7 +435,7 @@ if (CMAKE_CROSSCOMPILING)
                     FILES
                     "${CONFIG_HEADER_INCLUDE_DIR}/tusb_config.h"
             )
-    
+
             # Add fsdev driver
             target_sources(
                     ${TARGET}
@@ -392,7 +448,7 @@ if (CMAKE_CROSSCOMPILING)
                     "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_common.h"
                     "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_stm32.h"
             )
-    
+
             target_sources(
                     ${TARGET}
                     PRIVATE
@@ -400,7 +456,7 @@ if (CMAKE_CROSSCOMPILING)
                     "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/fsdev_common.c"
                     "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/tinyusb/src/portable/st/stm32_fsdev/hcd_stm32_fsdev.c"
             )
-    
+
             # Add STM32 fsdev driver
             target_include_directories(${TARGET} PRIVATE ${CONFIG_HEADER_INCLUDE_DIR})
         endfunction()

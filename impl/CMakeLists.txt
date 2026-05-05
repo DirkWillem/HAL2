@@ -152,6 +152,65 @@ function(add_stm32g0_hal VARIANT XMLFILE)
 
 endfunction()
 
+function(add_stm32u0_hal VARIANT XMLFILE)
+    generate_pin_mapping(
+            stm32u0
+            ${VARIANT}
+            "uart"
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32u0/generated/${VARIANT}/stm32u0/mappings/uart_pin_mapping.cppm"
+    )
+
+    generate_pin_mapping(
+            stm32u0
+            ${VARIANT}
+            "spi_i2s"
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32u0/generated/${VARIANT}/stm32u0/mappings/spi_i2s_pin_mapping.cppm"
+    )
+
+    generate_pin_mapping(
+            stm32u0
+            ${VARIANT}
+            i2c
+            "${XMLFILE}"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32u0/generated/${VARIANT}/stm32u0/mappings/i2c_pin_mapping.cppm"
+    )
+
+    add_library("${VARIANT}_hal")
+    target_sources("${VARIANT}_hal"
+            PUBLIC
+            FILE_SET CXX_MODULES
+            FILES
+            "${CMAKE_CURRENT_LIST_DIR}/stm32u0/generated/${VARIANT}/stm32u0/mappings/uart_pin_mapping.cppm"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32u0/generated/${VARIANT}/stm32u0/mappings/i2c_pin_mapping.cppm"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32u0/generated/${VARIANT}/stm32u0/mappings/spi_i2s_pin_mapping.cppm"
+
+            stm32u0/stm32u0.cppm
+
+            stm32u0/clocks.cppm
+            stm32u0/peripherals.cppm
+            stm32u0/pin.cppm
+
+            PUBLIC
+            FILE_SET pub_headers TYPE HEADERS
+            BASE_DIRS "${CMAKE_CURRENT_LIST_DIR}/stm32u0"
+            FILES
+            "${CMAKE_CURRENT_LIST_DIR}/stm32u0/interrupts.h"
+            "${CMAKE_CURRENT_LIST_DIR}/stm32u0/internal/peripheral_availability.h"
+    )
+
+    target_link_libraries("${VARIANT}_hal"
+            PUBLIC
+            "${VARIANT}_vendor"
+
+            PRIVATE
+            hstd
+            hal_abstract
+            project_settings)
+
+endfunction()
+
 function(add_stm32g4_hal VARIANT XMLFILE)
     # Add generated code
     add_generated_file(
@@ -401,8 +460,15 @@ endfunction()
 
 
 if ("${TARGET}" STREQUAL "arm-cortex-m0plus")
-    #    add_stm32g0_hal(stm32g030 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G030K(6-8)Tx.xml")
-    add_stm32g0_hal(stm32g0b1 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G0B1R(B-C-E)Tx.xml")
+    if ("${STM32G0_VARIANT}" STREQUAL "STM32G030")
+        add_stm32g0_hal(stm32g030 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G030K(6-8)Tx.xml")
+    elseif ("${STM32G0_VARIANT}" STREQUAL "STM32G0B1")
+        add_stm32g0_hal(stm32g0b1 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32G0B1R(B-C-E)Tx.xml")
+    endif ()
+
+    if ("${STM32U0_VARIANT}" STREQUAL "STM32U083")
+        add_stm32u0_hal(stm32u083 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32U083RCTx.xml")
+    endif ()
 endif ()
 
 if ("${TARGET}" STREQUAL "arm-cortex-m4")
@@ -420,9 +486,9 @@ endif ()
 if ("${TARGET}" STREQUAL "arm-cortex-m33")
     if ("${STM32H5_VARIANT}" STREQUAL "STM32H533RE")
         add_stm32h5_hal(stm32h533 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32H533RETx.xml")
-    elseif("${STM32H5_VARIANT}" STREQUAL "STM32H563VI")
+    elseif ("${STM32H5_VARIANT}" STREQUAL "STM32H563VI")
         add_stm32h5_hal(stm32h563 "${CMAKE_CURRENT_LIST_DIR}/../vendor/stm32_pin_data/mcu/STM32H563VITx.xml")
-    endif()
+    endif ()
 endif ()
 
 if (NOT CMAKE_CROSSCOMPILING)
