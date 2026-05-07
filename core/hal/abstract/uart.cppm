@@ -22,8 +22,7 @@ export enum class UartParity { Even, Odd, None };
 export enum class UartStopBits { Half, One, OneAndHalf, Two };
 
 export template <typename Impl>
-concept UartBase =
-    Peripheral<std::decay_t<Impl>> && IsPeripheralInUse<std::decay_t<Impl>>();
+concept UartBase = Peripheral<std::decay_t<Impl>> && IsPeripheralInUse<std::decay_t<Impl>>();
 
 export template <typename Impl>
 concept AsyncUart = UartBase<Impl> && requires(Impl& impl) {
@@ -33,28 +32,19 @@ concept AsyncUart = UartBase<Impl> && requires(Impl& impl) {
   impl.Write(std::declval<std::string_view>());
   impl.Write(std::declval<std::span<const std::byte>>());
   impl.Receive(std::declval<std::span<std::byte>>());
-
-  impl.RegisterUartReceiveCallback(
-      std::declval<hstd::Callback<std::span<std::byte>>&>());
-  impl.ClearUartReceiveCallback();
-
-  impl.RegisterUartTransmitCallback(std::declval<hstd::Callback<>&>());
-  impl.ClearUartTransmitCallback();
 };
 
 export template <typename Impl>
 concept RtosUart = UartBase<Impl> && requires(Impl& impl) {
   {
-    impl.Write(std::declval<std::string_view>(),
-               std::declval<std::chrono::milliseconds>())
+    impl.Write(std::declval<std::string_view>(), std::declval<std::chrono::milliseconds>())
   } -> std::convertible_to<bool>;
   {
     impl.Write(std::declval<std::span<const std::byte>>(),
                std::declval<std::chrono::milliseconds>())
   } -> std::convertible_to<bool>;
   {
-    impl.Receive(std::declval<std::span<std::byte>>(),
-                 std::declval<std::chrono::milliseconds>())
+    impl.Receive(std::declval<std::span<std::byte>>(), std::declval<std::chrono::milliseconds>())
   } -> std::convertible_to<std::optional<std::span<std::byte>>>;
 };
 
@@ -69,11 +59,10 @@ export template <typename Impl>
 /**
  * Basic implementation for UART
  */
-concept Uart =
-    UartBase<Impl>
-    && (hstd::Implies(Impl::OperatingMode == UartOperatingMode::Interrupt
-                          || Impl::OperatingMode == UartOperatingMode::Dma,
-                      AsyncUart<Impl>));
+concept Uart = UartBase<Impl>
+               && (hstd::Implies(Impl::OperatingMode == UartOperatingMode::Interrupt
+                                     || Impl::OperatingMode == UartOperatingMode::Dma,
+                                 AsyncUart<Impl>));
 
 /**
  * Helper class for adding registration of UART receive callbacks to an UART
@@ -95,8 +84,8 @@ export class RegisterableUartReceiveCallback {
    * Registers the UART receive callback
    * @param new_callback New receive callback to register
    */
-  constexpr void RegisterUartReceiveCallback(
-      hstd::Callback<std::span<std::byte>>& new_callback) noexcept {
+  constexpr void
+  RegisterUartReceiveCallback(hstd::Callback<std::span<std::byte>>& new_callback) noexcept {
     callback = &new_callback;
   }
 
@@ -114,8 +103,7 @@ export class RegisterableUartTransmitCallback {
     }
   }
 
-  constexpr void
-  RegisterUartTransmitCallback(hstd::Callback<>& new_callback) noexcept {
+  constexpr void RegisterUartTransmitCallback(hstd::Callback<>& new_callback) noexcept {
     callback = &new_callback;
   }
 

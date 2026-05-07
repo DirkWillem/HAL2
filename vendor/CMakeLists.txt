@@ -462,3 +462,11 @@ if (CMAKE_CROSSCOMPILING)
         endfunction()
     endmacro()
 endif ()
+
+if (TARGET cmsis_core_includes)
+    add_library(cmsis_core_cpp INTERFACE)
+    target_include_directories(cmsis_core_cpp INTERFACE
+            "cmsis_core_cpp")
+
+    target_link_libraries(cmsis_core_cpp INTERFACE cmsis_core_includes)
+endif ()

@@ -189,8 +189,11 @@ function(add_stm32u0_hal VARIANT XMLFILE)
             stm32u0/stm32u0.cppm
 
             stm32u0/clocks.cppm
+            stm32u0/dma.cppm
+            stm32u0/nvic.cppm
             stm32u0/peripherals.cppm
             stm32u0/pin.cppm
+            stm32u0/uart.cppm
 
             PUBLIC
             FILE_SET pub_headers TYPE HEADERS

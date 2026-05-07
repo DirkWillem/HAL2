@@ -63,3 +63,11 @@ function(ADD_USB)
     endif ()
 
 endfunction()
+
+function(ADD_SEQ)
+    add_subdirectory(${CMAKE_CURRENT_FUNCTION_LIST_DIR}/modules/seq)
+
+    if (CMAKE_CROSSCOMPILING)
+        add_seq_port_critical_section_queue()
+    endif()
+endfunction()

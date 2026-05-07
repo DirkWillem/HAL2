@@ -4,9 +4,11 @@ module;
 
 export module hal.stm32u0;
 
+export import :dma;
 export import :pin;
 export import :clocks;
 export import :peripherals;
+export import :uart;
 
 namespace stm32u0 {
 
@@ -21,5 +23,15 @@ export void InitializeHal(const bool enable_systick = true) {
     NVIC_DisableIRQ(SysTick_IRQn);
   }
 }
+
+/**
+ * @brief Hook that is executed during an interrupt. Can be specialized to perform a hook on certain
+ * interrupts.
+ * @tparam IRQn IRQ number to overload the hook for.
+ */
+export template <IRQn_Type IRQn>
+struct InterruptHook {
+  static inline void operator()() {}
+};
 
 }   // namespace stm32u0
